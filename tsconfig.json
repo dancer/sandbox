@@ -1,0 +1,17 @@
+{
+  "files": [],
+  "references": [
+    {
+      "path": "./packages/core"
+    },
+    {
+      "path": "./packages/local"
+    },
+    {
+      "path": "./packages/ai"
+    }
+  ],
+  "compilerOptions": {
+    "strictNullChecks": true
+  }
+}
