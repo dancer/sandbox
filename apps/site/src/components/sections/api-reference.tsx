@@ -51,7 +51,7 @@ const result = await proc.result;`;
 const PORTS_EXAMPLE = `const { url, port } = await sandbox.ports.expose(3000, {
   protocol: "https",
 });
-// → { url: "https://abc-3000.sandbox-sdk.dev", port: 3000 }`;
+// → { url: "https://abc-3000.sandbox-sdk.sh", port: 3000 }`;
 
 const SNAPSHOTS_EXAMPLE = `const snap = await sandbox.snapshots.create("after-bun-install");
 

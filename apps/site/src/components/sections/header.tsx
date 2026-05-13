@@ -1,8 +1,11 @@
 "use client";
 
 import { motion } from "motion/react";
+import Image from "next/image";
 
 import { Badge } from "@/components/ui/badge";
+
+import logo from "../../../public/logo.png";
 
 const GithubMark = ({ className }: { className?: string }) => (
   <svg
@@ -19,11 +22,30 @@ const GithubMark = ({ className }: { className?: string }) => (
 const EASE = [0.16, 1, 0.3, 1] as const;
 
 export const Header = () => (
-  <header className="self-end">
+  <header className="flex items-center justify-between">
+    <motion.a
+      aria-label="Sandbox SDK home"
+      href="/"
+      className="flex size-9 items-center justify-center"
+      initial={{ opacity: 0, x: -10 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.5, ease: EASE }}
+    >
+      <Image
+        alt=""
+        aria-hidden="true"
+        className="block shrink-0 select-none dark:invert"
+        height={28}
+        priority
+        src={logo}
+        unoptimized
+        width={28}
+      />
+    </motion.a>
     <motion.a
       className="text-muted-foreground transition-colors hover:text-foreground"
       href="https://github.com/dancer/sandbox"
-      rel="noreferrer"
+      rel="noopener noreferrer"
       target="_blank"
       aria-label="sandbox-sdk on GitHub"
       initial={{ opacity: 0, x: 10 }}
