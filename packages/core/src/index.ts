@@ -273,18 +273,30 @@ export const command = (
 export const timeout = (
   value?: number,
   signal?: AbortSignal
-): { clear(): void; signal?: AbortSignal } => {
+): { aborted(): boolean; clear(): void; signal?: AbortSignal } => {
   if (value === undefined) {
     return signal === undefined
-      ? { clear: () => undefined }
-      : { clear: () => undefined, signal };
+      ? { aborted: () => false, clear: () => undefined }
+      : { aborted: () => signal.aborted, clear: () => undefined, signal };
   }
 
+  let aborted = false;
   const controller = new AbortController();
-  const timer: Timer = setTimeout(() => controller.abort(), value);
-  signal?.addEventListener("abort", () => controller.abort(), { once: true });
+  const timer: Timer = setTimeout(() => {
+    aborted = true;
+    controller.abort();
+  }, value);
+  signal?.addEventListener(
+    "abort",
+    () => {
+      aborted = false;
+      controller.abort();
+    },
+    { once: true }
+  );
 
   return {
+    aborted: () => aborted,
     clear: () => clearTimeout(timer),
     signal: controller.signal,
   };
