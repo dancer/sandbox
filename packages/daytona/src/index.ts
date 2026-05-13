@@ -340,6 +340,7 @@ const createSandbox = (
   },
 });
 
+/** create a Daytona adapter with normalized sandbox operations */
 export const daytona = (options: Daytona = {}): Adapter<Raw> => ({
   capabilities,
   async create(input = {}) {

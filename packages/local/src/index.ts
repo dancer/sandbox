@@ -278,6 +278,7 @@ const start = (
   });
 };
 
+/** create a local adapter that runs against an isolated host directory */
 export const local = (options: Local = {}): Adapter<Raw> => ({
   capabilities: {
     environment: true,

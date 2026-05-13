@@ -360,6 +360,7 @@ const createSandbox = (
   },
 });
 
+/** create an E2B adapter with normalized sandbox operations */
 export const e2b = (options: E2B = {}): Adapter<Raw> => ({
   capabilities,
   async create(input = {}) {

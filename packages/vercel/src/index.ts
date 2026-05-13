@@ -424,6 +424,7 @@ const createSandbox = (
   },
 });
 
+/** create a Vercel Sandbox adapter with normalized sandbox operations */
 export const vercel = (options: Vercel = {}): Adapter<Raw> => ({
   capabilities,
   async create(input = {}) {
@@ -444,4 +445,5 @@ export const vercel = (options: Vercel = {}): Adapter<Raw> => ({
   provider,
 });
 
+/** alias for users who prefer the explicit provider name */
 export const vercelSandbox = vercel;
