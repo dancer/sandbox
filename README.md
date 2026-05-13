@@ -72,8 +72,15 @@ const kit = tools(sandbox, {
 
 kit.description;
 kit.sandbox;
+kit.sandbox.provider;
+kit.sandbox.workingDirectory;
+kit.sandbox.capabilities;
 kit.tools;
 ```
+
+The Cloudflare adapter is designed for Workers. Importing the package is safe in
+Node-based tooling, but creating a Cloudflare sandbox loads
+`@cloudflare/sandbox` inside the Worker path.
 
 ## Testing
 
@@ -82,7 +89,7 @@ bun test packages
 bun run test:live
 ```
 
-The default test suite runs without provider credentials and covers core behavior, the local adapter, and AI tool execution. Live provider tests are skipped unless credentials are present.
+The default test suite runs without provider credentials and covers core behavior, the local adapter, AI tool execution, provider adapter mocks, and package exports. Live provider tests are skipped unless credentials are present.
 
 - E2B: `E2B_API_KEY` or `E2B_ACCESS_TOKEN`
 - Daytona: `DAYTONA_TARGET` plus either `DAYTONA_API_KEY`, or `DAYTONA_JWT_TOKEN` and `DAYTONA_ORGANIZATION_ID`
