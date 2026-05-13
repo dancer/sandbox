@@ -20,43 +20,69 @@ import type {
 import { Sandbox as VercelSandbox } from "@vercel/sandbox";
 import type { Command as VercelCommand, NetworkPolicy } from "@vercel/sandbox";
 
+/** source used to seed a new Vercel sandbox */
 export type Source =
   | Readonly<{
+      /** shallow clone depth for git sources */
       depth?: number;
+      /** git branch, tag, or commit to check out */
       revision?: string;
       type: "git";
+      /** public git repository url */
       url: string;
     }>
   | Readonly<{
+      /** shallow clone depth for private git sources */
       depth?: number;
+      /** password or token for the private git source */
       password: string;
+      /** git branch, tag, or commit to check out */
       revision?: string;
       type: "git";
+      /** private git repository url */
       url: string;
+      /** username for the private git source */
       username: string;
     }>
   | Readonly<{
       type: "tarball";
+      /** tarball url used as the sandbox source */
       url: string;
     }>;
 
+/** Vercel sandbox resource request */
 export type Resources = Readonly<{
+  /** requested virtual cpu count */
   vcpus: number;
 }>;
 
+/** Vercel sandbox adapter configuration */
 export type Vercel = Readonly<{
+  /** default working directory for normalized file and process operations */
   cwd?: string;
+  /** default environment variables applied when creating a sandbox */
   env?: Readonly<Record<string, string>>;
+  /** custom fetch implementation passed to @vercel/sandbox */
   fetch?: typeof fetch;
+  /** Vercel network policy for the sandbox */
   networkPolicy?: NetworkPolicy;
+  /** ports declared at create time and later exposed with ports.expose */
   ports?: readonly number[];
+  /** Vercel project id; falls back to VERCEL_PROJECT_ID when using access-token auth */
   projectId?: string;
+  /** resource request for new sandboxes */
   resources?: Resources;
+  /** Vercel runtime id such as node24 or python3.13 */
   runtime?: string;
+  /** git or tarball source used for new sandboxes */
   source?: Source;
+  /** run commands with sudo when supported by Vercel Sandbox */
   sudo?: boolean;
+  /** Vercel team id; falls back to VERCEL_TEAM_ID when using access-token auth */
   teamId?: string;
+  /** sandbox lifetime timeout in milliseconds */
   timeout?: number;
+  /** Vercel access token; falls back to VERCEL_TOKEN */
   token?: string;
 }>;
 

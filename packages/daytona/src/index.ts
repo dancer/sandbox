@@ -29,26 +29,46 @@ import type {
   Sandbox,
 } from "@sandbox-sdk/core";
 
+/** Daytona adapter configuration */
 export type Daytona = DaytonaConfig &
   Readonly<{
+    /** archive idle sandbox after this many minutes when supported by Daytona */
     autoArchiveInterval?: number;
+    /** delete archived sandbox after this many minutes when supported by Daytona */
     autoDeleteInterval?: number;
+    /** stop idle sandbox after this many minutes when supported by Daytona */
     autoStopInterval?: number;
+    /** default working directory for normalized file and process operations */
     cwd?: string;
+    /** delete the Daytona sandbox instead of stopping it during cleanup */
     deleteOnStop?: boolean;
+    /** default environment variables applied when creating a sandbox */
     env?: Readonly<Record<string, string>>;
+    /** image name or Daytona Image used to create the sandbox */
     image?: string | Image;
+    /** labels attached to new sandboxes */
     labels?: Readonly<Record<string, string>>;
+    /** Daytona code language label for created sandboxes */
     language?: CodeLanguage | string;
+    /** stable Daytona sandbox name used when create input omits id */
     name?: string;
+    /** outbound network allow list passed to Daytona */
     networkAllowList?: string;
+    /** block outbound network access when supported by Daytona */
     networkBlockAll?: boolean;
+    /** signed preview url expiration in seconds */
     previewExpires?: number;
+    /** make the Daytona sandbox public when supported */
     public?: boolean;
+    /** resource request for new sandboxes */
     resources?: Resources;
+    /** use signed preview urls instead of standard preview links */
     signedPreview?: boolean;
+    /** Daytona snapshot id used when create input omits snapshot */
     snapshot?: string;
+    /** create, stop, and delete timeout in milliseconds */
     timeout?: number;
+    /** linux user used for supported Daytona operations */
     user?: string;
   }>;
 

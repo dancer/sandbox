@@ -3,26 +3,38 @@ import type { Result, Sandbox } from "@sandbox-sdk/core";
 
 /** json schema object accepted by AI SDK tools */
 export type Schema = Readonly<{
+  /** whether unknown properties are rejected */
   additionalProperties: false;
+  /** json schema property map */
   properties: Readonly<Record<string, unknown>>;
+  /** required property names */
   required?: readonly string[];
+  /** schema root type */
   type: "object";
 }>;
 
 /** provider-agnostic tool shape compatible with the AI SDK */
 export type Tool<Input, Output> = Readonly<{
+  /** prompt-facing tool description */
   description: string;
+  /** strict json schema for tool input */
   inputSchema: Schema;
+  /** true when model output should match the schema exactly */
   strict?: boolean;
+  /** tool implementation */
   execute(input: Input): Promise<Output>;
 }>;
 
+/** built-in sandbox tool name */
 export type Name = "exec" | "list" | "preview" | "read" | "write";
 
 /** context passed to policy hooks before a sandbox side effect */
 export type Context<ToolName extends Name = Name> = Readonly<{
+  /** default sandbox working directory */
   cwd: string;
+  /** sandbox the tool will operate on */
   sandbox: Sandbox;
+  /** tool currently being checked */
   tool: ToolName;
 }>;
 
@@ -34,30 +46,59 @@ export type Policy<Input, ToolName extends Name = Name> = (
 
 /** options for creating AI-ready sandbox tools and prompt context */
 export type Options = Readonly<{
+  /**
+   * tools exposed to the model
+   *
+   * @default ["read", "write", "list", "exec"] plus "preview" when ports are supported
+   */
   allow?: readonly Name[];
+  /** policy hook called before command execution */
   beforeExec?: Policy<Exec, "exec">;
+  /** policy hook called before directory listing */
   beforeList?: Policy<Partial<Path>, "list">;
+  /** policy hook called before preview URL exposure */
   beforePreview?: Policy<Preview, "preview">;
+  /** policy hook called before file reads */
   beforeRead?: Policy<Path, "read">;
+  /** policy hook called before file writes */
   beforeWrite?: Policy<Write, "write">;
+  /** working directory described to the agent and used by commands */
   cwd?: string;
+  /**
+   * maximum stdout and stderr characters returned by the exec tool
+   *
+   * @default 20000
+   */
   maxOutput?: number;
+  /**
+   * default command timeout in milliseconds for agent executions
+   *
+   * @default 30000
+   */
   timeout?: number;
 }>;
 
 /** AI tool kit with prompt context and a minimal agent sandbox shape */
 export type Kit = Readonly<{
+  /** prompt context describing the sandbox, capabilities, and limits */
   description: string;
+  /** minimal sandbox object for agent integrations that accept an executeCommand shape */
   sandbox: AgentSandbox;
+  /** AI SDK compatible tools keyed by enabled tool name */
   tools: Tools;
 }>;
 
 /** small sandbox description object for agents that support executeCommand */
 export type AgentSandbox = Readonly<{
+  /** advertised sandbox capabilities */
   capabilities: Sandbox["capabilities"];
+  /** prompt context describing the sandbox */
   description: string;
+  /** run a shell command using the normalized sandbox process API */
   executeCommand(input: Command): Promise<CommandResult>;
+  /** provider name */
   provider: string;
+  /** default working directory */
   workingDirectory: string;
 }>;
 
@@ -73,63 +114,91 @@ export type Tools = Readonly<Draft>;
 
 /** command input accepted by the exec tool and exec policy */
 export type Exec = Readonly<{
+  /** argv arguments when running an executable directly */
   args?: readonly string[];
+  /** shell command or executable name */
   command: string;
+  /** working directory inside the sandbox */
   cwd?: string;
+  /** command environment variables */
   env?: Readonly<Record<string, string>>;
 }>;
 
 /** command input used by AI SDK agent integrations */
 export type Command = Readonly<{
+  /** abort signal forwarded to sandbox command execution */
   abortSignal?: AbortSignal;
+  /** shell command to run */
   command: string;
+  /** working directory inside the sandbox */
   workingDirectory?: string;
 }>;
 
 /** command result returned by the agent sandbox shape */
 export type CommandResult = Readonly<{
+  /** command exit code */
   exitCode: number;
+  /** buffered stderr */
   stderr: string;
+  /** buffered stdout */
   stdout: string;
 }>;
 
 /** path input accepted by read and shared path policies */
 export type Path = Readonly<{
+  /** file or directory path inside the sandbox */
   path: string;
 }>;
 
 /** write input accepted by the write tool and write policy */
 export type Write = Readonly<{
+  /** file path inside the sandbox */
   path: string;
+  /** utf-8 text to write */
   text: string;
 }>;
 
 /** preview input accepted by the preview tool and preview policy */
 export type Preview = Readonly<{
+  /** sandbox port to expose */
   port: number;
 }>;
 
+/** result returned by the exec tool */
 export type ExecResult = Readonly<{
+  /** command exit code */
   code: number;
+  /** true when the command exited successfully */
   ok: boolean;
+  /** termination signal when reported by the provider */
   signal?: string;
+  /** buffered and capped stderr */
   stderr: string;
+  /** buffered and capped stdout */
   stdout: string;
 }>;
 
+/** result returned by the list tool */
 export type ListResult = Readonly<{
+  /** directory entries returned by the sandbox files API */
   entries: Awaited<ReturnType<Sandbox["files"]["list"]>>;
 }>;
 
+/** result returned by the read tool */
 export type TextResult = Readonly<{
+  /** file text */
   text: string;
 }>;
 
+/** result returned by the write tool */
 export type WriteResult = Readonly<{
+  /** always true when the write succeeded */
   ok: true;
 }>;
 
+/** result returned by the preview tool */
 export type PreviewResult = Readonly<{
+  /** exposed preview URL */
   url: string;
 }>;
 
@@ -240,6 +309,7 @@ const agent = (
   workingDirectory: cwd,
 });
 
+/** create AI SDK compatible tools and prompt context for a sandbox */
 export const tools = (sandbox: Sandbox, options: Options = {}): Kit => {
   const cwd = options.cwd ?? sandbox.cwd;
   const timeout = options.timeout ?? 30_000;

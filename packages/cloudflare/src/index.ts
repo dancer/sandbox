@@ -24,16 +24,28 @@ import type {
 
 export type { Sandbox as CloudflareSandbox } from "@cloudflare/sandbox";
 
+/** Cloudflare Sandbox adapter configuration */
 export type Cloudflare = Readonly<{
+  /** Durable Object binding for the Cloudflare Sandbox class, usually `env.Sandbox` */
   binding: DurableObjectNamespace<CloudflareSandbox>;
+  /**
+   * default working directory for normalized file and process operations
+   *
+   * @default "/workspace"
+   */
   cwd?: string;
+  /** default environment variables written to the sandbox when it is created */
   env?: Readonly<Record<string, string>>;
+  /** custom domain used for preview URLs, required for `ports.expose` */
   hostname?: string;
+  /** stable sandbox id used when create input omits id */
   id?: string;
+  /** list options forwarded to Cloudflare `listFiles` */
   list?: ListFilesOptions;
+  /** friendly preview name forwarded to Cloudflare `exposePort` */
   name?: string;
+  /** low-level Cloudflare Sandbox options forwarded to `getSandbox` */
   options?: SandboxOptions;
-  timeout?: number;
 }>;
 
 type Raw = CloudflareSandbox;
@@ -278,6 +290,7 @@ const createSandbox = (
   },
 });
 
+/** create a Cloudflare Sandbox adapter from a Worker binding */
 export const cloudflare = (options: Cloudflare): Adapter<Raw> => ({
   capabilities,
   async create(input = {}) {

@@ -19,22 +19,39 @@ import type {
 import { CommandExitError, FileType, Sandbox as E2BSandbox } from "e2b";
 import type { CommandHandle, SandboxConnectOpts, SandboxOpts } from "e2b";
 
+/** e2b adapter configuration */
 export type E2B = Readonly<{
+  /** e2b access token, usually used for template and account operations */
   accessToken?: string;
+  /** allow outbound internet access for the sandbox */
   allowInternetAccess?: boolean;
+  /** e2b api key; falls back to E2B_API_KEY */
   apiKey?: string;
+  /** custom e2b api url for advanced deployments */
   apiUrl?: string;
+  /** default working directory for normalized file and process operations */
   cwd?: string;
+  /** enable e2b debug connection behavior */
   debug?: boolean;
+  /** custom e2b domain used for api and preview hosts */
   domain?: string;
+  /** default environment variables applied when creating a sandbox */
   env?: Readonly<Record<string, string>>;
+  /** extra headers sent to the e2b api */
   headers?: Readonly<Record<string, string>>;
+  /** metadata attached to new sandboxes */
   metadata?: Readonly<Record<string, string>>;
+  /** request timeout in milliseconds for e2b api calls */
   requestTimeout?: number;
+  /** custom sandbox url for advanced or debug deployments */
   sandboxUrl?: string;
+  /** secure sandbox controller traffic when supported by e2b */
   secure?: boolean;
+  /** e2b template id, template name, or snapshot id used when create input omits template and snapshot */
   template?: string;
+  /** sandbox lifetime timeout in milliseconds */
   timeout?: number;
+  /** linux user used for file and command operations */
   user?: string;
 }>;
 

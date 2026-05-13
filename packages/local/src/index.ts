@@ -31,9 +31,28 @@ import type {
 } from "@sandbox-sdk/core";
 
 export type Local = Readonly<{
-  /** host environment inheritance policy for local commands */
+  /**
+   * host environment inheritance policy for local commands
+   *
+   * `true` passes all host environment variables, `false` passes none, and an
+   * array passes only the named variables
+   *
+   * @default ["HOME", "PATH", "SHELL", "TEMP", "TMP", "TMPDIR"]
+   */
   inheritEnv?: boolean | readonly string[];
+  /**
+   * keep temporary local sandbox files after `stop`
+   *
+   * custom roots are always left on disk because they are owned by the caller
+   *
+   * @default false
+   */
   keep?: boolean;
+  /**
+   * host directory used as the sandbox root
+   *
+   * when omitted, the adapter creates a temporary directory
+   */
   root?: string;
 }>;
 
