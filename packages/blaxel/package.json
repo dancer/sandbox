@@ -1,0 +1,51 @@
+{
+  "name": "@sandbox-sdk/blaxel",
+  "version": "0.0.0",
+  "description": "Blaxel adapter for Sandbox SDK",
+  "keywords": [
+    "agent",
+    "blaxel",
+    "sandbox",
+    "sdk",
+    "typescript"
+  ],
+  "homepage": "https://sandbox-sdk.sh",
+  "bugs": {
+    "url": "https://github.com/dancer/sandbox/issues"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/dancer/sandbox.git",
+    "directory": "packages/blaxel"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepack": "bun run build",
+    "test": "bun test test"
+  },
+  "dependencies": {
+    "@blaxel/core": "^0.2.82",
+    "@sandbox-sdk/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.41",
+    "typescript": "^5.9.3"
+  }
+}

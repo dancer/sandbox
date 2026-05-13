@@ -1,0 +1,191 @@
+import { expect, test } from "bun:test";
+
+import { SandboxInstance } from "@blaxel/core";
+import { create } from "@sandbox-sdk/core";
+
+import { blaxel } from "../src/index";
+
+const response = (exitCode = 0, stdout = "ok", stderr = "") => ({
+  command: "command",
+  completedAt: new Date().toISOString(),
+  exitCode,
+  logs: stdout + stderr,
+  name: "process",
+  pid: "process",
+  startedAt: new Date().toISOString(),
+  status: exitCode === 0 ? "completed" : "failed",
+  stderr,
+  stdout,
+  workingDir: "/work",
+});
+
+test("blaxel reports incomplete credentials before provider calls", async () => {
+  await expect(
+    create({
+      adapter: blaxel({
+        apiKey: "key",
+      }),
+    })
+  ).rejects.toMatchObject({
+    code: "configuration",
+    provider: "blaxel",
+  });
+});
+
+test("blaxel maps create options and normalized operations", async () => {
+  const original = SandboxInstance.create;
+  let createSeen: unknown;
+  let safeSeen: unknown;
+  const mkdirSeen: string[] = [];
+  const processSeen: unknown[] = [];
+  let previewSeen: unknown;
+  let killed: string | undefined;
+  const raw = {
+    delete: () => Promise.resolve(),
+    fs: {
+      ls: () =>
+        Promise.resolve({
+          files: [
+            {
+              group: "group",
+              lastModified: "2026-01-01T00:00:00.000Z",
+              name: "file.txt",
+              owner: "owner",
+              path: "/work/file.txt",
+              permissions: "0644",
+              size: 2,
+            },
+          ],
+          name: "work",
+          path: "/work",
+          subdirectories: [{ name: "src", path: "/work/src" }],
+        }),
+      mkdir: (path: string) => {
+        mkdirSeen.push(path);
+        return Promise.resolve({});
+      },
+      read: () => Promise.resolve("text"),
+      readBinary: () => Promise.resolve(new Blob(["text"])),
+      rm: () => Promise.resolve({}),
+      write: () => Promise.resolve({}),
+      writeBinary: () => Promise.resolve({}),
+    },
+    metadata: { name: "sandbox" },
+    previews: {
+      createIfNotExists: (preview: unknown) => {
+        previewSeen = preview;
+        return Promise.resolve({
+          spec: { url: "https://preview.bl.run" },
+        });
+      },
+    },
+    process: {
+      exec: (request: unknown) => {
+        processSeen.push(request);
+        return Promise.resolve(response());
+      },
+      kill: (id: string) => {
+        killed = id;
+        return Promise.resolve({});
+      },
+      streamLogs: () => ({
+        close: () => {},
+        wait: () => Promise.resolve(),
+      }),
+      wait: () => Promise.resolve(response()),
+    },
+  } as unknown as SandboxInstance;
+
+  SandboxInstance.create = ((input?: unknown, options?: unknown) => {
+    createSeen = input;
+    safeSeen = options;
+    return Promise.resolve(raw);
+  }) as typeof SandboxInstance.create;
+
+  try {
+    const sandbox = await create({
+      adapter: blaxel({
+        apiKey: "key",
+        env: { A: "1" },
+        image: "blaxel/base-image:latest",
+        labels: { owner: "sdk" },
+        memory: 4096,
+        name: "named",
+        ports: [3000],
+        safe: true,
+        workspace: "workspace",
+      }),
+      cwd: "/work",
+      env: { B: "2" },
+      metadata: { task: "test" },
+      ports: [8080],
+      template: "blaxel/py-app:latest",
+      timeout: 4500,
+    });
+
+    expect(sandbox.id).toBe("sandbox");
+    expect(sandbox.cwd).toBe("/work");
+    expect(createSeen).toMatchObject({
+      envs: [
+        { name: "A", value: "1" },
+        { name: "B", value: "2" },
+      ],
+      image: "blaxel/py-app:latest",
+      labels: { owner: "sdk", task: "test" },
+      memory: 4096,
+      name: "named",
+      ports: [{ protocol: "HTTP", target: 8080 }],
+      ttl: "5s",
+    });
+    expect(safeSeen).toEqual({ safe: true });
+    expect(mkdirSeen).toContain("/work");
+
+    await expect(sandbox.ports.expose(3000)).rejects.toMatchObject({
+      code: "unsupported",
+      provider: "blaxel",
+    });
+    await expect(sandbox.ports.expose(8080)).resolves.toEqual({
+      port: 8080,
+      url: "https://preview.bl.run",
+    });
+    expect(previewSeen).toEqual({
+      metadata: { name: "sandbox-sdk-8080" },
+      spec: { port: 8080, public: true },
+    });
+
+    await expect(
+      sandbox.process.exec("echo", ["hello world"], {
+        cwd: "/tmp",
+        env: { C: "3" },
+        timeout: 2500,
+      })
+    ).resolves.toMatchObject({
+      code: 0,
+      ok: true,
+      stdout: "ok",
+    });
+    expect(processSeen.at(-1)).toEqual({
+      command: "echo 'hello world'",
+      env: { C: "3" },
+      timeout: 3,
+      waitForCompletion: true,
+      workingDir: "/tmp",
+    });
+
+    const running = await sandbox.process.spawnShell("sleep 1");
+    await running.kill();
+    expect(killed).toBe("process");
+
+    try {
+      await sandbox.snapshots.create();
+      throw new Error("expected snapshot creation to fail");
+    } catch (error) {
+      expect(error).toMatchObject({
+        code: "unsupported",
+        provider: "blaxel",
+      });
+    }
+  } finally {
+    SandboxInstance.create = original;
+  }
+});

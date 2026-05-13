@@ -7,6 +7,7 @@ provider credentials configured. The local example runs without remote
 credentials.
 
 - `local.ts`
+- `blaxel.ts`
 - `e2b.ts`
 - `daytona.ts`
 - `vercel.ts`
