@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import "./globals.css";
@@ -18,9 +18,7 @@ const geistMono = Geist_Mono({
   variable: "--font-mono",
 });
 
-const protocol = process.env.NODE_ENV === "production" ? "https" : "http";
-const origin = process.env.VERCEL_PROJECT_PRODUCTION_URL ?? "localhost:3000";
-const baseUrl = `${protocol}://${origin}`;
+const baseUrl = "https://sandbox-sdk.sh";
 
 const title =
   "Sandbox SDK: one API for E2B, Daytona, Vercel & Cloudflare sandboxes";
@@ -32,9 +30,14 @@ export const metadata: Metadata = {
     canonical: "/",
   },
   description,
+  icons: {
+    apple: "/apple-icon.png",
+    icon: "/icon.svg",
+  },
   metadataBase: new URL(baseUrl),
   openGraph: {
     description,
+    images: [{ alt: "Sandbox SDK", height: 630, url: "/og.png", width: 1200 }],
     locale: "en_US",
     siteName: "Sandbox SDK",
     title,
@@ -45,8 +48,13 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     description,
+    images: ["/og.png"],
     title,
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0a0a0a",
 };
 
 const jsonLd = {
