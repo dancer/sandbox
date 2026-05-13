@@ -82,6 +82,17 @@ The Cloudflare adapter is designed for Workers. Importing the package is safe in
 Node-based tooling, but creating a Cloudflare sandbox loads
 `@cloudflare/sandbox` inside the Worker path.
 
+## Cloudflare Validation
+
+`apps/cloudflare` is a deployable Worker fixture for the Cloudflare live test.
+It exports the Sandbox Durable Object class, binds it in `wrangler.jsonc`, and
+validates file operations, command execution, shell execution, and background
+process spawning through the shared adapter.
+
+Cloudflare port previews need custom-domain wildcard routing in production.
+Deploying to `.workers.dev` is enough for the live validation endpoint, but not
+for production `ports.expose()` preview URLs.
+
 ## Testing
 
 ```bash
