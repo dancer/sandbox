@@ -9,7 +9,6 @@ import { e2b } from "@sandbox-sdk/e2b";
 const sandbox = await create({
   adapter: e2b({
     template: "base",
-    // apiKey auto-loaded from E2B_API_KEY
   }),
 });`;
 
@@ -19,10 +18,9 @@ export const E2B = () => (
       E2B
     </Heading>
     <p>
-      E2B's microVM sandboxes via <code>@e2b/code-interpreter</code>. The
-      adapter pins a template at construction and threads writes, commands, and
-      ports through the E2B SDK. Auto-loads the API key from{" "}
-      <code>E2B_API_KEY</code>.
+      E2B's microVM sandboxes via <code>e2b</code>. The adapter can pin a
+      template at construction and threads writes, commands, ports, and
+      snapshots through the E2B SDK.
     </p>
     <CodeBlock code={E2B_EXAMPLE} lang="ts" />
     <div className="flex flex-col gap-2">
@@ -30,7 +28,7 @@ export const E2B = () => (
         Options
       </Heading>
       <Accordion className="rounded-md border-dotted" type="multiple">
-        <PropAccordionItem name="template" status="required" value="template">
+        <PropAccordionItem name="template" status="optional" value="template">
           <p>
             E2B sandbox template id or name. Pre-baked templates ship with
             common stacks (Node, Python, Bun) and you can build your own via the
@@ -39,11 +37,11 @@ export const E2B = () => (
         </PropAccordionItem>
         <PropAccordionItem name="apiKey" status="optional" value="apiKey">
           <p>
-            E2B API key. Falls back to <code>E2B_API_KEY</code>; required if no
-            env var is set.
+            E2B API key passed to the native SDK. Omit it to use the provider
+            SDK's environment-based defaults.
           </p>
         </PropAccordionItem>
-        <PropAccordionItem name="timeoutMs" status="optional" value="timeoutMs">
+        <PropAccordionItem name="timeout" status="optional" value="timeout">
           <p>
             Maximum lifetime of the sandbox in milliseconds. After it elapses
             E2B kills the sandbox server-side. Defaults to E2B's account

@@ -9,7 +9,6 @@ import { daytona } from "@sandbox-sdk/daytona";
 const sandbox = await create({
   adapter: daytona({
     image: "ubuntu:22.04",
-    // apiKey auto-loaded from DAYTONA_API_KEY
   }),
 });`;
 
@@ -29,7 +28,7 @@ export const Daytona = () => (
         Options
       </Heading>
       <Accordion className="rounded-md border-dotted" type="multiple">
-        <PropAccordionItem name="image" status="required" value="image">
+        <PropAccordionItem name="image" status="optional" value="image">
           <p>
             Container image the workspace is built from (e.g.{" "}
             <code>ubuntu:22.04</code>). Pulled by Daytona on first use.
@@ -37,13 +36,14 @@ export const Daytona = () => (
         </PropAccordionItem>
         <PropAccordionItem name="apiKey" status="optional" value="apiKey">
           <p>
-            Daytona API key. Falls back to <code>DAYTONA_API_KEY</code>;
-            required if no env var is set.
+            Daytona API key passed to the native SDK. Omit it to use the
+            provider SDK's environment-based defaults.
           </p>
         </PropAccordionItem>
-        <PropAccordionItem name="region" status="optional" value="region">
+        <PropAccordionItem name="target" status="optional" value="target">
           <p>
-            Daytona region for the workspace. Falls back to the account default.
+            Daytona target for workspace placement. Falls back to the native SDK
+            default when omitted.
           </p>
         </PropAccordionItem>
       </Accordion>

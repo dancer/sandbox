@@ -6,15 +6,16 @@ import { Accordion } from "@/components/ui/accordion";
 const CLOUDFLARE_EXAMPLE = `import { create } from "@sandbox-sdk/core";
 import { cloudflare } from "@sandbox-sdk/cloudflare";
 
-// inside a worker the binding is passed in from env
 export default {
   async fetch(_request: Request, env: { SANDBOX: DurableObjectNamespace }) {
     const sandbox = await create({
       adapter: cloudflare({ binding: env.SANDBOX }),
+      cwd: "/workspace",
     });
 
-    await sandbox.files.write("main.ts", "console.log('hello')");
-    const result = await sandbox.process.exec("bun", ["main.ts"]);
+    await sandbox.files.write("/workspace/main.ts", "console.log('hello')");
+
+    const result = await sandbox.process.shell("bun /workspace/main.ts");
 
     return new Response(result.stdout);
   },
@@ -23,13 +24,13 @@ export default {
 export const Cloudflare = () => (
   <section>
     <Heading as="h3" id="adapter-cloudflare">
-      Cloudflare Sandbox
+      Cloudflare
     </Heading>
     <p>
-      Cloudflare Sandbox via <code>@cloudflare/sandbox</code>. Backed by a
-      Durable Object running a Linux container, so the adapter takes a binding
-      from <code>env</code> rather than an API key, and all I/O stays on
-      Cloudflare's network.
+      Cloudflare via <code>@cloudflare/sandbox</code>. Backed by a Durable
+      Object running a Linux container, so the adapter takes a binding from{" "}
+      <code>env</code> rather than an API key, and all I/O stays on Cloudflare's
+      network.
     </p>
     <CodeBlock code={CLOUDFLARE_EXAMPLE} lang="ts" />
     <div className="flex flex-col gap-2">

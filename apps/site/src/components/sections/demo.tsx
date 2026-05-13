@@ -34,17 +34,22 @@ const ADAPTERS = [
 ] as const;
 
 const buildCode = (adapter: (typeof ADAPTERS)[number]) =>
-  `import { create } from "@sandbox-sdk/core";
+  `import { withSandbox } from "@sandbox-sdk/core";
 ${adapter.import}
 
-const sandbox = await create({
-  adapter: ${adapter.config},
-});
+await withSandbox(
+  {
+    adapter: ${adapter.config},
+    cwd: "/workspace",
+  },
+  async (sandbox) => {
+    await sandbox.files.write("/workspace/main.ts", "console.log('hello')");
 
-await sandbox.files.write("main.ts", "console.log('hello')");
-const result = await sandbox.process.exec("bun", ["main.ts"]);
+    const result = await sandbox.process.shell("bun /workspace/main.ts");
 
-await sandbox.stop();`;
+    console.log(result.stdout);
+  }
+);`;
 
 const TABS = ADAPTERS.map((adapter) => ({
   code: buildCode(adapter),

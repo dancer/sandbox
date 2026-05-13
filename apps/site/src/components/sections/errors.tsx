@@ -7,7 +7,7 @@ try {
   await sandbox.ports.expose(3000);
 } catch (err) {
   if (err instanceof SandboxError && err.code === "unsupported") {
-    // adapter doesn't support ports so degrade gracefully
+    return new Response("preview unavailable");
   }
   throw err;
 }`;
@@ -40,13 +40,9 @@ export const Errors = () => (
           exist.
         </li>
         <li className="px-4 py-3">
-          <code>"unauthorized"</code>: provider credentials missing, expired, or
-          insufficient.
-        </li>
-        <li className="px-4 py-3">
-          <code>"timeout"</code>: <code>process.exec</code> hit{" "}
-          <code>options.timeout</code> and the partial output is attached to{" "}
-          <code>cause</code>.
+          <code>"timeout"</code>: <code>process.shell</code> or{" "}
+          <code>process.exec</code> hit <code>options.timeout</code> and the
+          partial output is attached to <code>cause</code>.
         </li>
         <li className="px-4 py-3">
           <code>"provider"</code>: anything else. Inspect <code>cause</code> for

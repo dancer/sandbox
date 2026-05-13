@@ -4,6 +4,7 @@ import { Heading } from "@/components/heading";
 const SANDBOX_TYPE = `type Sandbox<Raw = unknown> = Readonly<{
   id: string;
   provider: string;
+  cwd: string;
   capabilities: Capabilities;
   files: Files;
   process: Process;
@@ -14,15 +15,32 @@ const SANDBOX_TYPE = `type Sandbox<Raw = unknown> = Readonly<{
 }>;
 
 type Capability =
-  | "files"
-  | "process"
-  | "ports"
-  | "snapshots"
-  | "secrets"
+  | "desktop"
   | "environment"
-  | "streaming";
+  | "files"
+  | "git"
+  | "network"
+  | "process"
+  | "pty"
+  | "ports"
+  | "secrets"
+  | "snapshots"
+  | "streaming"
+  | "volumes";
 
-type Capabilities = Readonly<Partial<Record<Capability, boolean>>>;`;
+type Mode =
+  | boolean
+  | "combined"
+  | "create-time"
+  | "derived"
+  | "disk"
+  | "dynamic"
+  | "filesystem"
+  | "memory"
+  | "separate"
+  | "volume";
+
+type Capabilities = Readonly<Partial<Record<Capability, Mode>>>;`;
 
 export const SandboxType = () => (
   <section>

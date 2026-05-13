@@ -58,12 +58,12 @@ const ROWS: { capability: string; cells: Record<ColumnKey, Cell> }[] = [
     capability: "streaming",
     cells: {
       cloudflare: ok,
-      daytona: ok,
+      daytona: no(
+        "Daytona exposes stable buffered command execution in this adapter. Background process streaming stays behind raw until the provider surface is stable."
+      ),
       e2b: ok,
       local: ok,
-      vercel: warn(
-        "Vercel Sandbox streams stdout/stderr in chunks but doesn't flush on every write; for tight log feedback use exec() and read the buffered stdout afterwards."
-      ),
+      vercel: ok,
     },
   },
   {
@@ -72,8 +72,8 @@ const ROWS: { capability: string; cells: Record<ColumnKey, Cell> }[] = [
       cloudflare: ok,
       daytona: ok,
       e2b: ok,
-      local: no(
-        "Local processes don't tunnel. There's nothing to expose. Use the host's own network for dev, or branch on sandbox.capabilities.ports."
+      local: warn(
+        "Local previews are derived localhost URLs. There is no tunnel because the process already runs on the host."
       ),
       vercel: ok,
     },
@@ -81,16 +81,20 @@ const ROWS: { capability: string; cells: Record<ColumnKey, Cell> }[] = [
   {
     capability: "snapshots",
     cells: {
-      cloudflare: warn(
-        "Cloudflare Sandbox exposes Durable Object hibernation, not filesystem snapshots. The adapter maps snapshots.create() to a checkpoint of the DO state. Useful for resume, not for forking."
+      cloudflare: no(
+        "Cloudflare Sandbox backups and hibernation are provider-specific today. The adapter keeps them behind raw until the normalized snapshot contract is right."
       ),
-      daytona: ok,
-      e2b: ok,
+      daytona: no(
+        "Daytona snapshot and fork APIs are still experimental in the current adapter surface. Use raw for provider-specific snapshot workflows."
+      ),
+      e2b: warn(
+        "E2B supports snapshot creation. In-place restore is not normalized yet, so restore() throws unsupported."
+      ),
       local: no(
         "No snapshot primitive on the local filesystem. Mirror the root yourself with cp/rsync, or use a cloud adapter."
       ),
-      vercel: no(
-        "Vercel Sandbox is ephemeral by design. There is no snapshot or resume API. Persist any state you care about outside the sandbox."
+      vercel: warn(
+        "Vercel supports snapshot creation. In-place restore is not normalized yet, so restore() throws unsupported."
       ),
     },
   },
@@ -107,15 +111,21 @@ const ROWS: { capability: string; cells: Record<ColumnKey, Cell> }[] = [
   {
     capability: "secrets",
     cells: {
-      cloudflare: ok,
-      daytona: ok,
-      e2b: warn(
-        "E2B supports env injection at sandbox-create time, but has no dedicated secret store. Secrets are env vars under the hood. Rotate at the provider, not at the adapter."
+      cloudflare: no(
+        "Secrets are not normalized in this adapter. Pass environment values explicitly or use Cloudflare-native bindings outside the shared SDK surface."
+      ),
+      daytona: no(
+        "Secrets are not normalized in this adapter. Pass environment values explicitly or use Daytona-native features through raw."
+      ),
+      e2b: no(
+        "Secrets are not normalized in this adapter. Pass environment values explicitly or use E2B-native features through raw."
       ),
       local: no(
         "No secret store. Local sandboxes inherit the host environment. Manage secrets at the OS level."
       ),
-      vercel: ok,
+      vercel: no(
+        "Secrets are not normalized in this adapter. Pass environment values explicitly or use Vercel-native project configuration outside the shared SDK surface."
+      ),
     },
   },
 ];

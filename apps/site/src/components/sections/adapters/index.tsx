@@ -11,10 +11,9 @@ export const Adapters = () => (
     <Heading as="h2">Adapters</Heading>
     <p>
       Each adapter ships as its own package. Bring only what you use; the others
-      stay out of your node_modules. Adapters auto-load credentials from the
-      standard environment variables for that provider; pass options explicitly
-      to override. If an adapter is constructed without enough info to
-      authenticate, it throws at construction time naming the missing variable.
+      stay out of your node_modules. Pass credentials and provider settings
+      explicitly when you want deterministic behavior; otherwise the wrapped
+      provider SDK can use its own defaults.
     </p>
     <p>
       The list below covers what ships today. More providers are planned; the

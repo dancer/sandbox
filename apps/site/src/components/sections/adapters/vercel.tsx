@@ -9,19 +9,18 @@ import { vercel } from "@sandbox-sdk/vercel";
 const sandbox = await create({
   adapter: vercel({
     runtime: "node22",
-    // teamId / projectId / token auto-loaded from VERCEL_* env vars
   }),
 });`;
 
 export const Vercel = () => (
   <section>
     <Heading as="h3" id="adapter-vercel">
-      Vercel Sandbox
+      Vercel
     </Heading>
     <p>
-      Vercel Sandbox via <code>@vercel/sandbox</code>. Backed by Vercel's Fluid
-      Compute: ephemeral, region-local, hot-pooled. The adapter pins a runtime
-      at construction and exposes ports through Vercel's built-in tunneling.
+      Vercel via <code>@vercel/sandbox</code>. Backed by Vercel's Fluid Compute:
+      ephemeral, region-local, hot-pooled. The adapter can pin a runtime at
+      construction and exposes ports through Vercel's built-in tunneling.
     </p>
     <CodeBlock code={VERCEL_EXAMPLE} lang="ts" />
     <div className="flex flex-col gap-2">
@@ -29,7 +28,7 @@ export const Vercel = () => (
         Options
       </Heading>
       <Accordion className="rounded-md border-dotted" type="multiple">
-        <PropAccordionItem name="runtime" status="required" value="runtime">
+        <PropAccordionItem name="runtime" status="optional" value="runtime">
           <p>
             Vercel Sandbox runtime (e.g. <code>node22</code>,{" "}
             <code>python3.12</code>). Determines the base image and the
@@ -38,20 +37,20 @@ export const Vercel = () => (
         </PropAccordionItem>
         <PropAccordionItem name="teamId" status="optional" value="teamId">
           <p>
-            Vercel team id. Falls back to <code>VERCEL_TEAM_ID</code>; required
-            if no env var is set.
+            Vercel team id passed to the native SDK. Omit it to use the provider
+            SDK's environment-based defaults.
           </p>
         </PropAccordionItem>
         <PropAccordionItem name="projectId" status="optional" value="projectId">
           <p>
-            Vercel project id. Falls back to <code>VERCEL_PROJECT_ID</code>;
-            required if no env var is set.
+            Vercel project id passed to the native SDK. Omit it to use the
+            provider SDK's environment-based defaults.
           </p>
         </PropAccordionItem>
         <PropAccordionItem name="token" status="optional" value="token">
           <p>
-            Vercel access token. Falls back to <code>VERCEL_TOKEN</code>;
-            required if no env var is set.
+            Vercel access token passed to the native SDK. Omit it to use the
+            provider SDK's environment-based defaults.
           </p>
         </PropAccordionItem>
       </Accordion>

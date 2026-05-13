@@ -6,16 +6,12 @@ import { Accordion } from "@/components/ui/accordion";
 const LOCAL_EXAMPLE = `import { create } from "@sandbox-sdk/core";
 import { local } from "@sandbox-sdk/local";
 
-// the dev/test adapter points at a directory and implements
-// the same Sandbox contract as the cloud adapters using
-// node:child_process and node:fs/promises
 const sandbox = await create({
   adapter: local({
-    // optional: pin to a directory, otherwise mkdtemp picks one
-    // under the os temp dir and stop() cleans it up
-    // root: "./.sandbox",
-    // keep: true,
+    root: "./.sandbox",
+    keep: true,
   }),
+  cwd: "/workspace",
 });`;
 
 export const Local = () => (

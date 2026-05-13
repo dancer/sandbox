@@ -22,11 +22,16 @@ const REMOVE_EXAMPLE = `await sandbox.files.remove("dist");
 // removes files and directories recursively, idempotent:
 // missing paths resolve successfully`;
 
-const EXEC_EXAMPLE = `const result = await sandbox.process.exec("bun", ["main.ts"], {
+const SHELL_EXAMPLE = `const result = await sandbox.process.shell("bun main.ts", {
   cwd: "src",
   env: { NODE_ENV: "production" },
 });
 // → { code, signal?, stdout, stderr }`;
+
+const EXEC_EXAMPLE = `const result = await sandbox.process.exec("bun", ["main.ts"], {
+  cwd: "src",
+});
+// → argv execution without shell parsing`;
 
 const SPAWN_EXAMPLE = `const proc = await sandbox.process.spawn("bun", ["watch.ts"]);
 
@@ -115,12 +120,15 @@ export const ApiReference = () => (
 
     <section>
       <Heading as="h3" id="process-exec">
-        process.exec(command, args?, options?)
+        process.shell(command, options?) / process.exec(command, args?,
+        options?)
       </Heading>
       <p>
-        Runs <code>command</code> to completion, buffering stdout and stderr.
-        Returns once the process exits.
+        Runs a command to completion, buffering stdout and stderr. Use{" "}
+        <code>shell</code> for normal shell strings and <code>exec</code> for
+        explicit argv execution.
       </p>
+      <CodeBlock code={SHELL_EXAMPLE} lang="ts" />
       <CodeBlock code={EXEC_EXAMPLE} lang="ts" />
       <div className="flex flex-col gap-2">
         <Heading as="h4" id="process-exec-options">
@@ -137,10 +145,10 @@ export const ApiReference = () => (
           </PropAccordionItem>
           <PropAccordionItem name="env" status="optional" value="env">
             <p>
-              <code>Record&lt;string, string&gt;</code> merged onto the host
-              process environment. Adapter-defined defaults (the sandbox's own{" "}
-              <code>PATH</code>, provider auth) win over caller-provided
-              overrides for the same keys.
+              <code>Record&lt;string, string&gt;</code> passed to the process.
+              Merge order follows adapter semantics, so prefer explicit
+              application keys over overriding provider-managed values such as{" "}
+              <code>PATH</code> or auth variables.
             </p>
           </PropAccordionItem>
           <PropAccordionItem name="timeout" status="optional" value="timeout">

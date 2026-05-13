@@ -17,10 +17,10 @@ const sections: Section[] = [
   {
     children: [
       { id: "adapter-local", label: "Local" },
-      { id: "adapter-cloudflare", label: "Cloudflare Sandbox" },
+      { id: "adapter-cloudflare", label: "Cloudflare" },
       { id: "adapter-daytona", label: "Daytona" },
       { id: "adapter-e2b", label: "E2B" },
-      { id: "adapter-vercel", label: "Vercel Sandbox" },
+      { id: "adapter-vercel", label: "Vercel" },
     ],
     id: "adapters",
     label: "Adapters",
@@ -31,7 +31,7 @@ const sections: Section[] = [
       { id: "files-write", label: "files.write" },
       { id: "files-list", label: "files.list" },
       { id: "files-remove", label: "files.remove" },
-      { id: "process-exec", label: "process.exec" },
+      { id: "process-exec", label: "process.shell" },
       { id: "process-spawn", label: "process.spawn" },
       { id: "ports-expose", label: "ports.expose" },
       { id: "snapshots", label: "snapshots" },

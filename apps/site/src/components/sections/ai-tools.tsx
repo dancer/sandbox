@@ -36,11 +36,14 @@ import { local } from "@sandbox-sdk/local";
 import { tools } from "@sandbox-sdk/ai";
 
 const sandbox = await create({ adapter: local() });
-const fileTools = tools(sandbox);
+const kit = tools(sandbox);
 
-// fileTools.read.execute({ path: "main.ts" })
-// fileTools.write.execute({ path: "main.ts", text: "console.log('hi')" })
-// fileTools.command.execute({ command: "bun", args: ["main.ts"] })`;
+await kit.tools.write?.execute({
+  path: "/workspace/main.ts",
+  text: "console.log('hi')",
+});
+
+await kit.tools.exec?.execute({ command: "bun /workspace/main.ts" });`;
 
 const AI_SDK_EXAMPLE = `import { generateText } from "ai";
 import { create } from "@sandbox-sdk/core";
@@ -48,10 +51,12 @@ import { local } from "@sandbox-sdk/local";
 import { tools } from "@sandbox-sdk/ai";
 
 const sandbox = await create({ adapter: local() });
+const kit = tools(sandbox);
 
 const result = await generateText({
   model: yourModel,
-  tools: tools(sandbox),
+  system: kit.description,
+  tools: kit.tools,
   prompt: "Write a TypeScript program that prints fib(10), then run it.",
 });`;
 
@@ -61,15 +66,16 @@ import { local } from "@sandbox-sdk/local";
 import { tools } from "@sandbox-sdk/ai";
 
 const sandbox = await create({ adapter: local() });
-const t = tools(sandbox);
+const kit = tools(sandbox);
 
 for await (const message of query({
   prompt: "Set up a Bun project, install zod, and write a parser.",
   options: {
-    tools: [t.read, t.write, t.command],
+    customSystemPrompt: kit.description,
+    tools: [kit.tools.read, kit.tools.write, kit.tools.exec],
   },
 })) {
-  // handle messages
+  handle(message);
 }`;
 
 export const AiTools = () => (
@@ -79,10 +85,10 @@ export const AiTools = () => (
     </Heading>
     <p>
       <code>@sandbox-sdk/ai</code> wraps a configured sandbox into ready-made
-      tools for agent frameworks. Same three operations (<code>read</code>,{" "}
-      <code>write</code>, <code>command</code>), same JSON-schema inputs, same
-      isolated runtime. Pick the framework that matches your stack; each tool is
-      just a thin shim around <code>files</code> and <code>process</code> on the
+      tools for agent frameworks. The kit includes prompt context plus file,
+      command, directory, and preview tools with JSON-schema inputs. Pick the
+      framework that matches your stack; each tool is just a thin shim around{" "}
+      <code>files</code>, <code>process</code>, and <code>ports</code> on the
       underlying sandbox.
     </p>
 
@@ -99,8 +105,9 @@ export const AiTools = () => (
       </Heading>
       <p>
         Pass a configured sandbox into <code>tools()</code>. The return value is
-        a record of three tool definitions, each with a <code>description</code>
-        , <code>inputSchema</code>, and <code>execute</code> function.
+        prompt context and a record of tool definitions, each with a{" "}
+        <code>description</code>, <code>inputSchema</code>, and{" "}
+        <code>execute</code> function.
       </p>
       <CodeBlock code={QUICK_START} lang="tsx" />
       <Accordion className="rounded-md border-dotted" type="multiple">
@@ -118,12 +125,13 @@ export const AiTools = () => (
             <code>{`{ ok: true }`}</code> on success.
           </p>
         </PropAccordionItem>
-        <PropAccordionItem name="command" value="ai-command">
+        <PropAccordionItem name="exec" value="ai-exec">
           <p>
             Runs <code>{`{ command, args?, cwd? }`}</code> through{" "}
-            <code>sandbox.process.exec()</code> and returns the buffered{" "}
-            <code>{`{ code, stdout, stderr }`}</code> result. The cwd is
-            path-checked against the sandbox root before the process starts.
+            <code>sandbox.process.shell()</code> when <code>args</code> is
+            omitted, or <code>sandbox.process.exec()</code> when args are
+            provided. Returns the buffered{" "}
+            <code>{`{ code, stdout, stderr }`}</code> result.
           </p>
         </PropAccordionItem>
       </Accordion>
