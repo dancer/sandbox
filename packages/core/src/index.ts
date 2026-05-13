@@ -259,16 +259,16 @@ export const result = (
 });
 
 export const quote = (value: string): string => {
-  if (/^[\w./:@%+=,-]+$/.test(value)) {
+  if (/^[\w./:@%+=,-]+$/u.test(value)) {
     return value;
   }
   return `'${value.replaceAll("'", "'\\''")}'`;
 };
 
-export const command = (
-  value: string,
-  args: readonly string[] = []
-): string => [value, ...args].map(quote).join(" ");
+export const command = (value: string, args: readonly string[] = []): string =>
+  [value, ...args].map(quote).join(" ");
+
+const noop = (): void => void 0;
 
 export const timeout = (
   value?: number,
@@ -276,8 +276,8 @@ export const timeout = (
 ): { aborted(): boolean; clear(): void; signal?: AbortSignal } => {
   if (value === undefined) {
     return signal === undefined
-      ? { aborted: () => false, clear: () => undefined }
-      : { aborted: () => signal.aborted, clear: () => undefined, signal };
+      ? { aborted: () => false, clear: noop }
+      : { aborted: () => signal.aborted, clear: noop, signal };
   }
 
   let aborted = false;

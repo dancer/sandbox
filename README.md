@@ -44,8 +44,10 @@ Current packages:
 - `@sandbox-sdk/core`
 - `@sandbox-sdk/local`
 - `@sandbox-sdk/ai`
-
-The first provider wave targets E2B, Daytona, Vercel Sandbox, and Cloudflare Sandbox.
+- `@sandbox-sdk/cloudflare`
+- `@sandbox-sdk/daytona`
+- `@sandbox-sdk/e2b`
+- `@sandbox-sdk/vercel`
 
 More providers will be added as adapters are written.
 

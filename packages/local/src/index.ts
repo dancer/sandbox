@@ -14,14 +14,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve as pathResolve } from "node:path";
 
 import { SandboxError, bytes, unsupported } from "@sandbox-sdk/core";
-import type {
-  Adapter,
-  Entry,
-  Exec,
-  Input,
-  Result,
-  Sandbox,
-} from "@sandbox-sdk/core";
+import type { Adapter, Entry, Exec, Result, Sandbox } from "@sandbox-sdk/core";
 
 export type Local = Readonly<{
   keep?: boolean;
