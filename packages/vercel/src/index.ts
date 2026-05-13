@@ -66,6 +66,8 @@ type VercelCreate = NonNullable<Parameters<typeof VercelSandbox.create>[0]>;
 
 type VercelGet = Parameters<typeof VercelSandbox.get>[0];
 
+type VercelSignal = NonNullable<Parameters<VercelCommand["kill"]>[0]>;
+
 const provider = "vercel";
 
 const capabilities: Capabilities = {
@@ -300,7 +302,7 @@ const spawn = async (
     return {
       id: running.cmdId,
       kill: async (signal = "SIGTERM") => {
-        await running.kill(signal === "SIGKILL" ? 9 : "SIGTERM");
+        await running.kill(signal as VercelSignal);
       },
       output: stream(running.logs(signals)),
       result: wait(running, deadline, options.signal),

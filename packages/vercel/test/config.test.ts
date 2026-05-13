@@ -13,6 +13,11 @@ const restore = (name: string, value: string | undefined): void => {
   process.env[name] = value;
 };
 
+const logs = async function* logs(): AsyncIterable<{
+  data: string;
+  stream: string;
+}> {};
+
 test("vercel reports missing credentials before provider calls", async () => {
   const oidc = process.env.VERCEL_OIDC_TOKEN;
   const token = process.env.VERCEL_TOKEN;
@@ -84,5 +89,53 @@ test("vercel passes env access token credentials to provider", async () => {
     restore("VERCEL_TOKEN", token);
     restore("VERCEL_TEAM_ID", teamId);
     restore("VERCEL_PROJECT_ID", projectId);
+  }
+});
+
+test("vercel forwards process kill signals", async () => {
+  const original = VercelSandbox.create;
+  let signal: unknown;
+  const raw = {
+    fs: {
+      mkdir: () => Promise.resolve(),
+    },
+    runCommand: () =>
+      Promise.resolve({
+        cmdId: "command",
+        kill: (input?: unknown) => {
+          signal = input;
+          return Promise.resolve();
+        },
+        logs,
+        wait: () =>
+          Promise.resolve({
+            exitCode: 0,
+            stderr: () => Promise.resolve(""),
+            stdout: () => Promise.resolve(""),
+          }),
+      }),
+    sandboxId: "sandbox",
+    stop: () => Promise.resolve(),
+  } as unknown as VercelSandbox;
+
+  VercelSandbox.create = (() =>
+    Promise.resolve(raw)) as typeof VercelSandbox.create;
+
+  try {
+    const sandbox = await create({
+      adapter: vercel({
+        projectId: "project",
+        teamId: "team",
+        token: "token",
+      }),
+    });
+    const process = await sandbox.process.spawn("sleep", ["10"]);
+
+    await process.kill("SIGINT");
+    await process.result;
+
+    expect(signal).toBe("SIGINT");
+  } finally {
+    VercelSandbox.create = original;
   }
 });
