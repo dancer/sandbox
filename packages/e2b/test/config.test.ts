@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 
 import { create } from "@sandbox-sdk/core";
+import { Sandbox as E2BSandbox } from "e2b";
 
 import { e2b } from "../src/index";
 
@@ -22,5 +23,98 @@ test("e2b reports missing credentials before provider calls", async () => {
   } finally {
     restore("E2B_API_KEY", apiKey);
     restore("E2B_ACCESS_TOKEN", accessToken);
+  }
+});
+
+test("e2b maps create and command options without running a real provider", async () => {
+  const original = E2BSandbox.create;
+  let commandSeen: unknown;
+  let createSeen: unknown;
+  let mkdirSeen: unknown;
+  const raw = {
+    commands: {
+      run: (line: string, options: unknown) => {
+        commandSeen = { line, options };
+        return Promise.resolve({
+          exitCode: 0,
+          stderr: "",
+          stdout: "ok",
+        });
+      },
+    },
+    files: {
+      makeDir: (path: string, options: unknown) => {
+        mkdirSeen = { options, path };
+        return Promise.resolve();
+      },
+    },
+    kill: () => Promise.resolve(),
+    sandboxId: "sandbox",
+  } as unknown as E2BSandbox;
+
+  E2BSandbox.create = ((input?: unknown) => {
+    createSeen = input;
+    return Promise.resolve(raw);
+  }) as typeof E2BSandbox.create;
+
+  try {
+    const sandbox = await create({
+      adapter: e2b({
+        allowInternetAccess: true,
+        apiKey: "key",
+        env: { A: "1" },
+        headers: { header: "value" },
+        metadata: { owner: "sdk" },
+        requestTimeout: 123,
+        template: "option-template",
+        timeout: 456,
+        user: "runner",
+      }),
+      cwd: "/work",
+      env: { B: "2" },
+      metadata: { task: "test" },
+      snapshot: "snapshot",
+      timeout: 789,
+    });
+
+    expect(sandbox.id).toBe("sandbox");
+    expect(sandbox.cwd).toBe("/work");
+    expect(createSeen).toMatchObject({
+      allowInternetAccess: true,
+      apiKey: "key",
+      envs: { A: "1", B: "2" },
+      headers: { header: "value" },
+      metadata: { owner: "sdk", task: "test" },
+      requestTimeoutMs: 123,
+      template: "snapshot",
+      timeoutMs: 789,
+    });
+    expect(mkdirSeen).toEqual({
+      options: { user: "runner" },
+      path: "/work",
+    });
+
+    await expect(
+      sandbox.process.exec("echo", ["hello world"], {
+        cwd: "/tmp",
+        env: { C: "3" },
+        timeout: 321,
+      })
+    ).resolves.toMatchObject({
+      code: 0,
+      ok: true,
+      stdout: "ok",
+    });
+    expect(commandSeen).toEqual({
+      line: "echo 'hello world'",
+      options: {
+        cwd: "/tmp",
+        envs: { C: "3" },
+        timeoutMs: 321,
+        user: "runner",
+      },
+    });
+  } finally {
+    E2BSandbox.create = original;
   }
 });

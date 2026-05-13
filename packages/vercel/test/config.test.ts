@@ -139,3 +139,114 @@ test("vercel forwards process kill signals", async () => {
     VercelSandbox.create = original;
   }
 });
+
+test("vercel maps create options and gates undeclared ports", async () => {
+  const original = VercelSandbox.create;
+  let createSeen: unknown;
+  let domainSeen: unknown;
+  let mkdirSeen: unknown;
+  const raw = {
+    domain: (port: number) => {
+      domainSeen = port;
+      return `https://preview.example.com/${port}`;
+    },
+    fs: {
+      mkdir: (path: string, options: unknown) => {
+        mkdirSeen = { options, path };
+        return Promise.resolve();
+      },
+    },
+    sandboxId: "sandbox",
+    stop: () => Promise.resolve(),
+  } as unknown as VercelSandbox;
+
+  VercelSandbox.create = ((input?: unknown) => {
+    createSeen = input;
+    return Promise.resolve(raw);
+  }) as typeof VercelSandbox.create;
+
+  try {
+    const sandbox = await create({
+      adapter: vercel({
+        env: { A: "1" },
+        ports: [3000],
+        projectId: "project",
+        resources: { vcpus: 2 },
+        runtime: "node24",
+        source: { type: "tarball", url: "https://example.com/app.tgz" },
+        teamId: "team",
+        timeout: 123,
+        token: "token",
+      }),
+      cwd: "/work",
+      env: { B: "2" },
+      ports: [8080],
+      snapshot: "snapshot",
+      timeout: 456,
+    });
+
+    expect(sandbox.id).toBe("sandbox");
+    expect(sandbox.cwd).toBe("/work");
+    expect(createSeen).toMatchObject({
+      env: { A: "1", B: "2" },
+      ports: [8080],
+      projectId: "project",
+      resources: { vcpus: 2 },
+      runtime: "node24",
+      source: { snapshotId: "snapshot", type: "snapshot" },
+      teamId: "team",
+      timeout: 456,
+      token: "token",
+    });
+    expect(mkdirSeen).toEqual({
+      options: { recursive: true },
+      path: "/work",
+    });
+
+    await expect(sandbox.ports.expose(3000)).rejects.toMatchObject({
+      code: "unsupported",
+      provider: "vercel",
+    });
+    expect(domainSeen).toBeUndefined();
+
+    await expect(sandbox.ports.expose(8080)).resolves.toEqual({
+      port: 8080,
+      url: "https://preview.example.com/8080",
+    });
+    expect(domainSeen).toBe(8080);
+  } finally {
+    VercelSandbox.create = original;
+  }
+});
+
+test("vercel normalizes provider command errors", async () => {
+  const original = VercelSandbox.create;
+  const raw = {
+    fs: {
+      mkdir: () => Promise.resolve(),
+    },
+    runCommand: () => Promise.reject(new Error("provider failed")),
+    sandboxId: "sandbox",
+    stop: () => Promise.resolve(),
+  } as unknown as VercelSandbox;
+
+  VercelSandbox.create = (() =>
+    Promise.resolve(raw)) as typeof VercelSandbox.create;
+
+  try {
+    const sandbox = await create({
+      adapter: vercel({
+        projectId: "project",
+        teamId: "team",
+        token: "token",
+      }),
+    });
+
+    await expect(sandbox.process.exec("echo")).rejects.toMatchObject({
+      code: "process",
+      provider: "vercel",
+    });
+  } finally {
+    VercelSandbox.create = original;
+  }
+});

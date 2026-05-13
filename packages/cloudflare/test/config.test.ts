@@ -6,18 +6,40 @@ import { create } from "@sandbox-sdk/core";
 import { cloudflare } from "../src/index";
 
 let exposeCalls = 0;
+let executeSeen: unknown;
+let getSeen: unknown;
+let mkdirSeen: unknown;
+let setEnvSeen: unknown;
 
 const raw = {
   destroy: () => Promise.resolve(),
+  exec: (line: string, options: unknown) => {
+    executeSeen = { line, options };
+    return Promise.resolve({
+      exitCode: 0,
+      stderr: "",
+      stdout: "ok",
+    });
+  },
   exposePort: () => {
     exposeCalls += 1;
     return Promise.resolve({ url: "https://preview.example.com" });
   },
-  mkdir: () => Promise.resolve(),
+  mkdir: (path: string, options: unknown) => {
+    mkdirSeen = { options, path };
+    return Promise.resolve();
+  },
+  setEnvVars: (input: unknown) => {
+    setEnvSeen = input;
+    return Promise.resolve();
+  },
 } as unknown as CloudflareSandbox;
 
 void mock.module("@cloudflare/sandbox", () => ({
-  getSandbox: () => raw,
+  getSandbox: (...input: unknown[]) => {
+    getSeen = input;
+    return raw;
+  },
 }));
 
 const binding = {} as DurableObjectNamespace<CloudflareSandbox>;
@@ -29,6 +51,74 @@ test("cloudflare reports missing durable object binding", async () => {
     code: "configuration",
     provider: "cloudflare",
   });
+});
+
+test("cloudflare maps create options before provider calls", async () => {
+  getSeen = undefined;
+  mkdirSeen = undefined;
+  setEnvSeen = undefined;
+
+  const sandbox = await create({
+    adapter: cloudflare({
+      binding,
+      env: { A: "1" },
+      id: "option-id",
+      options: { sleepAfter: "1m" },
+    }),
+    cwd: "/work",
+    env: { B: "2" },
+    id: "input-id",
+  });
+
+  try {
+    expect(sandbox.id).toBe("input-id");
+    expect(sandbox.cwd).toBe("/work");
+    expect(getSeen).toEqual([
+      binding,
+      "input-id",
+      { normalizeId: true, sleepAfter: "1m" },
+    ]);
+    expect(setEnvSeen).toEqual({ A: "1", B: "2" });
+    expect(mkdirSeen).toEqual({
+      options: { recursive: true },
+      path: "/work",
+    });
+  } finally {
+    await sandbox.stop();
+  }
+});
+
+test("cloudflare maps command options without executing a real provider", async () => {
+  executeSeen = undefined;
+  const sandbox = await create({
+    adapter: cloudflare({
+      binding,
+    }),
+  });
+
+  try {
+    await expect(
+      sandbox.process.exec("echo", ["hello world"], {
+        cwd: "/tmp",
+        env: { A: "1" },
+        timeout: 123,
+      })
+    ).resolves.toMatchObject({
+      code: 0,
+      ok: true,
+      stdout: "ok",
+    });
+    expect(executeSeen).toEqual({
+      line: "echo 'hello world'",
+      options: {
+        cwd: "/tmp",
+        env: { A: "1" },
+        timeout: 123,
+      },
+    });
+  } finally {
+    await sandbox.stop();
+  }
 });
 
 test("cloudflare rejects workers dev preview hosts before provider calls", async () => {
