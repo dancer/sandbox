@@ -146,6 +146,7 @@ const params = (
   options: Daytona,
   input: Parameters<Adapter<Raw>["create"]>[0] = {}
 ): CreateSandboxFromImageParams | CreateSandboxFromSnapshotParams => {
+  const snapshot = input.snapshot ?? input.template ?? options.snapshot;
   const base: CreateSandboxBaseParams = {
     ...(options.autoArchiveInterval === undefined
       ? {}
@@ -170,6 +171,16 @@ const params = (
     ...(options.user === undefined ? {} : { user: options.user }),
   };
 
+  if (snapshot !== undefined) {
+    return {
+      ...base,
+      ...(options.resources === undefined
+        ? {}
+        : { resources: options.resources }),
+      snapshot,
+    };
+  }
+
   if (options.image !== undefined) {
     return {
       ...base,
@@ -182,11 +193,15 @@ const params = (
 
   return {
     ...base,
-    ...((input.snapshot ?? input.template ?? options.snapshot)
-      ? { snapshot: input.snapshot ?? input.template ?? options.snapshot }
-      : {}),
+    ...(options.resources === undefined
+      ? {}
+      : { resources: options.resources }),
   };
 };
+
+const imageInput = (
+  value: CreateSandboxFromImageParams | CreateSandboxFromSnapshotParams
+): value is CreateSandboxFromImageParams => "image" in value;
 
 const seconds = (value?: number): number | undefined =>
   value === undefined ? undefined : Math.max(1, Math.ceil(value / 1000));
@@ -334,16 +349,10 @@ export const daytona = (options: Daytona = {}): Adapter<Raw> => ({
       createTimeout === undefined ? undefined : { timeout: createTimeout };
     const createParams = params(options, input);
     let raw: Raw;
-    if (input.id === undefined && options.image === undefined) {
-      raw = await client.create(
-        createParams as CreateSandboxFromSnapshotParams,
-        createSettings
-      );
-    } else if (input.id === undefined) {
-      raw = await client.create(
-        createParams as CreateSandboxFromImageParams,
-        createSettings
-      );
+    if (input.id === undefined) {
+      raw = imageInput(createParams)
+        ? await client.create(createParams, createSettings)
+        : await client.create(createParams, createSettings);
     } else {
       raw = await client.get(input.id);
     }
