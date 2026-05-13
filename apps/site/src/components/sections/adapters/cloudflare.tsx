@@ -4,13 +4,13 @@ import { PropAccordionItem } from "@/components/prop-accordion-item";
 import { Accordion } from "@/components/ui/accordion";
 
 const CLOUDFLARE_EXAMPLE = `import { create } from "@sandbox-sdk/core";
-import { cloudflareSandbox } from "@sandbox-sdk/cloudflare";
+import { cloudflare } from "@sandbox-sdk/cloudflare";
 
 // inside a worker the binding is passed in from env
 export default {
   async fetch(_request: Request, env: { SANDBOX: DurableObjectNamespace }) {
     const sandbox = await create({
-      adapter: cloudflareSandbox({ binding: env.SANDBOX }),
+      adapter: cloudflare({ binding: env.SANDBOX }),
     });
 
     await sandbox.files.write("main.ts", "console.log('hello')");

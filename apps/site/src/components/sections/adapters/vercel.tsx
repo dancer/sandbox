@@ -4,10 +4,10 @@ import { PropAccordionItem } from "@/components/prop-accordion-item";
 import { Accordion } from "@/components/ui/accordion";
 
 const VERCEL_EXAMPLE = `import { create } from "@sandbox-sdk/core";
-import { vercelSandbox } from "@sandbox-sdk/vercel";
+import { vercel } from "@sandbox-sdk/vercel";
 
 const sandbox = await create({
-  adapter: vercelSandbox({
+  adapter: vercel({
     runtime: "node22",
     // teamId / projectId / token auto-loaded from VERCEL_* env vars
   }),

@@ -20,15 +20,15 @@ const ADAPTERS = [
     label: "Daytona",
   },
   {
-    config: `vercelSandbox({ runtime: "node22" })`,
+    config: `vercel({ runtime: "node22" })`,
     id: "vercel",
-    import: `import { vercelSandbox } from "@sandbox-sdk/vercel";`,
+    import: `import { vercel } from "@sandbox-sdk/vercel";`,
     label: "Vercel",
   },
   {
-    config: `cloudflareSandbox({ binding: env.SANDBOX })`,
+    config: `cloudflare({ binding: env.SANDBOX })`,
     id: "cloudflare",
-    import: `import { cloudflareSandbox } from "@sandbox-sdk/cloudflare";`,
+    import: `import { cloudflare } from "@sandbox-sdk/cloudflare";`,
     label: "Cloudflare",
   },
 ] as const;
