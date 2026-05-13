@@ -896,6 +896,84 @@ create AI SDK compatible tools and prompt context for a sandbox
 export declare const tools: (sandbox: Sandbox, options?: Options) => Kit;
 ```
 
+## @sandbox-sdk/blaxel
+
+Blaxel adapter for Sandbox SDK
+
+### types
+
+#### `Blaxel`
+
+blaxel adapter configuration
+
+```ts
+export type Blaxel = Readonly<
+  Pick<
+    BlaxelConfig,
+    | "apiKey"
+    | "apikey"
+    | "clientCredentials"
+    | "disableH2"
+    | "proxy"
+    | "workspace"
+  > & {
+    /** default working directory for normalized file and process operations */
+    cwd?: string;
+    /** default environment variables applied when creating a sandbox */
+    env?: Readonly<Record<string, string>>;
+    /** sandbox expiration time forwarded to blaxel */
+    expires?: Date;
+    /** default blaxel image for new sandboxes */
+    image?: string;
+    /** default metadata labels attached to new sandboxes */
+    labels?: Readonly<Record<string, string>>;
+    /** blaxel lifecycle configuration forwarded to the native sdk */
+    lifecycle?: SandboxCreateConfiguration["lifecycle"];
+    /** blaxel memory allocation in mib */
+    memory?: number;
+    /** stable sandbox name for create or reconnect workflows */
+    name?: string;
+    /** blaxel network configuration forwarded to the native sdk */
+    network?: SandboxCreateConfiguration["network"];
+    /** extra blaxel sandbox create options */
+    options?: Omit<
+      SandboxCreateConfiguration,
+      | "envs"
+      | "expires"
+      | "image"
+      | "labels"
+      | "lifecycle"
+      | "memory"
+      | "name"
+      | "network"
+      | "ports"
+      | "region"
+      | "ttl"
+    >;
+    /** ports declared at create time and later exposed through previews */
+    ports?: readonly number[];
+    /** blaxel region such as `us-pdx-1` */
+    region?: string;
+    /** verify basic filesystem access after creation */
+    safe?: boolean;
+    /** enable blaxel provider snapshot behavior for the sandbox runtime */
+    snapshotEnabled?: boolean;
+    /** sandbox ttl string forwarded to blaxel, such as `24h` */
+    ttl?: string;
+  }
+>;
+```
+
+### functions
+
+#### `blaxel`
+
+create a blaxel adapter with normalized sandbox operations
+
+```ts
+export declare const blaxel: (options?: Blaxel) => Adapter<Raw>;
+```
+
 ## @sandbox-sdk/cloudflare
 
 Cloudflare Sandbox adapter for Sandbox SDK
@@ -947,6 +1025,61 @@ export declare const cloudflare: (options: Cloudflare) => Adapter<Raw>;
 
 ```ts
 export type { Sandbox as CloudflareSandbox } from "@cloudflare/sandbox";
+```
+
+## @sandbox-sdk/codesandbox
+
+CodeSandbox adapter for Sandbox SDK
+
+### types
+
+#### `CodeSandbox`
+
+codesandbox adapter configuration
+
+```ts
+export type CodeSandbox = Readonly<{
+  /** existing codesandbox sdk client for tests or custom transport */
+  client?: Sdk;
+  /** options forwarded to the codesandbox sdk constructor */
+  clientOptions?: ClientOptions;
+  /** default working directory for normalized file and process operations */
+  cwd?: string;
+  /** sandbox description shown in codesandbox */
+  description?: string;
+  /** default environment variables injected into the sdk session */
+  env?: Readonly<Record<string, string>>;
+  /** country hint forwarded when starting the vm */
+  ipcountry?: CreateOptions["ipcountry"];
+  /** custom sandbox path inside the codesandbox workspace */
+  path?: string;
+  /** sandbox preview privacy */
+  privacy?: CreateOptions["privacy"];
+  /** sdk session options forwarded to `sandbox.connect` */
+  session?: Omit<SessionOptions, "env">;
+  /** stop behavior used by `sandbox.stop` */
+  stop?: "delete" | "disconnect" | "hibernate" | "shutdown";
+  /** codesandbox tags added when creating a sandbox */
+  tags?: readonly string[];
+  /** template sandbox id used for new sandboxes */
+  template?: string;
+  /** sandbox title shown in codesandbox */
+  title?: string;
+  /** api token. falls back to CSB_API_KEY */
+  token?: string;
+  /** vm tier forwarded when starting the vm */
+  vmTier?: CreateOptions["vmTier"];
+}>;
+```
+
+### functions
+
+#### `codesandbox`
+
+create a codesandbox adapter with normalized sandbox operations
+
+```ts
+export declare const codesandbox: (options?: CodeSandbox) => Adapter<Raw>;
 ```
 
 ## @sandbox-sdk/daytona
@@ -1068,6 +1201,56 @@ create an E2B adapter with normalized sandbox operations
 
 ```ts
 export declare const e2b: (options?: E2B) => Adapter<Raw>;
+```
+
+## @sandbox-sdk/modal
+
+Modal Sandbox adapter for Sandbox SDK
+
+### types
+
+#### `Modal`
+
+modal adapter configuration
+
+```ts
+export type Modal = Readonly<
+  ModalSdk.ModalClientParams & {
+    /** modal app name used for new sandboxes */
+    app?: string;
+    /** existing modal client for custom transport, tests, or advanced auth */
+    client?: ModalSdk.ModalClient;
+    /** create the modal app if it does not exist */
+    createAppIfMissing?: boolean;
+    /** default working directory for normalized file and process operations */
+    cwd?: string;
+    /** default environment variables applied when creating a sandbox */
+    env?: Readonly<Record<string, string>>;
+    /** modal image object or registry tag used for new sandboxes */
+    image?: ModalSdk.Image | string;
+    /** modal sandbox create options forwarded to the native sdk */
+    options?: Omit<
+      ModalSdk.SandboxCreateParams,
+      "encryptedPorts" | "env" | "timeoutMs" | "workdir"
+    >;
+    /** encrypted ports declared at create time and later exposed with ports.expose */
+    ports?: readonly number[];
+    /** default tags attached to new sandboxes */
+    tags?: Readonly<Record<string, string>>;
+    /** sandbox lifetime timeout in milliseconds */
+    timeout?: number;
+  }
+>;
+```
+
+### functions
+
+#### `modal`
+
+create a modal sandbox adapter with normalized sandbox operations
+
+```ts
+export declare const modal: (options?: Modal) => Adapter<Raw>;
 ```
 
 ## @sandbox-sdk/vercel

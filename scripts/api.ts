@@ -26,9 +26,12 @@ const folders = [
   "core",
   "local",
   "ai",
+  "blaxel",
   "cloudflare",
+  "codesandbox",
   "daytona",
   "e2b",
+  "modal",
   "vercel",
 ] as const;
 

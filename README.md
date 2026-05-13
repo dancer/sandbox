@@ -75,17 +75,13 @@ Current packages:
 - `@sandbox-sdk/core`
 - `@sandbox-sdk/local`
 - `@sandbox-sdk/ai`
-- `@sandbox-sdk/cloudflare`
-- `@sandbox-sdk/daytona`
-- `@sandbox-sdk/e2b`
-- `@sandbox-sdk/vercel`
+- provider adapters are published as separate `@sandbox-sdk/*` packages
 
 More providers will be added as adapters are written.
 
 ## Examples
 
-See `examples/` for minimal local, E2B, Daytona, Vercel, Cloudflare, and AI
-tool starting points.
+See `examples/` for minimal local, provider, and AI tool starting points.
 
 ## AI Tools
 
