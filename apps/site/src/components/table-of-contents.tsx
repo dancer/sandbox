@@ -17,10 +17,10 @@ const sections: Section[] = [
   {
     children: [
       { id: "adapter-local", label: "Local" },
-      { id: "adapter-e2b", label: "E2B" },
-      { id: "adapter-daytona", label: "Daytona" },
-      { id: "adapter-vercel", label: "Vercel Sandbox" },
       { id: "adapter-cloudflare", label: "Cloudflare Sandbox" },
+      { id: "adapter-daytona", label: "Daytona" },
+      { id: "adapter-e2b", label: "E2B" },
+      { id: "adapter-vercel", label: "Vercel Sandbox" },
     ],
     id: "adapters",
     label: "Adapters",

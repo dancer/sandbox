@@ -22,9 +22,9 @@ export const Adapters = () => (
       for what's supported right now.
     </p>
     <Local />
-    <E2B />
-    <Daytona />
-    <Vercel />
     <Cloudflare />
+    <Daytona />
+    <E2B />
+    <Vercel />
   </section>
 );

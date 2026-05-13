@@ -8,10 +8,10 @@ const ADAPTERS = [
     label: "Local",
   },
   {
-    config: `e2b({ template: "base" })`,
-    id: "e2b",
-    import: `import { e2b } from "@sandbox-sdk/e2b";`,
-    label: "E2B",
+    config: `cloudflare({ binding: env.SANDBOX })`,
+    id: "cloudflare",
+    import: `import { cloudflare } from "@sandbox-sdk/cloudflare";`,
+    label: "Cloudflare",
   },
   {
     config: `daytona({ image: "ubuntu:22.04" })`,
@@ -20,16 +20,16 @@ const ADAPTERS = [
     label: "Daytona",
   },
   {
+    config: `e2b({ template: "base" })`,
+    id: "e2b",
+    import: `import { e2b } from "@sandbox-sdk/e2b";`,
+    label: "E2B",
+  },
+  {
     config: `vercel({ runtime: "node22" })`,
     id: "vercel",
     import: `import { vercel } from "@sandbox-sdk/vercel";`,
     label: "Vercel",
-  },
-  {
-    config: `cloudflare({ binding: env.SANDBOX })`,
-    id: "cloudflare",
-    import: `import { cloudflare } from "@sandbox-sdk/cloudflare";`,
-    label: "Cloudflare",
   },
 ] as const;
 

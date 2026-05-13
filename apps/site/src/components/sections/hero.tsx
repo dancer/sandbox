@@ -16,18 +16,23 @@ const EASE = [0.16, 1, 0.3, 1] as const;
 const iconMeta: Record<keyof typeof icons, { label: string; href?: string }> = {
   Cloudflare: {
     href: "https://sandbox.cloudflare.com",
-    label: "Cloudflare Sandbox",
+    label: "Cloudflare",
   },
   Daytona: { href: "https://www.daytona.io", label: "Daytona" },
   E2B: { href: "https://e2b.dev", label: "E2B" },
   Local: { label: "Local" },
-  Vercel: { href: "https://vercel.com/sandbox", label: "Vercel Sandbox" },
+  Vercel: { href: "https://vercel.com/sandbox", label: "Vercel" },
 };
 
-const iconList = Object.entries(icons) as [
-  keyof typeof icons,
-  (typeof icons)[keyof typeof icons],
-][];
+const iconOrder = [
+  "Local",
+  "Cloudflare",
+  "Daytona",
+  "E2B",
+  "Vercel",
+] as const satisfies (keyof typeof icons)[];
+
+const iconList = iconOrder.map((name) => [name, icons[name]] as const);
 
 export const Hero = () => (
   <section className="hero mt-16">

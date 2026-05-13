@@ -25,10 +25,10 @@ const no = (note: string): Cell => ({ note, status: "no" });
 
 const COLUMNS = [
   { key: "local", label: "Local", parent: "Local" },
-  { key: "e2b", label: "E2B", parent: "E2B" },
-  { key: "daytona", label: "Daytona", parent: "Daytona" },
-  { key: "vercel", label: "Vercel", parent: "Vercel" },
   { key: "cloudflare", label: "Cloudflare", parent: "Cloudflare" },
+  { key: "daytona", label: "Daytona", parent: "Daytona" },
+  { key: "e2b", label: "E2B", parent: "E2B" },
+  { key: "vercel", label: "Vercel", parent: "Vercel" },
 ] as const;
 
 type ColumnKey = (typeof COLUMNS)[number]["key"];
