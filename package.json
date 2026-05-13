@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "bun run --cwd apps/site dev",
     "build": "bun run build:packages && bun run --cwd apps/site build",
-    "build:packages": "bun run --cwd packages/core build && bun run --cwd packages/local build && bun run --cwd packages/ai build && bun run --cwd packages/vercel build && bun run --cwd packages/e2b build",
+    "build:packages": "bun run --cwd packages/core build && bun run --cwd packages/local build && bun run --cwd packages/ai build && bun run --cwd packages/vercel build && bun run --cwd packages/e2b build && bun run --cwd packages/daytona build",
     "check": "ultracite check",
     "fix": "ultracite fix",
     "test": "bun test packages",
