@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { once } from "node:events";
 import {
+  cp,
   mkdir,
   mkdtemp,
   readdir,
@@ -11,10 +12,23 @@ import {
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join, relative, resolve as pathResolve } from "node:path";
+import {
+  dirname,
+  join,
+  parse,
+  relative,
+  resolve as pathResolve,
+} from "node:path";
 
-import { SandboxError, abort, bytes, unsupported } from "@sandbox-sdk/core";
-import type { Adapter, Entry, Exec, Result, Sandbox } from "@sandbox-sdk/core";
+import { SandboxError, abort, bytes } from "@sandbox-sdk/core";
+import type {
+  Adapter,
+  Entry,
+  Exec,
+  Result,
+  Sandbox,
+  Snapshot,
+} from "@sandbox-sdk/core";
 
 export type Local = Readonly<{
   keep?: boolean;
@@ -24,6 +38,22 @@ export type Local = Readonly<{
 type Raw = Readonly<{
   root: string;
 }>;
+
+interface State {
+  name?: string;
+  path: string;
+}
+
+const mount = (path: string): string => {
+  const target = pathResolve(path);
+  if (target === parse(target).root) {
+    throw new SandboxError("Sandbox root cannot be filesystem root", {
+      code: "path_escape",
+      provider: "local",
+    });
+  }
+  return target;
+};
 
 const safe = (root: string, path: string): string => {
   const value = path.startsWith("/") ? path.slice(1) : path;
@@ -201,13 +231,15 @@ export const local = (options: Local = {}): Adapter<Raw> => ({
     ports: "derived",
     process: true,
     secrets: false,
-    snapshots: false,
+    snapshots: "filesystem",
     streaming: "combined",
   },
   async create(input = {}) {
     const root = options.root
-      ? pathResolve(options.root)
+      ? mount(options.root)
       : await mkdtemp(join(tmpdir(), "sandbox-sdk-"));
+    const snapshots = new Map<string, State>();
+    const snapshotsRoot = await mkdtemp(join(tmpdir(), "sandbox-sdk-snap-"));
 
     await mkdir(root, { recursive: true });
     const cwd = input.cwd ?? "/workspace";
@@ -310,13 +342,34 @@ export const local = (options: Local = {}): Adapter<Raw> => ({
       provider: "local",
       raw: { root },
       snapshots: {
-        create: () => unsupported("local", "snapshots"),
-        restore: () => unsupported("local", "snapshots"),
+        create: async (name): Promise<Snapshot> => {
+          const id = randomUUID();
+          const target = join(snapshotsRoot, id);
+          await cp(root, target, { force: true, recursive: true });
+          snapshots.set(
+            id,
+            name === undefined ? { path: target } : { name, path: target }
+          );
+          return name === undefined ? { id } : { id, name };
+        },
+        restore: async (id) => {
+          const snapshot = snapshots.get(id);
+          if (snapshot === undefined) {
+            throw new SandboxError("Snapshot not found", {
+              code: "not_found",
+              provider: "local",
+            });
+          }
+          await rm(root, { force: true, recursive: true });
+          await mkdir(root, { recursive: true });
+          await cp(snapshot.path, root, { force: true, recursive: true });
+        },
       },
       stop: async () => {
         if (!options.keep && !options.root) {
           await rm(root, { force: true, recursive: true });
         }
+        await rm(snapshotsRoot, { force: true, recursive: true });
       },
     };
 

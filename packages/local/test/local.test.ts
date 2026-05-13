@@ -83,6 +83,15 @@ test("local prevents paths escaping the sandbox root", async () => {
   await sandbox.stop();
 });
 
+test("local rejects filesystem root sandboxes", async () => {
+  await expect(create({ adapter: local({ root: "/" }) })).rejects.toMatchObject(
+    {
+      code: "path_escape",
+      provider: "local",
+    }
+  );
+});
+
 test("local normalizes missing path errors", async () => {
   const sandbox = await create({ adapter: local() });
 
@@ -154,6 +163,28 @@ test("local aborts running commands", async () => {
 
   await expect(promise).rejects.toMatchObject({
     code: "aborted",
+    provider: "local",
+  });
+
+  await sandbox.stop();
+});
+
+test("local creates and restores snapshots", async () => {
+  const sandbox = await create({ adapter: local() });
+
+  await sandbox.files.write("/workspace/state.txt", "before");
+  const snapshot = await sandbox.snapshots.create("checkpoint");
+  await sandbox.files.write("/workspace/state.txt", "after");
+  await sandbox.files.write("/workspace/extra.txt", "extra");
+
+  await sandbox.snapshots.restore(snapshot.id);
+
+  expect(snapshot.name).toBe("checkpoint");
+  expect(await sandbox.files.text("/workspace/state.txt")).toBe("before");
+  expect(await sandbox.files.exists("/workspace/extra.txt")).toBe(false);
+
+  await expect(sandbox.snapshots.restore("missing")).rejects.toMatchObject({
+    code: "not_found",
     provider: "local",
   });
 

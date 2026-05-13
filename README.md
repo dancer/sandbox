@@ -38,6 +38,7 @@ Swap the adapter import once provider packages land and keep the rest of your ag
 - Provider escape hatch: every adapter exposes its native client through `sandbox.raw`
 - Safe cleanup: `withSandbox` stops sandboxes after success or failure
 - Cancellation: pass `AbortSignal` and `timeout` to command calls
+- Local snapshots: checkpoint and restore filesystem state in tests
 - Local-first development: test agent loops without remote credentials
 - TypeScript-first packages: each adapter ships as its own package so apps only install what they use
 

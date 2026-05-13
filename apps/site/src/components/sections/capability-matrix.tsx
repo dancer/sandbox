@@ -90,8 +90,8 @@ const ROWS: { capability: string; cells: Record<ColumnKey, Cell> }[] = [
       e2b: warn(
         "E2B supports snapshot creation. In-place restore is not normalized yet, so restore() throws unsupported."
       ),
-      local: no(
-        "No snapshot primitive on the local filesystem. Mirror the root yourself with cp/rsync, or use a cloud adapter."
+      local: warn(
+        "Local snapshots copy the sandbox filesystem to a temporary host directory and support restore in the same process."
       ),
       vercel: warn(
         "Vercel supports snapshot creation. In-place restore is not normalized yet, so restore() throws unsupported."
