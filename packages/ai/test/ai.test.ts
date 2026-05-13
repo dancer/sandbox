@@ -23,6 +23,7 @@ test("tools returns prompt context and selected tools", async () => {
     "write",
   ]);
   expect(kit.sandbox.description).toBe(kit.description);
+  expect(kit.tools.exec?.inputSchema.additionalProperties).toBe(false);
   expect(kit.tools.exec?.strict).toBe(true);
 
   await sandbox.stop();

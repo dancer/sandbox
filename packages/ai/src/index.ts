@@ -2,6 +2,7 @@ import { supports } from "@sandbox-sdk/core";
 import type { Result, Sandbox } from "@sandbox-sdk/core";
 
 export type Schema = Readonly<{
+  additionalProperties: false;
   properties: Readonly<Record<string, unknown>>;
   required?: readonly string[];
   type: "object";
@@ -128,6 +129,7 @@ const schema = (
   properties: Readonly<Record<string, unknown>>,
   required: readonly string[]
 ): Schema => ({
+  additionalProperties: false,
   properties,
   required,
   type: "object",
