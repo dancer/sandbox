@@ -37,6 +37,9 @@ const safe = (root: string, path: string): string => {
   });
 };
 
+const display = (root: string, target: string): string =>
+  `/${relative(root, target)}`;
+
 const missing = (error: unknown): boolean =>
   typeof error === "object" &&
   error !== null &&
@@ -203,7 +206,7 @@ export const local = (options: Local = {}): Adapter<Raw> => ({
               return {
                 kind: info.isDirectory() ? "directory" : "file",
                 modified: info.mtime,
-                path: relative(root, target),
+                path: display(root, target),
                 size: info.size,
               };
             })

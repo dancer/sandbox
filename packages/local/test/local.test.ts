@@ -36,7 +36,7 @@ test("local creates and checks directories", async () => {
   expect(entries).toEqual([
     expect.objectContaining({
       kind: "directory",
-      path: "workspace/cache",
+      path: "/workspace/cache",
     }),
   ]);
 

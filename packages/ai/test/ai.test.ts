@@ -53,7 +53,7 @@ test("tools can read, write, list, and execute", async () => {
 
   expect(read?.text).toBe("hello");
   expect(
-    list?.entries.some((entry) => entry.path === "workspace/file.txt")
+    list?.entries.some((entry) => entry.path === "/workspace/file.txt")
   ).toBe(true);
   expect(exec?.stdout.trim()).toBe("hello");
   expect(shell?.stdout).toBe("shell");
