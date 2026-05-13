@@ -1,4 +1,3 @@
-import { getSandbox } from "@cloudflare/sandbox";
 import type {
   ListFilesOptions,
   Sandbox as CloudflareSandbox,
@@ -23,7 +22,7 @@ import type {
   Sandbox,
 } from "@sandbox-sdk/core";
 
-export { Sandbox as CloudflareSandbox } from "@cloudflare/sandbox";
+export type { Sandbox as CloudflareSandbox } from "@cloudflare/sandbox";
 
 export type Cloudflare = Readonly<{
   binding: DurableObjectNamespace<CloudflareSandbox>;
@@ -237,6 +236,7 @@ export const cloudflare = (options: Cloudflare): Adapter<Raw> => ({
   async create(input = {}) {
     const id = input.id ?? options.id ?? crypto.randomUUID();
     const cwd = input.cwd ?? options.cwd ?? "/workspace";
+    const { getSandbox } = await import("@cloudflare/sandbox");
     const raw = getSandbox(options.binding, id, {
       normalizeId: true,
       ...options.options,
