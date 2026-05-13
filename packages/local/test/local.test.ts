@@ -108,10 +108,20 @@ test("local passes sandbox environment to commands", async () => {
 
 test("local applies command timeouts", async () => {
   const sandbox = await create({ adapter: local() });
+  let thrown: unknown;
 
-  await expect(
-    sandbox.process.exec("sleep", ["1"], { timeout: 10 })
-  ).rejects.toMatchObject({ code: "timeout" });
+  try {
+    await sandbox.process.exec("sleep", ["1"], { timeout: 10 });
+  } catch (error) {
+    thrown = error;
+  }
+
+  expect(thrown).toBeInstanceOf(SandboxError);
+  expect(thrown).toMatchObject({ code: "timeout" });
+  expect((thrown as Error).cause).toMatchObject({
+    code: 124,
+    ok: false,
+  });
 
   await sandbox.stop();
 });

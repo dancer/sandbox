@@ -122,6 +122,9 @@ const settle = async (
 
     return result;
   } catch (error) {
+    if (error instanceof SandboxError) {
+      throw error;
+    }
     throw new SandboxError(timed ? "Command timed out" : "Command failed", {
       cause: error,
       code: timed ? "timeout" : "process",
