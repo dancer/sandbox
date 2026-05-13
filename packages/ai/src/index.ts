@@ -136,6 +136,7 @@ const description = (
     "Use read/list before editing when you need file context.",
     "Use write only for files that belong in the sandbox workspace.",
     `Commands run with a default timeout of ${timeout}ms.`,
+    "The exec tool accepts shell command strings; use args only for explicit argv execution.",
     `Command stdout and stderr are each capped at ${maxOutput} characters.`,
     unavailable.length === 0
       ? "All advertised sandbox capabilities are available."
@@ -193,7 +194,7 @@ export const tools = (sandbox: Sandbox, options: Options = {}): Kit => {
 
   if (enabled.has("exec")) {
     output.exec = {
-      description: "Run a command inside the sandbox.",
+      description: "Run a shell command inside the sandbox.",
       execute: async (input: Exec): Promise<ExecResult> => {
         const run = {
           cwd: input.cwd ?? cwd,
@@ -201,10 +202,12 @@ export const tools = (sandbox: Sandbox, options: Options = {}): Kit => {
           ...(input.env === undefined ? {} : { env: input.env }),
         };
 
-        return result(
-          await sandbox.process.exec(input.command, input.args, run),
-          maxOutput
-        );
+        const executed =
+          input.args === undefined
+            ? await sandbox.process.shell(input.command, run)
+            : await sandbox.process.exec(input.command, input.args, run);
+
+        return result(executed, maxOutput);
       },
       inputSchema: schema(
         {

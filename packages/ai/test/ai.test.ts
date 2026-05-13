@@ -42,6 +42,9 @@ test("tools can read, write, list, and execute", async () => {
     args: ["hello"],
     command: "echo",
   });
+  const shell = await kit.tools.exec?.execute({
+    command: "printf shell",
+  });
   const env = await kit.tools.exec?.execute({
     args: ["SANDBOX_VALUE"],
     command: "printenv",
@@ -53,6 +56,7 @@ test("tools can read, write, list, and execute", async () => {
     list?.entries.some((entry) => entry.path === "workspace/file.txt")
   ).toBe(true);
   expect(exec?.stdout.trim()).toBe("hello");
+  expect(shell?.stdout).toBe("shell");
   expect(env?.stdout.trim()).toBe("ok");
 
   await sandbox.stop();
