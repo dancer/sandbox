@@ -33,7 +33,8 @@ type Raw = Readonly<{
 }>;
 
 const safe = (root: string, path: string): string => {
-  const target = pathResolve(root, path);
+  const value = path.startsWith("/") ? path.slice(1) : path;
+  const target = pathResolve(root, value);
   if (target === root || target.startsWith(`${root}/`)) {
     return target;
   }
@@ -56,44 +57,70 @@ const stream = (child: ReturnType<typeof spawn>): ReadableStream<Uint8Array> =>
     },
   });
 
-const settle = async (child: ReturnType<typeof spawn>): Promise<Result> => {
+const settle = async (
+  child: ReturnType<typeof spawn>,
+  timeout?: number
+): Promise<Result> => {
   const stdout: Buffer[] = [];
   const stderr: Buffer[] = [];
 
   child.stdout?.on("data", (chunk: Buffer) => stdout.push(chunk));
   child.stderr?.on("data", (chunk: Buffer) => stderr.push(chunk));
 
-  const [code, signal] = await Promise.race([
-    once(child, "close") as Promise<[number | null, NodeJS.Signals | null]>,
-    once(child, "error").then(([error]) => {
-      throw error;
-    }),
-  ]);
+  let timed = false;
+  const timer =
+    timeout === undefined
+      ? undefined
+      : setTimeout(() => {
+          timed = true;
+          child.kill("SIGTERM");
+        }, timeout);
 
-  const result: Result = {
-    code: code ?? 0,
-    stderr: Buffer.concat(stderr).toString(),
-    stdout: Buffer.concat(stdout).toString(),
-  };
+  try {
+    const [code, signal] = await Promise.race([
+      once(child, "close") as Promise<[number | null, NodeJS.Signals | null]>,
+      once(child, "error").then(([error]) => {
+        throw error;
+      }),
+    ]);
 
-  if (signal) {
-    return { ...result, signal };
+    const result: Result = {
+      code: code ?? (timed ? 124 : 0),
+      ok: code === 0 && !timed,
+      stderr: Buffer.concat(stderr).toString(),
+      stdout: Buffer.concat(stdout).toString(),
+    };
+
+    if (signal) {
+      return { ...result, signal };
+    }
+
+    return result;
+  } catch (error) {
+    throw new SandboxError(timed ? "Command timed out" : "Command failed", {
+      cause: error,
+      code: timed ? "timeout" : "process",
+      provider: "local",
+    });
+  } finally {
+    if (timer) {
+      clearTimeout(timer);
+    }
   }
-
-  return result;
 };
 
 const execute = (
   root: string,
+  cwd: string,
   command: string,
   args: readonly string[],
   options: Exec
 ): Promise<Result> => {
   const child = spawn(command, args, {
-    cwd: options.cwd ? safe(root, options.cwd) : root,
+    cwd: safe(root, options.cwd ?? cwd),
     env: { ...process.env, ...options.env },
   });
-  return settle(child);
+  return settle(child, options.timeout);
 };
 
 const bytes = async (input: Input): Promise<Uint8Array | string> => {
@@ -133,7 +160,7 @@ export const local = (options: Local = {}): Adapter<Raw> => ({
     process: true,
     secrets: false,
     snapshots: false,
-    streaming: true,
+    streaming: "combined",
   },
   async create(input = {}) {
     const root = options.root
@@ -141,9 +168,12 @@ export const local = (options: Local = {}): Adapter<Raw> => ({
       : await mkdtemp(join(tmpdir(), "sandbox-sdk-"));
 
     await mkdir(root, { recursive: true });
+    const cwd = input.cwd ?? ".";
+    await mkdir(safe(root, cwd), { recursive: true });
 
     const sandbox: Sandbox<Raw> = {
       capabilities: this.capabilities,
+      cwd,
       files: {
         list: async (path = ".") => {
           const base = safe(root, path);
@@ -180,24 +210,21 @@ export const local = (options: Local = {}): Adapter<Raw> => ({
       },
       process: {
         exec: (command, args = [], run = {}) =>
-          execute(root, command, args, run),
+          execute(root, cwd, command, args, run),
         spawn: (command, args = [], run = {}) => {
-          const controller = new AbortController();
           const child = spawn(command, args, {
-            cwd: run.cwd ? safe(root, run.cwd) : root,
+            cwd: safe(root, run.cwd ?? cwd),
             env: { ...process.env, ...input.env, ...run.env },
-            signal: controller.signal,
           });
           const output = stream(child);
           return Promise.resolve({
             id: randomUUID(),
-            kill: () => {
-              controller.abort();
-              child.kill();
+            kill: (signal = "SIGTERM") => {
+              child.kill(signal as NodeJS.Signals);
               return Promise.resolve();
             },
             output,
-            result: settle(child),
+            result: settle(child, run.timeout),
           });
         },
       },
