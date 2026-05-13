@@ -21,6 +21,9 @@
     },
     {
       "path": "./packages/cloudflare"
+    },
+    {
+      "path": "./packages/modal"
     }
   ],
   "compilerOptions": {

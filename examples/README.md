@@ -11,4 +11,5 @@ credentials.
 - `daytona.ts`
 - `vercel.ts`
 - `cloudflare.ts`
+- `modal.ts`
 - `ai.ts`
