@@ -1,47 +1,69 @@
 # Sandbox SDK
 
-One TypeScript API for agent sandboxes. A small, honest runtime layer for files, commands, ports, snapshots, and provider escape hatches.
+One TypeScript API for agent sandboxes. A small, typed runtime layer for files, commands, ports, snapshots, capabilities, and provider escape hatches.
 
 ## Install
 
 ```bash
-npm install @sandbox-sdk/core @sandbox-sdk/e2b
+bun add @sandbox-sdk/core @sandbox-sdk/local
 ```
 
 ## Quick Start
 
 ```ts
 import { create } from "@sandbox-sdk/core";
-import { e2b } from "@sandbox-sdk/e2b";
+import { local } from "@sandbox-sdk/local";
 
 const sandbox = await create({
-  adapter: e2b({ token: process.env.E2B_API_KEY }),
+  adapter: local(),
+  cwd: "/workspace",
 });
 
-await sandbox.files.write("main.ts", "console.log('hello')");
+await sandbox.files.write("/workspace/main.ts", "console.log('hello')");
 const result = await sandbox.process.exec("bun", ["main.ts"]);
+
+console.log(result.stdout);
 
 await sandbox.stop();
 ```
 
-Swap the adapter import (`@sandbox-sdk/vercel`, `@sandbox-sdk/cloudflare`, `@sandbox-sdk/daytona`, and more) and keep the rest of your agent loop the same.
+Swap the adapter import once provider packages land and keep the rest of your agent loop the same.
 
 ## What You Get
 
 - One API across providers: create sandboxes, read and write files, run commands, expose ports, create snapshots, and clean up
 - Capability checks: branch on provider support instead of guessing what works
 - Provider escape hatch: every adapter exposes its native client through `sandbox.raw`
+- Local-first development: test agent loops without remote credentials
 - TypeScript-first packages: each adapter ships as its own package so apps only install what they use
 
 ## Adapters
 
-The first adapter wave targets local development, E2B, Daytona, Vercel Sandbox, and Cloudflare Sandbox.
+Current packages:
 
-The broader roadmap includes Blaxel, Hopx, Modal, Runloop, CodeSandbox, Namespace, and self-hosted runtimes.
+- `@sandbox-sdk/core`
+- `@sandbox-sdk/local`
+- `@sandbox-sdk/ai`
+
+The first provider wave targets E2B, Daytona, Vercel Sandbox, and Cloudflare Sandbox.
+
+The broader roadmap includes Blaxel, Hopx, Modal, Runloop, CodeSandbox, Namespace, Sandbox0, and self-hosted runtimes.
 
 ## AI Tools
 
-`@sandbox-sdk/ai` wraps a configured sandbox as ready-made tools for agents that need to read files, write files, and run commands in an isolated runtime.
+`@sandbox-sdk/ai` wraps a configured sandbox as ready-made tools plus prompt context for agents that need to read files, write files, list directories, run commands, and open previews when ports are supported.
+
+```ts
+import { tools } from "@sandbox-sdk/ai";
+
+const kit = tools(sandbox, {
+  cwd: "/workspace",
+  allow: ["read", "write", "list", "exec"],
+});
+
+kit.description;
+kit.tools;
+```
 
 ## License
 
