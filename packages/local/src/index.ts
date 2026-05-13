@@ -214,7 +214,9 @@ export const local = (options: Local = {}): Adapter<Raw> => ({
             left.path.localeCompare(right.path)
           );
         },
-        mkdir: (path) => mkdir(safe(root, path), { recursive: true }),
+        mkdir: async (path) => {
+          await mkdir(safe(root, path), { recursive: true });
+        },
         read: (path) => readFile(safe(root, path)),
         remove: (path) =>
           rm(safe(root, path), { force: true, recursive: true }),
