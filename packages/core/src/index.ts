@@ -170,6 +170,9 @@ export class SandboxError extends Error {
   }
 }
 
+export const isSandboxError = (error: unknown): error is SandboxError =>
+  error instanceof SandboxError;
+
 export const create = <Raw = unknown>(
   input: Options & { adapter: Adapter<Raw> }
 ): Promise<Sandbox<Raw>> => {

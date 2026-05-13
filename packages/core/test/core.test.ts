@@ -1,6 +1,12 @@
 import { expect, test } from "bun:test";
 
-import { SandboxError, create, supports, unsupported } from "../src/index";
+import {
+  SandboxError,
+  create,
+  isSandboxError,
+  supports,
+  unsupported,
+} from "../src/index";
 import type { Adapter, Options, Sandbox } from "../src/index";
 
 const sandbox = (capabilities: Sandbox["capabilities"]): Sandbox => ({
@@ -94,4 +100,14 @@ test("unsupported throws a typed sandbox error", () => {
     expect((error as SandboxError).code).toBe("unsupported");
     expect((error as SandboxError).provider).toBe("test");
   }
+});
+
+test("isSandboxError narrows sandbox errors", () => {
+  const error = new SandboxError("Failed", {
+    code: "provider",
+    provider: "test",
+  });
+
+  expect(isSandboxError(error)).toBe(true);
+  expect(isSandboxError(new Error("Failed"))).toBe(false);
 });
