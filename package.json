@@ -14,7 +14,7 @@
     "check": "ultracite check",
     "fix": "ultracite fix",
     "test": "bun test packages",
-    "test:live": "bun test packages/e2b/test/live.test.ts packages/vercel/test/live.test.ts",
+    "test:live": "bun test packages/daytona/test/live.test.ts packages/e2b/test/live.test.ts packages/vercel/test/live.test.ts",
     "typecheck": "bun run build:packages && bun run --cwd apps/site typecheck",
     "prepare": "husky"
   },

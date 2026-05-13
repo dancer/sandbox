@@ -75,6 +75,7 @@ bun run test:live
 The default test suite runs without provider credentials and covers core behavior, the local adapter, and AI tool execution. Live provider tests are skipped unless credentials are present.
 
 - E2B: `E2B_API_KEY` or `E2B_ACCESS_TOKEN`
+- Daytona: `DAYTONA_TARGET` plus either `DAYTONA_API_KEY`, or `DAYTONA_JWT_TOKEN` and `DAYTONA_ORGANIZATION_ID`
 - Vercel: `VERCEL_OIDC_TOKEN`, or `VERCEL_TOKEN`, `VERCEL_TEAM_ID`, and `VERCEL_PROJECT_ID`
 
 ## License
