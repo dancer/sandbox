@@ -20,6 +20,7 @@
     "@sandbox-sdk/core": "workspace:*"
   },
   "devDependencies": {
+    "@sandbox-sdk/local": "workspace:*",
     "typescript": "^5.9.3"
   }
 }
