@@ -91,6 +91,14 @@ const settle = async (
       stdout: Buffer.concat(stdout).toString(),
     };
 
+    if (timed) {
+      throw new SandboxError("Command timed out", {
+        cause: result,
+        code: "timeout",
+        provider: "local",
+      });
+    }
+
     if (signal) {
       return { ...result, signal };
     }
