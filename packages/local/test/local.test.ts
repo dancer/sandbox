@@ -53,6 +53,21 @@ test("local prevents paths escaping the sandbox root", async () => {
   await sandbox.stop();
 });
 
+test("local normalizes missing path errors", async () => {
+  const sandbox = await create({ adapter: local() });
+
+  await expect(sandbox.files.text("/missing.txt")).rejects.toMatchObject({
+    code: "not_found",
+    provider: "local",
+  });
+  await expect(sandbox.files.list("/missing")).rejects.toMatchObject({
+    code: "not_found",
+    provider: "local",
+  });
+
+  await sandbox.stop();
+});
+
 test("local returns command status and output", async () => {
   const sandbox = await create({ adapter: local(), cwd: "/workspace" });
   const result = await sandbox.process.exec("echo", ["hello"]);

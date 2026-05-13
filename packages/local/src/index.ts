@@ -44,6 +44,27 @@ const safe = (root: string, path: string): string => {
   });
 };
 
+const missing = (error: unknown): boolean =>
+  typeof error === "object" &&
+  error !== null &&
+  "code" in error &&
+  error.code === "ENOENT";
+
+const wrap = async <Value>(operation: () => Promise<Value>): Promise<Value> => {
+  try {
+    return await operation();
+  } catch (error) {
+    if (missing(error)) {
+      throw new SandboxError("Path not found", {
+        cause: error,
+        code: "not_found",
+        provider: "local",
+      });
+    }
+    throw error;
+  }
+};
+
 const stream = (child: ReturnType<typeof spawn>): ReadableStream<Uint8Array> =>
   new ReadableStream({
     start(controller) {
@@ -197,7 +218,7 @@ export const local = (options: Local = {}): Adapter<Raw> => ({
         },
         list: async (path = ".") => {
           const base = safe(root, path);
-          const names = await readdir(base);
+          const names = await wrap(() => readdir(base));
           const entries = await Promise.all(
             names.map(async (name): Promise<Entry> => {
               const target = join(base, name);
@@ -217,10 +238,10 @@ export const local = (options: Local = {}): Adapter<Raw> => ({
         mkdir: async (path) => {
           await mkdir(safe(root, path), { recursive: true });
         },
-        read: (path) => readFile(safe(root, path)),
+        read: (path) => wrap(() => readFile(safe(root, path))),
         remove: (path) =>
           rm(safe(root, path), { force: true, recursive: true }),
-        text: (path) => readFile(safe(root, path), "utf-8"),
+        text: (path) => wrap(() => readFile(safe(root, path), "utf-8")),
         write: async (path, value) => {
           const target = safe(root, path);
           await mkdir(dirname(target), { recursive: true });
