@@ -47,7 +47,7 @@ Current packages:
 
 The first provider wave targets E2B, Daytona, Vercel Sandbox, and Cloudflare Sandbox.
 
-The broader roadmap includes Blaxel, Hopx, Modal, Runloop, CodeSandbox, Namespace, Sandbox0, and self-hosted runtimes.
+More providers will be added as adapters are written.
 
 ## AI Tools
 
