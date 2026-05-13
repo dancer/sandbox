@@ -68,6 +68,7 @@ const capabilities: Capabilities = {
   processSpawn: false,
   snapshotCreate: false,
   snapshotRestore: false,
+  snapshotSource: "create-time",
   snapshots: false,
   volumes: true,
 };
@@ -181,8 +182,8 @@ const params = (
 
   return {
     ...base,
-    ...((input.template ?? options.snapshot)
-      ? { snapshot: input.template ?? options.snapshot }
+    ...((input.snapshot ?? input.template ?? options.snapshot)
+      ? { snapshot: input.snapshot ?? input.template ?? options.snapshot }
       : {}),
   };
 };

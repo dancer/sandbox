@@ -12,6 +12,7 @@ export type Capability =
   | "secrets"
   | "snapshotCreate"
   | "snapshotRestore"
+  | "snapshotSource"
   | "snapshots"
   | "streaming"
   | "volumes";
@@ -142,6 +143,7 @@ export type Options = Readonly<{
   id?: string;
   metadata?: Readonly<Record<string, string>>;
   ports?: readonly number[];
+  snapshot?: string;
   template?: string;
   timeout?: number;
 }>;

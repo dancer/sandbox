@@ -78,6 +78,7 @@ const capabilities: Capabilities = {
   processSpawn: "separate",
   snapshotCreate: "disk",
   snapshotRestore: false,
+  snapshotSource: "create-time",
   snapshots: false,
   streaming: "separate",
 };
@@ -137,8 +138,9 @@ const auth = (
 const createInput = (
   options: Vercel,
   input: Parameters<Adapter<Raw>["create"]>[0] = {}
-): VercelCreate =>
-  ({
+): VercelCreate => {
+  const snapshot = input.snapshot ?? input.template;
+  return {
     ...auth(options),
     env: { ...options.env, ...input.env },
     networkPolicy: options.networkPolicy,
@@ -146,11 +148,12 @@ const createInput = (
     resources: options.resources,
     runtime: options.runtime,
     source:
-      input.template === undefined
+      snapshot === undefined
         ? options.source
-        : { snapshotId: input.template, type: "snapshot" },
+        : { snapshotId: snapshot, type: "snapshot" },
     timeout: input.timeout ?? options.timeout,
-  }) as VercelCreate;
+  } as VercelCreate;
+};
 
 const getInput = (options: Vercel, id: string): VercelGet =>
   ({

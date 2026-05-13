@@ -114,7 +114,27 @@ const ROWS: { capability: string; cells: Record<ColumnKey, Cell> }[] = [
         "Local restore works for snapshots created by the same sandbox instance."
       ),
       vercel: no(
-        "Vercel can create a new sandbox from a snapshot through the template input, but in-place restore is not supported."
+        "Vercel can create a new sandbox from a snapshot through the snapshot create option, but in-place restore is not supported."
+      ),
+    },
+  },
+  {
+    capability: "snapshot source",
+    cells: {
+      cloudflare: no(
+        "Cloudflare backup and hibernation flows stay behind raw until the normalized create-from-snapshot contract is right."
+      ),
+      daytona: warn(
+        "Daytona can create a new sandbox from a snapshot id at create time."
+      ),
+      e2b: warn(
+        "E2B can create a new sandbox from a snapshot id or template id at create time."
+      ),
+      local: no(
+        "Local snapshots are in-process filesystem checkpoints, not portable snapshot sources."
+      ),
+      vercel: warn(
+        "Vercel can create a new sandbox from a snapshot id at create time."
       ),
     },
   },

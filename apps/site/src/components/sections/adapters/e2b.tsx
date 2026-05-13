@@ -22,6 +22,11 @@ export const E2B = () => (
       template at construction and threads writes, commands, ports, and
       snapshots through the E2B SDK.
     </p>
+    <p>
+      Use the shared <code>snapshot</code> create option to start a fresh E2B
+      sandbox from a snapshot id. Use <code>template</code> for provider
+      template ids and names.
+    </p>
     <CodeBlock code={E2B_EXAMPLE} lang="ts" />
     <div className="flex flex-col gap-2">
       <Heading as="h4" id="adapter-e2b-options">

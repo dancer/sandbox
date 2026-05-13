@@ -54,9 +54,7 @@ const PORTS_EXAMPLE = `const { url, port } = await sandbox.ports.expose(3000, {
 // → { url: "https://abc-3000.sandbox-sdk.dev", port: 3000 }`;
 
 const SNAPSHOTS_EXAMPLE = `const snap = await sandbox.snapshots.create("after-bun-install");
-// → { id, name? }
 
-// later, possibly from a different process
 await sandbox.snapshots.restore(snap.id);`;
 
 export const ApiReference = () => (
@@ -224,11 +222,11 @@ export const ApiReference = () => (
         snapshots.create(name?) / snapshots.restore(id)
       </Heading>
       <p>
-        Captures the filesystem (and on providers that support it, memory) state
-        of the sandbox so a later call can resume from it. Adapters without a
-        snapshot primitive throw <code>SandboxError</code> with{" "}
-        <code>code: "unsupported"</code>. Branch on{" "}
-        <code>sandbox.capabilities.snapshots</code> first.
+        Captures provider state when <code>snapshotCreate</code> is supported.
+        Restore means in-place restore of the current sandbox and is tracked
+        separately with <code>snapshotRestore</code>. To create a fresh sandbox
+        from a snapshot, pass <code>snapshot</code> to <code>create()</code> on
+        adapters that advertise <code>snapshotSource</code>.
       </p>
       <CodeBlock code={SNAPSHOTS_EXAMPLE} lang="ts" />
     </section>

@@ -44,6 +44,30 @@ Swap the adapter import to target a provider and keep the rest of your agent loo
 - Local-first development: test agent loops without remote credentials
 - TypeScript-first packages: each adapter ships as its own package so apps only install what they use
 
+## Snapshots
+
+Snapshot support is capability-gated because providers expose different
+lifecycle shapes.
+
+Use `sandbox.snapshots.create()` when `supports(sandbox, "snapshotCreate")` is
+true. Use `sandbox.snapshots.restore(id)` only when
+`supports(sandbox, "snapshotRestore")` is true; restore means in-place restore
+of the current sandbox.
+
+To create a fresh sandbox from a snapshot, pass the snapshot id to `create()`:
+
+```ts
+const checkpoint = await sandbox.snapshots.create("ready");
+
+const next = await create({
+  adapter,
+  snapshot: checkpoint.id,
+});
+```
+
+The `snapshot` create option is supported by adapters that advertise
+`snapshotSource`. Provider template ids still use `template`.
+
 ## Adapters
 
 Current packages:

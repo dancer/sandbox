@@ -97,10 +97,15 @@ test("create delegates without passing the adapter option", async () => {
     adapter,
     id: "sandbox",
     ports: [3000],
+    snapshot: "snapshot",
   });
 
   expect(current.provider).toBe("test");
-  expect(seen).toEqual({ id: "sandbox", ports: [3000] });
+  expect(seen).toEqual({
+    id: "sandbox",
+    ports: [3000],
+    snapshot: "snapshot",
+  });
 });
 
 test("withSandbox stops after returning a value", async () => {
@@ -155,6 +160,7 @@ test("supports handles boolean and mode capabilities", () => {
     processSpawn: false,
     snapshotCreate: "disk",
     snapshotRestore: false,
+    snapshotSource: "create-time",
     snapshots: false,
   });
 
@@ -164,6 +170,7 @@ test("supports handles boolean and mode capabilities", () => {
   expect(supports(current, "processSpawn")).toBe(false);
   expect(supports(current, "snapshotCreate")).toBe(true);
   expect(supports(current, "snapshotRestore")).toBe(false);
+  expect(supports(current, "snapshotSource")).toBe(true);
   expect(supports(current, "snapshots")).toBe(false);
   expect(supports(current, "desktop")).toBe(false);
 });

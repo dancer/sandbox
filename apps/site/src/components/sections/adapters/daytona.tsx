@@ -18,9 +18,13 @@ export const Daytona = () => (
       Daytona
     </Heading>
     <p>
-      Daytona dev environments via <code>@daytonaio/sdk</code>. The adapter
-      spins up a workspace from the given image, mounts a workdir, and threads
-      files and processes through Daytona's API.
+      Daytona dev environments via <code>@daytona/sdk</code>. The adapter spins
+      up a workspace from the given image, mounts a workdir, and threads files
+      and processes through Daytona's API.
+    </p>
+    <p>
+      Use the shared <code>snapshot</code> create option, or the adapter{" "}
+      <code>snapshot</code> default, to start from a Daytona snapshot id.
     </p>
     <CodeBlock code={DAYTONA_EXAMPLE} lang="ts" />
     <div className="flex flex-col gap-2">

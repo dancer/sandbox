@@ -23,6 +23,10 @@ export const Vercel = () => (
       ephemeral, region-local, hot-pooled. The adapter can pin a runtime at
       construction and exposes ports through Vercel's built-in tunneling.
     </p>
+    <p>
+      Use the shared <code>snapshot</code> create option to start a fresh Vercel
+      sandbox from a snapshot id. In-place snapshot restore is not supported.
+    </p>
     <CodeBlock code={VERCEL_EXAMPLE} lang="ts" />
     <div className="flex flex-col gap-2">
       <Heading as="h4" id="adapter-vercel-options">

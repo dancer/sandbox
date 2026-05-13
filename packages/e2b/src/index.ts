@@ -54,6 +54,7 @@ const capabilities: Capabilities = {
   pty: true,
   snapshotCreate: "disk",
   snapshotRestore: false,
+  snapshotSource: "create-time",
   snapshots: false,
   streaming: "combined",
 };
@@ -108,8 +109,8 @@ const createOptions = (
   envs: { ...options.env, ...input.env },
   metadata: { ...options.metadata, ...input.metadata },
   ...(options.secure === undefined ? {} : { secure: options.secure }),
-  ...((input.template ?? options.template)
-    ? { template: input.template ?? options.template }
+  ...((input.snapshot ?? input.template ?? options.template)
+    ? { template: input.snapshot ?? input.template ?? options.template }
     : {}),
   ...((input.timeout ?? options.timeout)
     ? { timeoutMs: input.timeout ?? options.timeout }
