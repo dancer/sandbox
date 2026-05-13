@@ -107,6 +107,33 @@ kit.sandbox.capabilities;
 kit.tools;
 ```
 
+AI SDK v7 can use the returned sandbox object directly:
+
+```ts
+await generateText({
+  model,
+  tools: kit.tools,
+  sandbox: kit.sandbox,
+  system: kit.description,
+  prompt: "run the tests",
+});
+```
+
+AI SDK v6 can use the same tools and prompt context without depending on the v7
+sandbox setting:
+
+```ts
+await generateText({
+  model,
+  tools: kit.tools,
+  system: kit.description,
+  prompt: "run the tests",
+});
+```
+
+`@sandbox-sdk/ai` does not depend on `ai`, so it stays structurally compatible
+with the AI SDK tool contract instead of forcing a peer version.
+
 The Cloudflare adapter is designed for Workers. Importing the package is safe in
 Node-based tooling, but creating a Cloudflare sandbox loads
 `@cloudflare/sandbox` inside the Worker path.
