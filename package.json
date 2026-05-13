@@ -9,14 +9,14 @@
   "type": "module",
   "scripts": {
     "dev": "bun run --cwd apps/site dev",
-    "build": "bun run build:packages && bun run --cwd apps/site build",
+    "build": "bun run build:packages && bun run --cwd apps/site build && bun run --cwd apps/cloudflare typecheck",
     "build:packages": "bun run --cwd packages/core build && bun run --cwd packages/local build && bun run --cwd packages/ai build && bun run --cwd packages/vercel build && bun run --cwd packages/e2b build && bun run --cwd packages/daytona build && bun run --cwd packages/cloudflare build",
     "check": "ultracite check",
     "fix": "ultracite fix",
     "pack:packages": "for p in packages/core packages/local packages/ai packages/vercel packages/e2b packages/daytona packages/cloudflare; do (cd $p && bun pm pack --dry-run); done",
     "test": "bun run build:packages && bun test packages test",
-    "test:live": "bun run build:packages && bun test packages/daytona/test/live.test.ts packages/e2b/test/live.test.ts packages/vercel/test/live.test.ts",
-    "typecheck": "bun run build:packages && bun run --cwd apps/site typecheck",
+    "test:live": "bun run build:packages && bun test packages/cloudflare/test/live.test.ts packages/daytona/test/live.test.ts packages/e2b/test/live.test.ts packages/vercel/test/live.test.ts",
+    "typecheck": "bun run build:packages && bun run --cwd apps/site typecheck && bun run --cwd apps/cloudflare typecheck",
     "prepare": "husky"
   },
   "devDependencies": {

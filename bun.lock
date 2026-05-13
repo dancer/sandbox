@@ -19,6 +19,19 @@
         "ultracite": "7.7.0",
       },
     },
+    "apps/cloudflare": {
+      "name": "@sandbox-sdk/cloudflare-live",
+      "version": "0.0.0",
+      "dependencies": {
+        "@cloudflare/sandbox": "^0.10.1",
+        "@sandbox-sdk/cloudflare": "workspace:*",
+        "@sandbox-sdk/core": "workspace:*",
+      },
+      "devDependencies": {
+        "@cloudflare/workers-types": "^4.20260511.1",
+        "typescript": "^5.9.3",
+      },
+    },
     "apps/site": {
       "name": "@sandbox-sdk/site",
       "version": "0.1.0",
@@ -714,6 +727,8 @@
     "@sandbox-sdk/ai": ["@sandbox-sdk/ai@workspace:packages/ai"],
 
     "@sandbox-sdk/cloudflare": ["@sandbox-sdk/cloudflare@workspace:packages/cloudflare"],
+
+    "@sandbox-sdk/cloudflare-live": ["@sandbox-sdk/cloudflare-live@workspace:apps/cloudflare"],
 
     "@sandbox-sdk/core": ["@sandbox-sdk/core@workspace:packages/core"],
 

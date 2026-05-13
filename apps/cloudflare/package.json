@@ -1,0 +1,20 @@
+{
+  "name": "@sandbox-sdk/cloudflare-live",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "deploy": "bunx wrangler deploy",
+    "dev": "bunx wrangler dev",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@cloudflare/sandbox": "^0.10.1",
+    "@sandbox-sdk/cloudflare": "workspace:*",
+    "@sandbox-sdk/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260511.1",
+    "typescript": "^5.9.3"
+  }
+}
