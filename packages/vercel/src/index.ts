@@ -83,35 +83,44 @@ const capabilities: Capabilities = {
   streaming: "separate",
 };
 
-const present = (value: string | undefined): boolean =>
+const present = (value: string | undefined): value is string =>
   value !== undefined && value.length > 0;
 
 const env = (name: string): string | undefined => globalThis.process?.env[name];
 
-const validate = (options: Vercel): void => {
-  const token = options.token ?? env("VERCEL_TOKEN");
-  const teamId = options.teamId ?? env("VERCEL_TEAM_ID");
+const credentials = (
+  options: Vercel
+): {
+  projectId?: string;
+  teamId?: string;
+  token?: string;
+} => {
   const projectId = options.projectId ?? env("VERCEL_PROJECT_ID");
-  if (present(options.token) && present(teamId) && present(projectId)) {
+  const teamId = options.teamId ?? env("VERCEL_TEAM_ID");
+  const token = options.token ?? env("VERCEL_TOKEN");
+  return {
+    ...(present(projectId) ? { projectId } : {}),
+    ...(present(teamId) ? { teamId } : {}),
+    ...(present(token) ? { token } : {}),
+  };
+};
+
+const validate = (options: Vercel): void => {
+  const input = credentials(options);
+  if (
+    present(input.token) &&
+    present(input.teamId) &&
+    present(input.projectId)
+  ) {
     return;
-  }
-  if (present(options.token)) {
-    throw sandboxError(
-      provider,
-      "Vercel access token authentication requires VERCEL_TEAM_ID and VERCEL_PROJECT_ID, or pass teamId and projectId to vercel().",
-      "configuration"
-    );
   }
   if (present(env("VERCEL_OIDC_TOKEN"))) {
     return;
   }
-  if (present(token) && present(teamId) && present(projectId)) {
-    return;
-  }
-  if (present(token)) {
+  if (present(input.token)) {
     throw sandboxError(
       provider,
-      "Vercel access token authentication requires VERCEL_TEAM_ID and VERCEL_PROJECT_ID.",
+      "Vercel access token authentication requires VERCEL_TEAM_ID and VERCEL_PROJECT_ID, or pass teamId and projectId to vercel().",
       "configuration"
     );
   }
@@ -130,9 +139,7 @@ const auth = (
   token?: string;
 } => ({
   ...(options.fetch === undefined ? {} : { fetch: options.fetch }),
-  ...(options.projectId === undefined ? {} : { projectId: options.projectId }),
-  ...(options.teamId === undefined ? {} : { teamId: options.teamId }),
-  ...(options.token === undefined ? {} : { token: options.token }),
+  ...credentials(options),
 });
 
 const createInput = (
