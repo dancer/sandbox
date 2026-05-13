@@ -5,9 +5,11 @@ import {
   SandboxError,
   abort,
   bytes,
+  capabilityMode,
   command,
   create,
   isSandboxError,
+  requireCapability,
   result,
   supports,
   timeout,
@@ -152,7 +154,37 @@ test("withSandbox stops after errors", async () => {
   expect(stopped).toBe(1);
 });
 
-test("supports handles boolean and mode capabilities", () => {
+test("withSandbox preserves work and cleanup errors", async () => {
+  const adapter: Adapter = {
+    capabilities: {},
+    create: () =>
+      Promise.resolve({
+        ...sandbox({}),
+        stop: () => Promise.reject(new Error("cleanup failed")),
+      }),
+    provider: "test",
+  };
+
+  try {
+    await withSandbox({ adapter }, () => {
+      throw new Error("work failed");
+    });
+  } catch (error) {
+    expect(error).toBeInstanceOf(AggregateError);
+    expect((error as AggregateError).errors).toHaveLength(2);
+    expect((error as AggregateError).errors[0]).toMatchObject({
+      message: "work failed",
+    });
+    expect((error as AggregateError).errors[1]).toMatchObject({
+      message: "cleanup failed",
+    });
+    return;
+  }
+
+  throw new Error("expected aggregate error");
+});
+
+test("capability helpers handle boolean and mode capabilities", () => {
   const current = sandbox({
     files: true,
     ports: "create-time",
@@ -165,7 +197,10 @@ test("supports handles boolean and mode capabilities", () => {
   });
 
   expect(supports(current, "files")).toBe(true);
+  expect(capabilityMode(current, "files")).toBe(true);
   expect(supports(current, "ports")).toBe(true);
+  expect(capabilityMode(current, "ports")).toBe("create-time");
+  expect(requireCapability(current, "ports")).toBe("create-time");
   expect(supports(current, "processExec")).toBe(true);
   expect(supports(current, "processSpawn")).toBe(false);
   expect(supports(current, "snapshotCreate")).toBe(true);
@@ -173,6 +208,8 @@ test("supports handles boolean and mode capabilities", () => {
   expect(supports(current, "snapshotSource")).toBe(true);
   expect(supports(current, "snapshots")).toBe(false);
   expect(supports(current, "desktop")).toBe(false);
+  expect(capabilityMode(current, "desktop")).toBeUndefined();
+  expect(() => requireCapability(current, "desktop")).toThrow(SandboxError);
 });
 
 test("unsupported throws a typed sandbox error", () => {
