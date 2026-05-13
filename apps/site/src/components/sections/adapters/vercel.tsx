@@ -8,6 +8,7 @@ import { vercel } from "@sandbox-sdk/vercel";
 
 const sandbox = await create({
   adapter: vercel({
+    ports: [3000],
     runtime: "node22",
   }),
 });`;
@@ -51,6 +52,12 @@ export const Vercel = () => (
           <p>
             Vercel access token passed to the native SDK. Omit it to use the
             provider SDK's environment-based defaults.
+          </p>
+        </PropAccordionItem>
+        <PropAccordionItem name="ports" status="optional" value="ports">
+          <p>
+            Ports that can be exposed later with <code>ports.expose()</code>.
+            Vercel requires these at sandbox creation time.
           </p>
         </PropAccordionItem>
       </Accordion>

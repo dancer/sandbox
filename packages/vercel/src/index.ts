@@ -267,7 +267,8 @@ const spawn = async (
 const createSandbox = (
   raw: Raw,
   cwd: string,
-  sudo: boolean | undefined
+  sudo: boolean | undefined,
+  ports: readonly number[]
 ): Sandbox<Raw> => ({
   capabilities,
   cwd,
@@ -299,14 +300,24 @@ const createSandbox = (
   },
   id: raw.sandboxId,
   ports: {
-    expose: (port) =>
-      wrap(
+    expose: (port) => {
+      if (!ports.includes(port)) {
+        return Promise.reject(
+          sandboxError(
+            provider,
+            "Vercel ports must be declared at sandbox creation",
+            "unsupported"
+          )
+        );
+      }
+      return wrap(
         () => ({
           port,
           url: raw.domain(port),
         }),
         "port exposure"
-      ),
+      );
+    },
   },
   process: {
     exec: (command, args = [], options = {}) =>
@@ -336,6 +347,7 @@ export const vercel = (options: Vercel = {}): Adapter<Raw> => ({
   capabilities,
   async create(input = {}) {
     const cwd = input.cwd ?? options.cwd ?? "/vercel/sandbox";
+    const ports = input.ports ?? options.ports ?? [];
     const raw =
       input.id === undefined
         ? await VercelSandbox.create(createInput(options, input))
@@ -345,7 +357,7 @@ export const vercel = (options: Vercel = {}): Adapter<Raw> => ({
       await raw.fs.mkdir(cwd, { recursive: true });
     }
 
-    return createSandbox(raw, cwd, options.sudo);
+    return createSandbox(raw, cwd, options.sudo, ports);
   },
   provider,
 });
