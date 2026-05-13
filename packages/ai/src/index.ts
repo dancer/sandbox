@@ -1,9 +1,10 @@
-import type { Sandbox } from "@sandbox-sdk/core";
+import { supports } from "@sandbox-sdk/core";
+import type { Result, Sandbox } from "@sandbox-sdk/core";
 
 export type Schema = Readonly<{
-  type: "object";
   properties: Readonly<Record<string, unknown>>;
   required?: readonly string[];
+  type: "object";
 }>;
 
 export type Tool<Input, Output> = Readonly<{
@@ -12,15 +13,33 @@ export type Tool<Input, Output> = Readonly<{
   execute(input: Input): Promise<Output>;
 }>;
 
-export type Tools = Readonly<{
-  command: Tool<Command, CommandResult>;
-  read: Tool<Path, TextResult>;
-  write: Tool<Write, WriteResult>;
+export type Name = "exec" | "list" | "preview" | "read" | "write";
+
+export type Options = Readonly<{
+  allow?: readonly Name[];
+  cwd?: string;
+  maxOutput?: number;
+  timeout?: number;
 }>;
 
-export type Command = Readonly<{
-  command: string;
+export type Kit = Readonly<{
+  description: string;
+  tools: Tools;
+}>;
+
+interface Draft {
+  exec?: Tool<Exec, ExecResult>;
+  list?: Tool<Partial<Path>, ListResult>;
+  preview?: Tool<Preview, PreviewResult>;
+  read?: Tool<Path, TextResult>;
+  write?: Tool<Write, WriteResult>;
+}
+
+export type Tools = Readonly<Draft>;
+
+export type Exec = Readonly<{
   args?: readonly string[];
+  command: string;
   cwd?: string;
 }>;
 
@@ -33,10 +52,19 @@ export type Write = Readonly<{
   text: string;
 }>;
 
-export type CommandResult = Readonly<{
+export type Preview = Readonly<{
+  port: number;
+}>;
+
+export type ExecResult = Readonly<{
   code: number;
-  stdout: string;
+  ok: boolean;
   stderr: string;
+  stdout: string;
+}>;
+
+export type ListResult = Readonly<{
+  entries: Awaited<ReturnType<Sandbox["files"]["list"]>>;
 }>;
 
 export type TextResult = Readonly<{
@@ -47,51 +75,143 @@ export type WriteResult = Readonly<{
   ok: true;
 }>;
 
-export const tools = (sandbox: Sandbox): Tools => ({
-  command: {
-    description: "Run a command inside the sandbox.",
-    execute: (input) =>
-      sandbox.process.exec(
-        input.command,
-        input.args,
-        input.cwd ? { cwd: input.cwd } : undefined
-      ),
-    inputSchema: {
-      properties: {
-        args: { items: { type: "string" }, type: "array" },
-        command: { type: "string" },
-        cwd: { type: "string" },
-      },
-      required: ["command"],
-      type: "object",
-    },
-  },
-  read: {
-    description: "Read a text file from the sandbox.",
-    execute: async (input) => ({
-      text: await sandbox.files.text(input.path),
-    }),
-    inputSchema: {
-      properties: {
-        path: { type: "string" },
-      },
-      required: ["path"],
-      type: "object",
-    },
-  },
-  write: {
-    description: "Write a text file to the sandbox.",
-    execute: async (input) => {
-      await sandbox.files.write(input.path, input.text);
-      return { ok: true };
-    },
-    inputSchema: {
-      properties: {
-        path: { type: "string" },
-        text: { type: "string" },
-      },
-      required: ["path", "text"],
-      type: "object",
-    },
-  },
+export type PreviewResult = Readonly<{
+  url: string;
+}>;
+
+const names = ["read", "write", "list", "exec"] as const;
+
+const trim = (value: string, limit: number): string => {
+  if (value.length <= limit) {
+    return value;
+  }
+  return `${value.slice(0, limit)}\n[truncated ${value.length - limit} bytes]`;
+};
+
+const result = (output: Result, limit: number): ExecResult => ({
+  code: output.code,
+  ok: output.ok,
+  stderr: trim(output.stderr, limit),
+  stdout: trim(output.stdout, limit),
 });
+
+const schema = (
+  properties: Readonly<Record<string, unknown>>,
+  required: readonly string[]
+): Schema => ({
+  properties,
+  required,
+  type: "object",
+});
+
+const description = (
+  sandbox: Sandbox,
+  allowed: readonly Name[],
+  cwd: string,
+  timeout: number,
+  maxOutput: number
+): string => {
+  const unavailable = [
+    supports(sandbox, "ports") ? undefined : "ports",
+    supports(sandbox, "snapshots") ? undefined : "snapshots",
+    supports(sandbox, "pty") ? undefined : "pty",
+    supports(sandbox, "desktop") ? undefined : "desktop",
+  ].filter((item): item is string => item !== undefined);
+
+  return [
+    `You have access to an isolated ${sandbox.provider} sandbox.`,
+    `Default working directory: ${cwd}.`,
+    `Allowed sandbox tools: ${allowed.join(", ")}.`,
+    "Use read/list before editing when you need file context.",
+    "Use write only for files that belong in the sandbox workspace.",
+    `Commands run with a default timeout of ${timeout}ms.`,
+    `Command stdout and stderr are each capped at ${maxOutput} characters.`,
+    unavailable.length === 0
+      ? "All advertised sandbox capabilities are available."
+      : `Unavailable capabilities: ${unavailable.join(", ")}.`,
+  ].join("\n");
+};
+
+export const tools = (sandbox: Sandbox, options: Options = {}): Kit => {
+  const cwd = options.cwd ?? sandbox.cwd;
+  const timeout = options.timeout ?? 30_000;
+  const maxOutput = options.maxOutput ?? 20_000;
+  const allow = options.allow ?? [
+    ...names,
+    ...(supports(sandbox, "ports") ? (["preview"] as const) : []),
+  ];
+  const enabled = new Set<Name>(allow);
+  const output: Draft = {};
+
+  if (enabled.has("read")) {
+    output.read = {
+      description: "Read a text file from the sandbox.",
+      execute: async (input: Path): Promise<TextResult> => ({
+        text: await sandbox.files.text(input.path),
+      }),
+      inputSchema: schema({ path: { type: "string" } }, ["path"]),
+    };
+  }
+
+  if (enabled.has("write")) {
+    output.write = {
+      description: "Write a text file in the sandbox.",
+      execute: async (input: Write): Promise<WriteResult> => {
+        await sandbox.files.write(input.path, input.text);
+        return { ok: true };
+      },
+      inputSchema: schema(
+        { path: { type: "string" }, text: { type: "string" } },
+        ["path", "text"]
+      ),
+    };
+  }
+
+  if (enabled.has("list")) {
+    output.list = {
+      description: "List files in a sandbox directory.",
+      execute: async (input: Partial<Path>): Promise<ListResult> => ({
+        entries: await sandbox.files.list(input.path),
+      }),
+      inputSchema: schema({ path: { type: "string" } }, []),
+    };
+  }
+
+  if (enabled.has("exec")) {
+    output.exec = {
+      description: "Run a command inside the sandbox.",
+      execute: async (input: Exec): Promise<ExecResult> =>
+        result(
+          await sandbox.process.exec(input.command, input.args, {
+            cwd: input.cwd ?? cwd,
+            timeout,
+          }),
+          maxOutput
+        ),
+      inputSchema: schema(
+        {
+          args: { items: { type: "string" }, type: "array" },
+          command: { type: "string" },
+          cwd: { type: "string" },
+        },
+        ["command"]
+      ),
+    };
+  }
+
+  if (enabled.has("preview")) {
+    output.preview = {
+      description: "Expose or retrieve a preview URL for a sandbox port.",
+      execute: async (input: Preview): Promise<PreviewResult> => {
+        const preview = await sandbox.ports.expose(input.port);
+        return { url: preview.url };
+      },
+      inputSchema: schema({ port: { type: "number" } }, ["port"]),
+    };
+  }
+
+  return {
+    description: description(sandbox, allow, cwd, timeout, maxOutput),
+    tools: output,
+  };
+};
