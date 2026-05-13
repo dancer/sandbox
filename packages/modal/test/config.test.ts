@@ -123,11 +123,19 @@ test("modal maps create options, tags, commands, and ports", async () => {
       cpu: 0.5,
       encryptedPorts: [8080],
       env: { A: "1", B: "2" },
-      timeoutMs: 456,
+      timeoutMs: 1000,
       workdir: "/work",
     },
   });
   expect(tagsSeen).toEqual({ owner: "sdk", task: "test" });
+  expect(execSeen[0]).toEqual({
+    command: ["sh", "-lc", "mkdir -p /work"],
+    options: {
+      stderr: "pipe",
+      stdout: "pipe",
+      workdir: "/",
+    },
+  });
 
   await expect(sandbox.ports.expose(3000)).rejects.toMatchObject({
     code: "unsupported",
@@ -155,7 +163,7 @@ test("modal maps create options, tags, commands, and ports", async () => {
       env: { C: "3" },
       stderr: "pipe",
       stdout: "pipe",
-      timeoutMs: 321,
+      timeoutMs: 1000,
       workdir: "/tmp",
     },
   });

@@ -158,20 +158,35 @@ const appParams = (options: Modal): ModalSdk.AppFromNameParams => ({
     : { environment: options.environment }),
 });
 
+const duration = (value: number | undefined): number | undefined => {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (!Number.isFinite(value) || value <= 0) {
+    throw sandboxError(
+      provider,
+      "Modal timeouts must be positive milliseconds",
+      "configuration"
+    );
+  }
+  return Math.ceil(value / 1000) * 1000;
+};
+
 const createOptions = (
   options: Modal,
   input: Parameters<Adapter<Raw>["create"]>[0],
   cwd: string,
   ports: readonly number[]
-): ModalSdk.SandboxCreateParams => ({
-  ...options.options,
-  encryptedPorts: [...ports],
-  env: { ...options.env, ...input?.env },
-  ...((input?.timeout ?? options.timeout) === undefined
-    ? {}
-    : { timeoutMs: input?.timeout ?? options.timeout }),
-  workdir: cwd,
-});
+): ModalSdk.SandboxCreateParams => {
+  const value = duration(input?.timeout ?? options.timeout);
+  return {
+    ...options.options,
+    encryptedPorts: [...ports],
+    env: { ...options.env, ...input?.env },
+    ...(value === undefined ? {} : { timeoutMs: value }),
+    workdir: cwd,
+  };
+};
 
 const check = (signal?: AbortSignal): void => {
   if (signal?.aborted) {
@@ -187,12 +202,13 @@ const execute = async (
 ): Promise<Result> => {
   check(options.signal);
   try {
+    const value = duration(options.timeout);
     const run: ModalSdk.SandboxExecParams & { mode?: "text" } = {
       stderr: "pipe",
       stdout: "pipe",
       workdir: options.cwd ?? cwd,
       ...(options.env === undefined ? {} : { env: { ...options.env } }),
-      ...(options.timeout === undefined ? {} : { timeoutMs: options.timeout }),
+      ...(value === undefined ? {} : { timeoutMs: value }),
     };
     const process = await raw.exec([...parts], run);
     const [code, stdout, stderr] = await Promise.all([
@@ -354,7 +370,7 @@ export const modal = (options: Modal = {}): Adapter<Raw> => ({
         : await modalClient.sandboxes.fromId(input.id);
 
     if (input.id === undefined) {
-      await shell(raw, cwd, `mkdir -p ${quote(cwd)}`, {});
+      await shell(raw, "/", `mkdir -p ${quote(cwd)}`, {});
       const tags = { ...options.tags, ...input.metadata };
       if (Object.keys(tags).length > 0) {
         await raw.setTags(tags);
