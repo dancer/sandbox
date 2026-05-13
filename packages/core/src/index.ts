@@ -143,6 +143,8 @@ export type Cause = Readonly<{
   cause?: unknown;
 }>;
 
+export type Timer = ReturnType<typeof setTimeout>;
+
 export type Code =
   | "aborted"
   | "not_found"
@@ -193,4 +195,97 @@ export const unsupported = (provider: string, feature: string): never => {
     code: "unsupported",
     provider,
   });
+};
+
+export const error = (
+  provider: string,
+  message: string,
+  code: Code = "provider",
+  cause?: unknown
+): SandboxError =>
+  new SandboxError(message, {
+    cause,
+    code,
+    provider,
+  });
+
+export const bytes = async (input: Input): Promise<Uint8Array | string> => {
+  if (typeof input === "string" || input instanceof Uint8Array) {
+    return input;
+  }
+  if (input instanceof ArrayBuffer) {
+    return new Uint8Array(input);
+  }
+  if (input instanceof Blob) {
+    return new Uint8Array(await input.arrayBuffer());
+  }
+
+  const chunks: Uint8Array[] = [];
+  const reader = input.getReader();
+  while (true) {
+    const next = await reader.read();
+    if (next.done) {
+      break;
+    }
+    chunks.push(next.value);
+  }
+
+  const size = chunks.reduce((total, chunk) => total + chunk.byteLength, 0);
+  const output = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) {
+    output.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return output;
+};
+
+export const text = async (input: Input): Promise<string> => {
+  const value = await bytes(input);
+  return typeof value === "string" ? value : new TextDecoder().decode(value);
+};
+
+export const result = (
+  code: number,
+  stdout = "",
+  stderr = "",
+  signal?: string
+): Result => ({
+  code,
+  ok: code === 0,
+  ...(signal === undefined ? {} : { signal }),
+  stderr,
+  stdout,
+});
+
+export const quote = (value: string): string => {
+  if (/^[\w./:@%+=,-]+$/.test(value)) {
+    return value;
+  }
+  return `'${value.replaceAll("'", "'\\''")}'`;
+};
+
+export const command = (
+  value: string,
+  args: readonly string[] = []
+): string => [value, ...args].map(quote).join(" ");
+
+export const timeout = (
+  value?: number,
+  signal?: AbortSignal
+): { clear(): void; signal?: AbortSignal } => {
+  if (value === undefined) {
+    return signal === undefined
+      ? { clear: () => undefined }
+      : { clear: () => undefined, signal };
+  }
+
+  const controller = new AbortController();
+  const timer: Timer = setTimeout(() => controller.abort(), value);
+  signal?.addEventListener("abort", () => controller.abort(), { once: true });
+
+  return {
+    clear: () => clearTimeout(timer),
+    signal: controller.signal,
+  };
 };

@@ -13,7 +13,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve as pathResolve } from "node:path";
 
-import { SandboxError, unsupported } from "@sandbox-sdk/core";
+import { SandboxError, bytes, unsupported } from "@sandbox-sdk/core";
 import type {
   Adapter,
   Entry,
@@ -151,35 +151,6 @@ const execute = (
     env: { ...process.env, ...env, ...options.env },
   });
   return settle(child, options.timeout);
-};
-
-const bytes = async (input: Input): Promise<Uint8Array | string> => {
-  if (typeof input === "string" || input instanceof Uint8Array) {
-    return input;
-  }
-  if (input instanceof ArrayBuffer) {
-    return new Uint8Array(input);
-  }
-  if (input instanceof Blob) {
-    return new Uint8Array(await input.arrayBuffer());
-  }
-  const chunks: Uint8Array[] = [];
-  const reader = input.getReader();
-  while (true) {
-    const next = await reader.read();
-    if (next.done) {
-      break;
-    }
-    chunks.push(next.value);
-  }
-  const size = chunks.reduce((total, chunk) => total + chunk.byteLength, 0);
-  const output = new Uint8Array(size);
-  let offset = 0;
-  for (const chunk of chunks) {
-    output.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  return output;
 };
 
 export const local = (options: Local = {}): Adapter<Raw> => ({
