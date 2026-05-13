@@ -9,6 +9,8 @@ const enabled = Boolean(
   process.env.E2B_API_KEY || process.env.E2B_ACCESS_TOKEN
 );
 const live = enabled ? test : test.skip;
+const text = (stream: ReadableStream<Uint8Array>): Promise<string> =>
+  new Response(stream).text();
 
 live("e2b runs a live sandbox workflow", async () => {
   const cwd = `/tmp/sandbox-sdk-${randomUUID()}`;
@@ -41,6 +43,15 @@ live("e2b runs a live sandbox workflow", async () => {
       stdout: "hello from e2b",
     });
 
+    const running = await sandbox.process.spawnShell(`cat ${file}`);
+    const spawnOutput = await text(running.output);
+    const spawned = await running.result;
+    expect(spawned).toMatchObject({
+      code: 0,
+      ok: true,
+    });
+    expect(spawnOutput).toContain("hello from e2b");
+
     const failure = await sandbox.process.exec("sh", [
       "-lc",
       "echo failed >&2; exit 7",
@@ -54,6 +65,24 @@ live("e2b runs a live sandbox workflow", async () => {
     const preview = await sandbox.ports.expose(3000);
     expect(preview.port).toBe(3000);
     expect(preview.url).toMatch(/^https?:\/\//u);
+  } finally {
+    await sandbox.stop();
+  }
+});
+
+live("e2b creates a live snapshot", async () => {
+  const cwd = `/tmp/sandbox-sdk-${randomUUID()}`;
+  const file = `${cwd}/snapshot.txt`;
+  const sandbox = await create({
+    adapter: e2b({ timeout: 300_000 }),
+    cwd,
+  });
+
+  try {
+    await sandbox.files.write(file, "ready");
+
+    const snapshot = await sandbox.snapshots.create("sandbox-sdk-live");
+    expect(snapshot.id).toBeTruthy();
   } finally {
     await sandbox.stop();
   }

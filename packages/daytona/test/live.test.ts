@@ -55,6 +55,19 @@ live("daytona runs a live sandbox workflow", async () => {
       ok: false,
     });
 
+    await expect(
+      sandbox.process.spawn("echo", ["hello"])
+    ).rejects.toMatchObject({
+      code: "unsupported",
+      provider: "daytona",
+    });
+    await expect(
+      sandbox.process.spawnShell("echo hello")
+    ).rejects.toMatchObject({
+      code: "unsupported",
+      provider: "daytona",
+    });
+
     const preview = await sandbox.ports.expose(3000);
     expect(preview.port).toBe(3000);
     expect(preview.url).toMatch(/^https?:\/\//u);
