@@ -102,6 +102,7 @@ export type Snapshot = Readonly<{
 export type Exec = Readonly<{
   cwd?: string;
   env?: Readonly<Record<string, string>>;
+  signal?: AbortSignal;
   timeout?: number;
 }>;
 
@@ -222,6 +223,10 @@ export const error = (
     code,
     provider,
   });
+
+export const abort = (provider: string, cause?: unknown): never => {
+  throw error(provider, "Operation aborted", "aborted", cause);
+};
 
 export const bytes = async (input: Input): Promise<Uint8Array | string> => {
   if (typeof input === "string" || input instanceof Uint8Array) {

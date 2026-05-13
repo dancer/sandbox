@@ -143,6 +143,23 @@ test("local applies command timeouts", async () => {
   await sandbox.stop();
 });
 
+test("local aborts running commands", async () => {
+  const sandbox = await create({ adapter: local() });
+  const controller = new AbortController();
+  const promise = sandbox.process.exec("sleep", ["1"], {
+    signal: controller.signal,
+  });
+
+  controller.abort("stopped");
+
+  await expect(promise).rejects.toMatchObject({
+    code: "aborted",
+    provider: "local",
+  });
+
+  await sandbox.stop();
+});
+
 test("local writes bytes and removes files", async () => {
   const sandbox = await create({ adapter: local(), cwd: "/workspace" });
   const value = new Uint8Array([104, 101, 108, 108, 111]);

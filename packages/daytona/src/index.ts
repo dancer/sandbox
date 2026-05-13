@@ -12,6 +12,7 @@ import type {
   Sandbox as DaytonaSandbox,
 } from "@daytona/sdk";
 import {
+  abort,
   bytes,
   command,
   error as sandboxError,
@@ -145,12 +146,19 @@ const content = async (input: Input): Promise<Buffer> => {
   return typeof value === "string" ? Buffer.from(value) : Buffer.from(value);
 };
 
+const check = (signal?: AbortSignal): void => {
+  if (signal?.aborted) {
+    abort(provider, signal.reason);
+  }
+};
+
 const executeLine = async (
   raw: Raw,
   cwd: string,
   line: string,
   options: Exec
 ): Promise<Result> => {
+  check(options.signal);
   try {
     const output = await raw.process.executeCommand(
       line,

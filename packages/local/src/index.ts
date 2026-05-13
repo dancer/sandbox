@@ -13,7 +13,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve as pathResolve } from "node:path";
 
-import { SandboxError, bytes, unsupported } from "@sandbox-sdk/core";
+import { SandboxError, abort, bytes, unsupported } from "@sandbox-sdk/core";
 import type { Adapter, Entry, Exec, Result, Sandbox } from "@sandbox-sdk/core";
 
 export type Local = Readonly<{
@@ -61,6 +61,12 @@ const wrap = async <Value>(operation: () => Promise<Value>): Promise<Value> => {
   }
 };
 
+const check = (signal?: AbortSignal): void => {
+  if (signal?.aborted) {
+    abort("local", signal.reason);
+  }
+};
+
 const stream = (child: ReturnType<typeof spawn>): ReadableStream<Uint8Array> =>
   new ReadableStream({
     start(controller) {
@@ -76,7 +82,7 @@ const stream = (child: ReturnType<typeof spawn>): ReadableStream<Uint8Array> =>
 
 const settle = async (
   child: ReturnType<typeof spawn>,
-  timeout?: number
+  options: Exec
 ): Promise<Result> => {
   const stdout: Buffer[] = [];
   const stderr: Buffer[] = [];
@@ -84,14 +90,25 @@ const settle = async (
   child.stdout?.on("data", (chunk: Buffer) => stdout.push(chunk));
   child.stderr?.on("data", (chunk: Buffer) => stderr.push(chunk));
 
+  let aborted = false;
   let timed = false;
   const timer =
-    timeout === undefined
+    options.timeout === undefined
       ? undefined
       : setTimeout(() => {
           timed = true;
           child.kill("SIGTERM");
-        }, timeout);
+        }, options.timeout);
+  const cancel = () => {
+    aborted = true;
+    child.kill("SIGTERM");
+  };
+
+  if (options.signal?.aborted) {
+    cancel();
+  } else {
+    options.signal?.addEventListener("abort", cancel, { once: true });
+  }
 
   try {
     const [code, signal] = await Promise.race([
@@ -102,8 +119,8 @@ const settle = async (
     ]);
 
     const result: Result = {
-      code: code ?? (timed ? 124 : 0),
-      ok: code === 0 && !timed,
+      code: code ?? (timed ? 124 : 130),
+      ok: code === 0 && !(aborted || timed),
       stderr: Buffer.concat(stderr).toString(),
       stdout: Buffer.concat(stdout).toString(),
     };
@@ -112,6 +129,14 @@ const settle = async (
       throw new SandboxError("Command timed out", {
         cause: result,
         code: "timeout",
+        provider: "local",
+      });
+    }
+
+    if (aborted) {
+      throw new SandboxError("Operation aborted", {
+        cause: result,
+        code: "aborted",
         provider: "local",
       });
     }
@@ -131,6 +156,7 @@ const settle = async (
       provider: "local",
     });
   } finally {
+    options.signal?.removeEventListener("abort", cancel);
     if (timer) {
       clearTimeout(timer);
     }
@@ -145,11 +171,12 @@ const execute = (
   args: readonly string[],
   options: Exec
 ): Promise<Result> => {
+  check(options.signal);
   const child = spawn(command, args, {
     cwd: safe(root, options.cwd ?? cwd),
     env: { ...process.env, ...env, ...options.env },
   });
-  return settle(child, options.timeout);
+  return settle(child, options);
 };
 
 const start = (
@@ -159,11 +186,13 @@ const start = (
   command: string,
   args: readonly string[],
   options: Exec
-) =>
-  spawn(command, args, {
+) => {
+  check(options.signal);
+  return spawn(command, args, {
     cwd: safe(root, options.cwd ?? cwd),
     env: { ...process.env, ...env, ...options.env },
   });
+};
 
 export const local = (options: Local = {}): Adapter<Raw> => ({
   capabilities: {
@@ -254,7 +283,7 @@ export const local = (options: Local = {}): Adapter<Raw> => ({
               return Promise.resolve();
             },
             output,
-            result: settle(child, run.timeout),
+            result: settle(child, run),
           });
         },
         spawnShell: (command, run = {}) => {
@@ -274,7 +303,7 @@ export const local = (options: Local = {}): Adapter<Raw> => ({
               return Promise.resolve();
             },
             output,
-            result: settle(child, run.timeout),
+            result: settle(child, run),
           });
         },
       },

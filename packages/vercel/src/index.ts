@@ -1,5 +1,6 @@
 import {
   SandboxError,
+  abort,
   bytes,
   error as sandboxError,
   result,
@@ -165,22 +166,27 @@ const execute = async (
   args: readonly string[],
   options: Exec
 ): Promise<Result> => {
-  const deadline = timeout(options.timeout);
+  const deadline = timeout(options.timeout, options.signal);
+  const signals =
+    deadline.signal === undefined ? {} : { signal: deadline.signal };
   try {
     const output = await raw.runCommand({
       args: [...args],
       cmd: command,
       cwd: options.cwd ?? cwd,
       ...(options.env === undefined ? {} : { env: { ...options.env } }),
-      ...(deadline.signal === undefined ? {} : { signal: deadline.signal }),
+      ...signals,
       ...(sudo === undefined ? {} : { sudo }),
     });
     return result(
       output.exitCode,
-      await output.stdout(),
-      await output.stderr()
+      await output.stdout(signals),
+      await output.stderr(signals)
     );
   } catch (error) {
+    if (options.signal?.aborted) {
+      abort(provider, error);
+    }
     if (deadline.aborted()) {
       throw sandboxError(provider, "Command timed out", "timeout", error);
     }
@@ -192,18 +198,22 @@ const execute = async (
 
 const wait = async (
   running: VercelCommand,
-  deadline: ReturnType<typeof timeout>
+  deadline: ReturnType<typeof timeout>,
+  signal?: AbortSignal
 ): Promise<Result> => {
+  const signals =
+    deadline.signal === undefined ? {} : { signal: deadline.signal };
   try {
-    const output = await running.wait(
-      deadline.signal === undefined ? {} : { signal: deadline.signal }
-    );
+    const output = await running.wait(signals);
     return result(
       output.exitCode,
-      await output.stdout(),
-      await output.stderr()
+      await output.stdout(signals),
+      await output.stderr(signals)
     );
   } catch (error) {
+    if (signal?.aborted) {
+      abort(provider, error);
+    }
     if (deadline.aborted()) {
       throw sandboxError(provider, "Command timed out", "timeout", error);
     }
@@ -221,7 +231,9 @@ const spawn = async (
   args: readonly string[],
   options: Exec
 ): Promise<Running> => {
-  const deadline = timeout(options.timeout);
+  const deadline = timeout(options.timeout, options.signal);
+  const signals =
+    deadline.signal === undefined ? {} : { signal: deadline.signal };
   try {
     const running = await raw.runCommand({
       args: [...args],
@@ -229,7 +241,7 @@ const spawn = async (
       cwd: options.cwd ?? cwd,
       detached: true,
       ...(options.env === undefined ? {} : { env: { ...options.env } }),
-      ...(deadline.signal === undefined ? {} : { signal: deadline.signal }),
+      ...signals,
       ...(sudo === undefined ? {} : { sudo }),
     });
     return {
@@ -237,11 +249,14 @@ const spawn = async (
       kill: async (signal = "SIGTERM") => {
         await running.kill(signal === "SIGKILL" ? 9 : "SIGTERM");
       },
-      output: stream(running.logs()),
-      result: wait(running, deadline),
+      output: stream(running.logs(signals)),
+      result: wait(running, deadline, options.signal),
     };
   } catch (error) {
     deadline.clear();
+    if (options.signal?.aborted) {
+      abort(provider, error);
+    }
     if (deadline.aborted()) {
       throw sandboxError(provider, "Command timed out", "timeout", error);
     }

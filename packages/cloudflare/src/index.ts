@@ -5,6 +5,7 @@ import type {
   SandboxOptions,
 } from "@cloudflare/sandbox";
 import {
+  abort,
   bytes,
   command,
   error as sandboxError,
@@ -73,12 +74,19 @@ const write = async (raw: Raw, path: string, input: Input): Promise<void> => {
   await raw.writeFile(path, stream(value));
 };
 
+const check = (signal?: AbortSignal): void => {
+  if (signal?.aborted) {
+    abort(provider, signal.reason);
+  }
+};
+
 const executeLine = async (
   raw: Raw,
   cwd: string,
   line: string,
   options: Exec
 ): Promise<Result> => {
+  check(options.signal);
   try {
     const output = await raw.exec(line, {
       cwd: options.cwd ?? cwd,
@@ -114,6 +122,7 @@ const spawnLine = async (
   line: string,
   options: Exec
 ): Promise<Running> => {
+  check(options.signal);
   try {
     const process = await raw.startProcess(line, {
       cwd: options.cwd ?? cwd,

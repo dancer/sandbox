@@ -1,4 +1,5 @@
 import {
+  abort,
   bytes,
   command,
   error as sandboxError,
@@ -95,6 +96,12 @@ const output = (value: {
   stdout: string;
 }): Result => result(value.exitCode, value.stdout, value.stderr);
 
+const check = (signal?: AbortSignal): void => {
+  if (signal?.aborted) {
+    abort(provider, signal.reason);
+  }
+};
+
 const executeLine = async (
   raw: Raw,
   cwd: string,
@@ -102,6 +109,7 @@ const executeLine = async (
   line: string,
   options: Exec
 ): Promise<Result> => {
+  check(options.signal);
   try {
     return output(
       await raw.commands.run(line, {
@@ -173,6 +181,7 @@ const spawnLine = async (
   line: string,
   options: Exec
 ): Promise<Running> => {
+  check(options.signal);
   const logs = stream();
   try {
     const handle = await raw.commands.run(line, {

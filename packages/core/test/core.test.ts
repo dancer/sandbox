@@ -3,6 +3,7 @@ import { setTimeout as delay } from "node:timers/promises";
 
 import {
   SandboxError,
+  abort,
   bytes,
   command,
   create,
@@ -168,6 +169,19 @@ test("unsupported throws a typed sandbox error", () => {
     expect(error).toBeInstanceOf(SandboxError);
     expect((error as SandboxError).code).toBe("unsupported");
     expect((error as SandboxError).provider).toBe("test");
+  }
+});
+
+test("abort throws a typed sandbox error", () => {
+  expect(() => abort("test")).toThrow(SandboxError);
+
+  try {
+    abort("test", "stopped");
+  } catch (error) {
+    expect(error).toBeInstanceOf(SandboxError);
+    expect((error as SandboxError).code).toBe("aborted");
+    expect((error as SandboxError).provider).toBe("test");
+    expect((error as Error).cause).toBe("stopped");
   }
 });
 
