@@ -9,10 +9,8 @@ import { blaxel } from "@sandbox-sdk/blaxel";
 const sandbox = await create({
   adapter: blaxel({
     image: "blaxel/base-image:latest",
-    ports: [3000],
   }),
   cwd: "/app",
-  ports: [3000],
 });`;
 
 export const Blaxel = () => (
@@ -51,8 +49,8 @@ export const Blaxel = () => (
         </PropAccordionItem>
         <PropAccordionItem name="ports" status="optional" value="ports">
           <p>
-            Ports declared at creation time and later exposed with{" "}
-            <code>ports.expose()</code> through Blaxel previews.
+            Ports declared at creation time for sandbox API access. Preview URLs
+            through <code>ports.expose()</code> can be created dynamically.
           </p>
         </PropAccordionItem>
       </Accordion>

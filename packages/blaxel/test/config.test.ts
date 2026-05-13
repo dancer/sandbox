@@ -140,9 +140,9 @@ test("blaxel maps create options and normalized operations", async () => {
     expect(safeSeen).toEqual({ safe: true });
     expect(mkdirSeen).toContain("/work");
 
-    await expect(sandbox.ports.expose(3000)).rejects.toMatchObject({
-      code: "unsupported",
-      provider: "blaxel",
+    await expect(sandbox.ports.expose(15_500)).resolves.toEqual({
+      port: 15_500,
+      url: "https://preview.bl.run",
     });
     await expect(sandbox.ports.expose(8080)).resolves.toEqual({
       port: 8080,

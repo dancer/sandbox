@@ -95,7 +95,7 @@ const capabilities: Capabilities = {
   environment: true,
   files: true,
   network: "create-time",
-  ports: "create-time",
+  ports: "dynamic",
   process: true,
   processExec: true,
   processSpawn: true,
@@ -422,11 +422,7 @@ const createOptions = (
   };
 };
 
-const createSandbox = (
-  raw: Raw,
-  cwd: string,
-  ports: readonly number[]
-): Sandbox<Raw> => ({
+const createSandbox = (raw: Raw, cwd: string): Sandbox<Raw> => ({
   capabilities,
   cwd,
   files: {
@@ -443,13 +439,6 @@ const createSandbox = (
   id: raw.metadata.name,
   ports: {
     expose: async (port) => {
-      if (!ports.includes(port)) {
-        throw sandboxError(
-          provider,
-          "Blaxel ports must be declared at sandbox creation",
-          "unsupported"
-        );
-      }
       const preview = await raw.previews.createIfNotExists({
         metadata: { name: `sandbox-sdk-${port}` },
         spec: { port, public: true },
@@ -503,7 +492,7 @@ export const blaxel = (options: Blaxel = {}): Adapter<Raw> => ({
         : await SandboxInstance.get(input.id);
 
     await mkdir(raw, cwd);
-    return createSandbox(raw, cwd, ports);
+    return createSandbox(raw, cwd);
   },
   provider,
 });
