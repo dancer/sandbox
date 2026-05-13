@@ -184,6 +184,18 @@ export const create = <Raw = unknown>(
   return adapter.create(options);
 };
 
+export const withSandbox = async <Raw = unknown, Output = unknown>(
+  input: Options & { adapter: Adapter<Raw> },
+  use: (sandbox: Sandbox<Raw>) => Output | Promise<Output>
+): Promise<Output> => {
+  const sandbox = await create(input);
+  try {
+    return await use(sandbox);
+  } finally {
+    await sandbox.stop();
+  }
+};
+
 export const supports = (
   subject: { capabilities: Capabilities },
   capability: Capability

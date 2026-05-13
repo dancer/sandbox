@@ -11,6 +11,7 @@ import {
   supports,
   timeout,
   unsupported,
+  withSandbox,
 } from "../src/index";
 import type { Adapter, Options, Sandbox } from "../src/index";
 
@@ -99,6 +100,50 @@ test("create delegates without passing the adapter option", async () => {
 
   expect(current.provider).toBe("test");
   expect(seen).toEqual({ id: "sandbox", ports: [3000] });
+});
+
+test("withSandbox stops after returning a value", async () => {
+  let stopped = 0;
+  const adapter: Adapter = {
+    capabilities: {},
+    create: () =>
+      Promise.resolve({
+        ...sandbox({}),
+        stop: () => {
+          stopped += 1;
+          return Promise.resolve();
+        },
+      }),
+    provider: "test",
+  };
+
+  const value = await withSandbox({ adapter }, (current) => current.id);
+
+  expect(value).toBe("test");
+  expect(stopped).toBe(1);
+});
+
+test("withSandbox stops after errors", async () => {
+  let stopped = 0;
+  const adapter: Adapter = {
+    capabilities: {},
+    create: () =>
+      Promise.resolve({
+        ...sandbox({}),
+        stop: () => {
+          stopped += 1;
+          return Promise.resolve();
+        },
+      }),
+    provider: "test",
+  };
+
+  await expect(
+    withSandbox({ adapter }, () => {
+      throw new Error("failed");
+    })
+  ).rejects.toThrow("failed");
+  expect(stopped).toBe(1);
 });
 
 test("supports handles boolean and mode capabilities", () => {
