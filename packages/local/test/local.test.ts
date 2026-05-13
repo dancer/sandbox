@@ -44,6 +44,23 @@ test("local creates and checks directories", async () => {
   await sandbox.stop();
 });
 
+test("local lists cwd by default", async () => {
+  const sandbox = await create({ adapter: local() });
+
+  await sandbox.files.write("/workspace/main.ts", "console.log('ok')");
+
+  const entries = await sandbox.files.list();
+
+  expect(entries).toEqual([
+    expect.objectContaining({
+      kind: "file",
+      path: "/workspace/main.ts",
+    }),
+  ]);
+
+  await sandbox.stop();
+});
+
 test("local derives preview urls", async () => {
   const sandbox = await create({ adapter: local() });
   const preview = await sandbox.ports.expose(3000);

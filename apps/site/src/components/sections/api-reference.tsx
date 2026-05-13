@@ -98,7 +98,7 @@ export const ApiReference = () => (
       </Heading>
       <p>
         Lists the immediate children of <code>path</code> (defaults to the
-        sandbox root). Returns a sorted, frozen array of <code>Entry</code>{" "}
+        sandbox cwd). Returns a sorted, frozen array of <code>Entry</code>{" "}
         values. Each carries <code>path</code>, <code>kind</code>, plus{" "}
         <code>size</code> and <code>modified</code> where the adapter has them
         cheaply.

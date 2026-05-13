@@ -199,7 +199,7 @@ export const local = (options: Local = {}): Adapter<Raw> => ({
             throw error;
           }
         },
-        list: async (path = ".") => {
+        list: async (path = cwd) => {
           const base = safe(root, path);
           const names = await wrap(() => readdir(base));
           const entries = await Promise.all(
