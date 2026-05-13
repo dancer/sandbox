@@ -5,6 +5,8 @@
     "": {
       "name": "sandbox",
       "devDependencies": {
+        "@cloudflare/sandbox": "^0.10.1",
+        "@cloudflare/workers-types": "^4.20260511.1",
         "@sandbox-sdk/ai": "workspace:*",
         "@sandbox-sdk/cloudflare": "workspace:*",
         "@sandbox-sdk/core": "workspace:*",

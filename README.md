@@ -82,6 +82,11 @@ Current packages:
 
 More providers will be added as adapters are written.
 
+## Examples
+
+See `examples/` for minimal local, E2B, Daytona, Vercel, Cloudflare, and AI
+tool starting points.
+
 ## AI Tools
 
 `@sandbox-sdk/ai` wraps a configured sandbox as ready-made tools plus prompt context for agents that need to read files, write files, list directories, run commands, and open previews when ports are supported.
