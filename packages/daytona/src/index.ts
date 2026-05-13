@@ -199,10 +199,6 @@ const params = (
   };
 };
 
-const imageInput = (
-  value: CreateSandboxFromImageParams | CreateSandboxFromSnapshotParams
-): value is CreateSandboxFromImageParams => "image" in value;
-
 const seconds = (value?: number): number | undefined =>
   value === undefined ? undefined : Math.max(1, Math.ceil(value / 1000));
 
@@ -348,14 +344,10 @@ export const daytona = (options: Daytona = {}): Adapter<Raw> => ({
     const createSettings =
       createTimeout === undefined ? undefined : { timeout: createTimeout };
     const createParams = params(options, input);
-    let raw: Raw;
-    if (input.id === undefined) {
-      raw = imageInput(createParams)
+    const raw =
+      input.id === undefined
         ? await client.create(createParams, createSettings)
-        : await client.create(createParams, createSettings);
-    } else {
-      raw = await client.get(input.id);
-    }
+        : await client.get(input.id);
     const cwd =
       input.cwd ?? options.cwd ?? (await raw.getWorkDir()) ?? "/home/daytona";
 
