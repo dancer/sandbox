@@ -2,6 +2,8 @@
 
 One TypeScript API for agent sandboxes. A small, typed runtime layer for files, commands, ports, snapshots, capabilities, and provider escape hatches.
 
+https://sandbox-sdk.sh
+
 ## Install
 
 ```bash
@@ -29,7 +31,7 @@ await withSandbox(
 );
 ```
 
-Swap the adapter import once provider packages land and keep the rest of your agent loop the same.
+Swap the adapter import to target a provider and keep the rest of your agent loop the same.
 
 ## What You Get
 
