@@ -17,9 +17,12 @@ const sections: Section[] = [
   {
     children: [
       { id: "adapter-local", label: "Local" },
+      { id: "adapter-blaxel", label: "Blaxel" },
       { id: "adapter-cloudflare", label: "Cloudflare" },
+      { id: "adapter-codesandbox", label: "CodeSandbox" },
       { id: "adapter-daytona", label: "Daytona" },
       { id: "adapter-e2b", label: "E2B" },
+      { id: "adapter-modal", label: "Modal" },
       { id: "adapter-vercel", label: "Vercel" },
     ],
     id: "adapters",
@@ -97,40 +100,55 @@ export const TableOfContents = () => {
   return (
     <nav aria-label="On this page">
       <ul className="flex list-none flex-col gap-0 pl-0">
-        {sections.map(({ id, label, children }) => (
-          <li key={id}>
-            <a
-              href={`#${id}`}
-              className={cn(
-                "block -ml-px border-l py-1 pl-4 text-xs leading-relaxed transition-colors",
-                activeId === id
-                  ? "border-foreground text-foreground"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {label}
-            </a>
-            {children && activeParentId === id ? (
-              <ul className="flex list-none flex-col gap-0 pl-0">
-                {children.map((child) => (
-                  <li key={child.id}>
-                    <a
-                      href={`#${child.id}`}
-                      className={cn(
-                        "block -ml-px border-l py-1 pl-8 text-xs leading-relaxed transition-colors",
-                        activeId === child.id
-                          ? "border-foreground text-foreground"
-                          : "border-transparent text-muted-foreground hover:text-foreground"
-                      )}
-                    >
-                      {child.label}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </li>
-        ))}
+        {sections.map(({ id, label, children }) => {
+          const expanded = activeParentId === id;
+          const active = activeId === id || expanded;
+
+          return (
+            <li key={id}>
+              <a
+                href={`#${id}`}
+                className={cn(
+                  "block -ml-px border-l py-1 pl-4 text-xs leading-relaxed transition-colors",
+                  active
+                    ? "border-foreground text-foreground"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {label}
+              </a>
+              {children ? (
+                <div
+                  aria-hidden={!expanded}
+                  className={cn(
+                    "grid transition-[grid-template-rows,opacity] duration-200 ease-out",
+                    expanded
+                      ? "grid-rows-[1fr] opacity-100"
+                      : "pointer-events-none grid-rows-[0fr] opacity-0"
+                  )}
+                >
+                  <ul className="flex min-h-0 list-none flex-col gap-0 overflow-hidden pl-0">
+                    {children.map((child) => (
+                      <li key={child.id}>
+                        <a
+                          href={`#${child.id}`}
+                          className={cn(
+                            "block -ml-px border-l py-1 pl-8 text-xs leading-relaxed transition-colors",
+                            activeId === child.id
+                              ? "border-foreground text-foreground"
+                              : "border-transparent text-muted-foreground hover:text-foreground"
+                          )}
+                        >
+                          {child.label}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+            </li>
+          );
+        })}
       </ul>
     </nav>
   );

@@ -66,6 +66,66 @@ export const Daytona = (props: SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
+export const Blaxel = (props: SVGProps<SVGSVGElement>) => (
+  <svg
+    viewBox="0 0 48 48"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    {...props}
+  >
+    <title>Blaxel</title>
+    <rect width="48" height="48" fill="#0A0A0A" />
+    <g stroke="#fff" strokeLinecap="round" strokeWidth="2.4">
+      <path d="M13 28c6-11 15-15 25-14" />
+      <path d="M10 22c8-6 18-8 29-5" />
+      <path d="M12 16c8 1 16 5 24 13" />
+      <path d="M18 11c0 10 5 18 17 25" />
+      <path d="M25 10c-3 8-3 17 1 28" />
+      <path d="M34 13c-9 5-15 12-18 23" />
+    </g>
+  </svg>
+);
+
+export const CodeSandbox = (props: SVGProps<SVGSVGElement>) => (
+  <svg
+    viewBox="0 0 48 48"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    {...props}
+  >
+    <title>CodeSandbox</title>
+    <rect width="48" height="48" fill="#0A0A0A" />
+    <path
+      d="M24 9 37 16.5v15L24 39 11 31.5v-15L24 9Z"
+      stroke="#fff"
+      strokeWidth="2.4"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M11 16.5 24 24l13-7.5M24 24v15"
+      stroke="#fff"
+      strokeWidth="2.4"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+export const Modal = (props: SVGProps<SVGSVGElement>) => (
+  <svg
+    viewBox="0 0 48 48"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    {...props}
+  >
+    <title>Modal</title>
+    <rect width="48" height="48" fill="#0A0A0A" />
+    <path d="M12 32 20 14h9l-8 18h-9Z" fill="#8BE5A0" />
+    <path d="M20 32 28 14h8l-8 18h-8Z" fill="#D7E2D6" />
+    <path d="M21 32 29 14h-4l-8 18h4Z" fill="#5C966B" />
+    <path d="M28 32 36 14h-4l-8 18h4Z" fill="#8A938D" />
+  </svg>
+);
+
 export const Vercel = (props: SVGProps<SVGSVGElement>) => (
   <svg
     viewBox="0 0 48 48"

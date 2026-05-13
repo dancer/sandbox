@@ -14,21 +14,27 @@ import * as icons from "./icons";
 const EASE = [0.16, 1, 0.3, 1] as const;
 
 const iconMeta: Record<keyof typeof icons, { label: string; href?: string }> = {
+  Blaxel: { href: "https://blaxel.ai", label: "Blaxel" },
   Cloudflare: {
     href: "https://sandbox.cloudflare.com",
     label: "Cloudflare",
   },
+  CodeSandbox: { href: "https://codesandbox.io/sdk", label: "CodeSandbox" },
   Daytona: { href: "https://www.daytona.io", label: "Daytona" },
   E2B: { href: "https://e2b.dev", label: "E2B" },
   Local: { label: "Local" },
+  Modal: { href: "https://modal.com/sandboxes", label: "Modal" },
   Vercel: { href: "https://vercel.com/sandbox", label: "Vercel" },
 };
 
 const iconOrder = [
   "Local",
+  "Blaxel",
   "Cloudflare",
+  "CodeSandbox",
   "Daytona",
   "E2B",
+  "Modal",
   "Vercel",
 ] as const satisfies (keyof typeof icons)[];
 
