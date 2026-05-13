@@ -46,6 +46,18 @@ test("local returns command status and output", async () => {
   await sandbox.stop();
 });
 
+test("local passes sandbox environment to commands", async () => {
+  const sandbox = await create({
+    adapter: local(),
+    env: { SANDBOX_MESSAGE: "hello" },
+  });
+  const result = await sandbox.process.exec("printenv", ["SANDBOX_MESSAGE"]);
+
+  expect(result.stdout.trim()).toBe("hello");
+
+  await sandbox.stop();
+});
+
 test("local applies command timeouts", async () => {
   const sandbox = await create({ adapter: local() });
 

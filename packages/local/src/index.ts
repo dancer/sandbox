@@ -120,13 +120,14 @@ const settle = async (
 const execute = (
   root: string,
   cwd: string,
+  env: Readonly<Record<string, string>> | undefined,
   command: string,
   args: readonly string[],
   options: Exec
 ): Promise<Result> => {
   const child = spawn(command, args, {
     cwd: safe(root, options.cwd ?? cwd),
-    env: { ...process.env, ...options.env },
+    env: { ...process.env, ...env, ...options.env },
   });
   return settle(child, options.timeout);
 };
@@ -218,7 +219,7 @@ export const local = (options: Local = {}): Adapter<Raw> => ({
       },
       process: {
         exec: (command, args = [], run = {}) =>
-          execute(root, cwd, command, args, run),
+          execute(root, cwd, input.env, command, args, run),
         spawn: (command, args = [], run = {}) => {
           const child = spawn(command, args, {
             cwd: safe(root, run.cwd ?? cwd),
