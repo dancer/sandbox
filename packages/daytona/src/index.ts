@@ -73,7 +73,7 @@ const capabilities: Capabilities = {
   volumes: true,
 };
 
-const present = (value: string | undefined): boolean =>
+const present = (value: string | undefined): value is string =>
   value !== undefined && value.length > 0;
 
 const env = (name: string): string | undefined => globalThis.process?.env[name];
@@ -83,7 +83,6 @@ const validate = (options: Daytona): void => {
   const jwtToken = options.jwtToken ?? env("DAYTONA_JWT_TOKEN");
   const organizationId =
     options.organizationId ?? env("DAYTONA_ORGANIZATION_ID");
-  const target = options.target ?? env("DAYTONA_TARGET");
   if (present(options.jwtToken) && !present(organizationId)) {
     throw sandboxError(
       provider,
@@ -92,14 +91,7 @@ const validate = (options: Daytona): void => {
     );
   }
   if (present(apiKey)) {
-    if (present(target)) {
-      return;
-    }
-    throw sandboxError(
-      provider,
-      "Daytona target missing. Set DAYTONA_TARGET or pass target to daytona().",
-      "configuration"
-    );
+    return;
   }
   if (present(jwtToken) && !present(organizationId)) {
     throw sandboxError(
@@ -108,15 +100,8 @@ const validate = (options: Daytona): void => {
       "configuration"
     );
   }
-  if (present(jwtToken) && present(organizationId) && present(target)) {
-    return;
-  }
   if (present(jwtToken) && present(organizationId)) {
-    throw sandboxError(
-      provider,
-      "Daytona target missing. Set DAYTONA_TARGET or pass target to daytona().",
-      "configuration"
-    );
+    return;
   }
   throw sandboxError(
     provider,

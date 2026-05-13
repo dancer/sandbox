@@ -9,7 +9,7 @@ const credentialed = Boolean(
   process.env.DAYTONA_API_KEY ||
   (process.env.DAYTONA_JWT_TOKEN && process.env.DAYTONA_ORGANIZATION_ID)
 );
-const enabled = credentialed && Boolean(process.env.DAYTONA_TARGET);
+const enabled = credentialed;
 const live = enabled ? test : test.skip;
 
 live("daytona runs a live sandbox workflow", async () => {

@@ -1,11 +1,16 @@
 import { expect, test } from "bun:test";
 
+import { Daytona as DaytonaClient } from "@daytona/sdk";
 import { create } from "@sandbox-sdk/core";
 
 import { daytona } from "../src/index";
 
 const restore = (name: string, value: string | undefined): void => {
-  process.env[name] = value ?? "";
+  if (value === undefined) {
+    Reflect.deleteProperty(process.env, name);
+    return;
+  }
+  process.env[name] = value;
 };
 
 test("daytona reports missing credentials before provider calls", async () => {
@@ -44,4 +49,41 @@ test("daytona reports incomplete jwt config", async () => {
     code: "configuration",
     provider: "daytona",
   });
+});
+
+test("daytona accepts api key config without target", async () => {
+  type Client = InstanceType<typeof DaytonaClient>;
+  type Create = Client["create"];
+
+  const client = DaytonaClient.prototype as Client;
+  const original = client.create;
+  const raw = {
+    fs: {
+      createFolder: () => Promise.resolve(),
+    },
+    getWorkDir: () => Promise.resolve("/workspace"),
+    id: "sandbox",
+    stop: () => Promise.resolve(),
+  };
+  let seen: unknown;
+
+  client.create = ((params?: unknown) => {
+    seen = params;
+    return Promise.resolve(raw);
+  }) as Create;
+
+  try {
+    const sandbox = await create({
+      adapter: daytona({
+        apiKey: "key",
+      }),
+    });
+
+    expect(sandbox.id).toBe("sandbox");
+    expect(seen).not.toMatchObject({
+      target: expect.any(String),
+    });
+  } finally {
+    client.create = original;
+  }
 });
