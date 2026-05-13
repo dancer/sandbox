@@ -12,6 +12,7 @@
     "build": "bun run build:packages && bun run --cwd apps/site build && bun run --cwd apps/cloudflare typecheck && tsc -p examples/tsconfig.json",
     "build:packages": "bun run --cwd packages/core build && bun run --cwd packages/local build && bun run --cwd packages/ai build && bun run --cwd packages/vercel build && bun run --cwd packages/e2b build && bun run --cwd packages/daytona build && bun run --cwd packages/cloudflare build",
     "check": "ultracite check",
+    "docs:api": "bun run build:packages && bun scripts/api.ts && bun x oxfmt docs/api.md",
     "fix": "ultracite fix",
     "pack:packages": "for p in packages/core packages/local packages/ai packages/vercel packages/e2b packages/daytona packages/cloudflare; do (cd $p && bun pm pack --dry-run); done",
     "test": "bun run build:packages && bun test packages test",
