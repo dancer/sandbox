@@ -85,7 +85,7 @@ Node-based tooling, but creating a Cloudflare sandbox loads
 ## Testing
 
 ```bash
-bun test packages
+bun run test
 bun run test:live
 ```
 
