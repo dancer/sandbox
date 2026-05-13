@@ -31,6 +31,8 @@ import type {
 } from "@sandbox-sdk/core";
 
 export type Local = Readonly<{
+  /** host environment inheritance policy for local commands */
+  inheritEnv?: boolean | readonly string[];
   keep?: boolean;
   root?: string;
 }>;
@@ -43,6 +45,39 @@ interface State {
   name?: string;
   path: string;
 }
+
+const defaultEnv = ["HOME", "PATH", "SHELL", "TEMP", "TMP", "TMPDIR"] as const;
+
+const pickEnv = (names: readonly string[]): Record<string, string> => {
+  const output: Record<string, string> = {};
+  for (const name of names) {
+    const value = process.env[name];
+    if (value !== undefined) {
+      output[name] = value;
+    }
+  }
+  return output;
+};
+
+const allEnv = (): Record<string, string> => {
+  const output: Record<string, string> = {};
+  for (const [name, value] of Object.entries(process.env)) {
+    if (value !== undefined) {
+      output[name] = value;
+    }
+  }
+  return output;
+};
+
+const hostEnv = (policy: Local["inheritEnv"]): Record<string, string> => {
+  if (policy === true) {
+    return allEnv();
+  }
+  if (policy === false) {
+    return {};
+  }
+  return pickEnv(policy ?? defaultEnv);
+};
 
 const mount = (path: string): string => {
   const target = pathResolve(path);
@@ -196,7 +231,7 @@ const settle = async (
 const execute = (
   root: string,
   cwd: string,
-  env: Readonly<Record<string, string>> | undefined,
+  env: Readonly<Record<string, string>>,
   command: string,
   args: readonly string[],
   options: Exec
@@ -204,7 +239,7 @@ const execute = (
   check(options.signal);
   const child = spawn(command, args, {
     cwd: safe(root, options.cwd ?? cwd),
-    env: { ...process.env, ...env, ...options.env },
+    env: { ...env, ...options.env },
   });
   return settle(child, options);
 };
@@ -212,7 +247,7 @@ const execute = (
 const start = (
   root: string,
   cwd: string,
-  env: Readonly<Record<string, string>> | undefined,
+  env: Readonly<Record<string, string>>,
   command: string,
   args: readonly string[],
   options: Exec
@@ -220,7 +255,7 @@ const start = (
   check(options.signal);
   return spawn(command, args, {
     cwd: safe(root, options.cwd ?? cwd),
-    env: { ...process.env, ...env, ...options.env },
+    env: { ...env, ...options.env },
   });
 };
 
@@ -247,6 +282,7 @@ export const local = (options: Local = {}): Adapter<Raw> => ({
 
     await mkdir(root, { recursive: true });
     const cwd = input.cwd ?? "/workspace";
+    const env = { ...hostEnv(options.inheritEnv), ...input.env };
     await mkdir(safe(root, cwd), { recursive: true });
 
     const sandbox: Sandbox<Raw> = {
@@ -306,11 +342,11 @@ export const local = (options: Local = {}): Adapter<Raw> => ({
       },
       process: {
         exec: (command, args = [], run = {}) =>
-          execute(root, cwd, input.env, command, args, run),
+          execute(root, cwd, env, command, args, run),
         shell: (command, run = {}) =>
-          execute(root, cwd, input.env, "sh", ["-lc", command], run),
+          execute(root, cwd, env, "sh", ["-lc", command], run),
         spawn: (command, args = [], run = {}) => {
-          const child = start(root, cwd, input.env, command, args, run);
+          const child = start(root, cwd, env, command, args, run);
           const output = stream(child);
           return Promise.resolve({
             id: randomUUID(),
@@ -323,14 +359,7 @@ export const local = (options: Local = {}): Adapter<Raw> => ({
           });
         },
         spawnShell: (command, run = {}) => {
-          const child = start(
-            root,
-            cwd,
-            input.env,
-            "sh",
-            ["-lc", command],
-            run
-          );
+          const child = start(root, cwd, env, "sh", ["-lc", command], run);
           const output = stream(child);
           return Promise.resolve({
             id: randomUUID(),

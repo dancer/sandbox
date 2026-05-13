@@ -132,6 +132,39 @@ test("local passes sandbox environment to commands", async () => {
   await sandbox.stop();
 });
 
+test("local does not inherit arbitrary host environment by default", async () => {
+  process.env.SANDBOX_SDK_SECRET = "secret";
+  const sandbox = await create({ adapter: local() });
+  const result = await sandbox.process.shell(
+    "printenv SANDBOX_SDK_SECRET || printf missing"
+  );
+
+  expect(result.stdout).toBe("missing");
+
+  await sandbox.stop();
+  delete process.env.SANDBOX_SDK_SECRET;
+});
+
+test("local can opt into host environment inheritance", async () => {
+  process.env.SANDBOX_SDK_ALLOWED = "allowed";
+  const all = await create({ adapter: local({ inheritEnv: true }) });
+  const picked = await create({
+    adapter: local({ inheritEnv: ["SANDBOX_SDK_ALLOWED"] }),
+  });
+
+  const allResult = await all.process.exec("printenv", ["SANDBOX_SDK_ALLOWED"]);
+  const pickedResult = await picked.process.exec("printenv", [
+    "SANDBOX_SDK_ALLOWED",
+  ]);
+
+  expect(allResult.stdout.trim()).toBe("allowed");
+  expect(pickedResult.stdout.trim()).toBe("allowed");
+
+  await all.stop();
+  await picked.stop();
+  delete process.env.SANDBOX_SDK_ALLOWED;
+});
+
 test("local applies command timeouts", async () => {
   const sandbox = await create({ adapter: local() });
   let thrown: unknown;
