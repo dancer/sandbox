@@ -7,6 +7,7 @@ import {
   command,
   error as sandboxError,
   result,
+  timeout,
   unsupported,
 } from "@sandbox-sdk/core";
 import type {
@@ -259,85 +260,6 @@ const check = (signal?: AbortSignal): void => {
   }
 };
 
-const execute = async (
-  client: SandboxClient,
-  cwd: string,
-  line: string,
-  options: Exec
-): Promise<Result> => {
-  check(options.signal);
-  try {
-    const stdout = await client.commands.run(line, {
-      ...(options.cwd === undefined ? { cwd } : { cwd: options.cwd }),
-      ...(options.env === undefined ? {} : { env: { ...options.env } }),
-    });
-    return result(0, stdout, "");
-  } catch (error) {
-    if (options.signal?.aborted) {
-      abort(provider, error);
-    }
-    const output = failure(error);
-    if (output !== undefined) {
-      return output;
-    }
-    throw sandboxError(provider, "Command failed", "process", error);
-  }
-};
-
-const shell = (
-  client: SandboxClient,
-  cwd: string,
-  script: string,
-  options: Exec
-): Promise<Result> => execute(client, cwd, script, options);
-
-const mkdir = async (client: SandboxClient, path: string): Promise<void> => {
-  await client.fs.mkdir(path, true);
-};
-
-const write = async (
-  client: SandboxClient,
-  path: string,
-  input: Input
-): Promise<void> => {
-  const value = await bytes(input);
-  await mkdir(client, dirname(path));
-  if (typeof value === "string") {
-    await client.fs.writeTextFile(path, value);
-    return;
-  }
-  await client.fs.writeFile(path, value);
-};
-
-const exists = async (
-  client: SandboxClient,
-  path: string
-): Promise<boolean> => {
-  try {
-    await client.fs.stat(path);
-    return true;
-  } catch {
-    return false;
-  }
-};
-
-const list = async (client: SandboxClient, path: string): Promise<Entry[]> => {
-  const children = await client.fs.readdir(path);
-  const entries = await Promise.all(
-    children.map(async (entry): Promise<Entry> => {
-      const next = joinPath(path, entry.name);
-      const stat = await client.fs.stat(next);
-      return {
-        kind: entry.type,
-        modified: new Date(stat.mtime),
-        path: next,
-        size: stat.size,
-      };
-    })
-  );
-  return entries.toSorted((left, right) => left.path.localeCompare(right.path));
-};
-
 const spawn = async (
   client: SandboxClient,
   cwd: string,
@@ -414,6 +336,103 @@ const spawn = async (
     }
     throw sandboxError(provider, "Command failed", "process", error);
   }
+};
+
+const execute = async (
+  client: SandboxClient,
+  cwd: string,
+  line: string,
+  options: Exec
+): Promise<Result> => {
+  check(options.signal);
+  if (options.signal !== undefined || options.timeout !== undefined) {
+    const deadline = timeout(options.timeout, options.signal);
+    try {
+      const run = {
+        ...(options.cwd === undefined ? {} : { cwd: options.cwd }),
+        ...(options.env === undefined ? {} : { env: { ...options.env } }),
+        ...(deadline.signal === undefined ? {} : { signal: deadline.signal }),
+      };
+      const running = await spawn(client, cwd, line, run);
+      const output = await running.result;
+      if (options.signal?.aborted) {
+        abort(provider, options.signal.reason);
+      }
+      if (deadline.aborted()) {
+        throw sandboxError(provider, "Command timed out", "timeout", output);
+      }
+      return output;
+    } finally {
+      deadline.clear();
+    }
+  }
+  try {
+    const stdout = await client.commands.run(line, {
+      ...(options.cwd === undefined ? { cwd } : { cwd: options.cwd }),
+      ...(options.env === undefined ? {} : { env: { ...options.env } }),
+    });
+    return result(0, stdout, "");
+  } catch (error) {
+    const output = failure(error);
+    if (output !== undefined) {
+      return output;
+    }
+    throw sandboxError(provider, "Command failed", "process", error);
+  }
+};
+
+const shell = (
+  client: SandboxClient,
+  cwd: string,
+  script: string,
+  options: Exec
+): Promise<Result> => execute(client, cwd, script, options);
+
+const mkdir = async (client: SandboxClient, path: string): Promise<void> => {
+  await client.fs.mkdir(path, true);
+};
+
+const write = async (
+  client: SandboxClient,
+  path: string,
+  input: Input
+): Promise<void> => {
+  const value = await bytes(input);
+  await mkdir(client, dirname(path));
+  if (typeof value === "string") {
+    await client.fs.writeTextFile(path, value);
+    return;
+  }
+  await client.fs.writeFile(path, value);
+};
+
+const exists = async (
+  client: SandboxClient,
+  path: string
+): Promise<boolean> => {
+  try {
+    await client.fs.stat(path);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const list = async (client: SandboxClient, path: string): Promise<Entry[]> => {
+  const children = await client.fs.readdir(path);
+  const entries = await Promise.all(
+    children.map(async (entry): Promise<Entry> => {
+      const next = joinPath(path, entry.name);
+      const stat = await client.fs.stat(next);
+      return {
+        kind: entry.type,
+        modified: new Date(stat.mtime),
+        path: next,
+        size: stat.size,
+      };
+    })
+  );
+  return entries.toSorted((left, right) => left.path.localeCompare(right.path));
 };
 
 const createSandbox = (

@@ -25,6 +25,7 @@ test("codesandbox maps create options and normalized operations", async () => {
   let connectSeen: unknown;
   let mkdirSeen: unknown;
   let portSeen: unknown;
+  let backgroundSeen: unknown;
   let runSeen: unknown;
   let shutdownSeen: string | undefined;
   let disconnected = false;
@@ -46,7 +47,10 @@ test("codesandbox maps create options and normalized operations", async () => {
         runSeen = { line, options };
         return Promise.resolve("ok");
       },
-      runBackground: () => Promise.resolve(background),
+      runBackground: (line: string, options: unknown) => {
+        backgroundSeen = { line, options };
+        return Promise.resolve(background);
+      },
     },
     disconnect: () => {
       disconnected = true;
@@ -142,6 +146,20 @@ test("codesandbox maps create options and normalized operations", async () => {
   expect(runSeen).toEqual({
     line: "echo 'hello world'",
     options: { cwd: "/tmp", env: { C: "3" } },
+  });
+
+  await expect(
+    current.process.exec("sleep", ["1"], {
+      timeout: 2500,
+    })
+  ).resolves.toMatchObject({
+    code: 0,
+    ok: true,
+    stdout: "done",
+  });
+  expect(backgroundSeen).toEqual({
+    line: "sleep 1",
+    options: { cwd: "/work" },
   });
 
   const running = await current.process.spawnShell("sleep 1");
