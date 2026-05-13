@@ -95,6 +95,35 @@ const check = (signal?: AbortSignal): void => {
   }
 };
 
+const validatePort = (value: number): void => {
+  if (
+    Number.isInteger(value) &&
+    value >= 1024 &&
+    value <= 65_535 &&
+    value !== 3000
+  ) {
+    return;
+  }
+
+  throw sandboxError(
+    provider,
+    "Cloudflare preview ports must be integers from 1024 to 65535, excluding 3000",
+    "unsupported"
+  );
+};
+
+const validateHostname = (value: string): void => {
+  if (!value.endsWith(".workers.dev")) {
+    return;
+  }
+
+  throw sandboxError(
+    provider,
+    "Cloudflare preview URLs require a custom domain because workers.dev does not support wildcard subdomains",
+    "unsupported"
+  );
+};
+
 const executeLine = async (
   raw: Raw,
   cwd: string,
@@ -210,6 +239,7 @@ const createSandbox = (
   id: options.id ?? "default",
   ports: {
     expose: async (port, input) => {
+      validatePort(port);
       const hostname = input?.host ?? options.hostname;
       if (!hostname) {
         throw sandboxError(
@@ -218,6 +248,7 @@ const createSandbox = (
           "unsupported"
         );
       }
+      validateHostname(hostname);
       const output = await raw.exposePort(port, {
         hostname,
         ...(options.name === undefined ? {} : { name: options.name }),
