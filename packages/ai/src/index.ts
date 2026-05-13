@@ -25,7 +25,13 @@ export type Options = Readonly<{
 
 export type Kit = Readonly<{
   description: string;
+  sandbox: AgentSandbox;
   tools: Tools;
+}>;
+
+export type AgentSandbox = Readonly<{
+  description: string;
+  executeCommand(input: Command): Promise<CommandResult>;
 }>;
 
 interface Draft {
@@ -43,6 +49,18 @@ export type Exec = Readonly<{
   command: string;
   cwd?: string;
   env?: Readonly<Record<string, string>>;
+}>;
+
+export type Command = Readonly<{
+  abortSignal?: AbortSignal;
+  command: string;
+  workingDirectory?: string;
+}>;
+
+export type CommandResult = Readonly<{
+  exitCode: number;
+  stderr: string;
+  stdout: string;
 }>;
 
 export type Path = Readonly<{
@@ -144,6 +162,27 @@ const description = (
   ].join("\n");
 };
 
+const agent = (
+  sandbox: Sandbox,
+  details: string,
+  cwd: string,
+  timeout: number
+): AgentSandbox => ({
+  description: details,
+  executeCommand: async (input) => {
+    const output = await sandbox.process.shell(input.command, {
+      cwd: input.workingDirectory ?? cwd,
+      ...(input.abortSignal === undefined ? {} : { signal: input.abortSignal }),
+      timeout,
+    });
+    return {
+      exitCode: output.code,
+      stderr: output.stderr,
+      stdout: output.stdout,
+    };
+  },
+});
+
 export const tools = (sandbox: Sandbox, options: Options = {}): Kit => {
   const cwd = options.cwd ?? sandbox.cwd;
   const timeout = options.timeout ?? 30_000;
@@ -237,8 +276,11 @@ export const tools = (sandbox: Sandbox, options: Options = {}): Kit => {
     };
   }
 
+  const text = description(sandbox, allow, cwd, timeout, maxOutput);
+
   return {
-    description: description(sandbox, allow, cwd, timeout, maxOutput),
+    description: text,
+    sandbox: agent(sandbox, text, cwd, timeout),
     tools: output,
   };
 };

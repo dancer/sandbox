@@ -68,6 +68,7 @@ const kit = tools(sandbox, {
 });
 
 kit.description;
+kit.sandbox;
 kit.tools;
 ```
 

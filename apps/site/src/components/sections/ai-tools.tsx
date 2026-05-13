@@ -55,6 +55,7 @@ const kit = tools(sandbox);
 
 const result = await generateText({
   model: yourModel,
+  sandbox: kit.sandbox,
   system: kit.description,
   tools: kit.tools,
   prompt: "Write a TypeScript program that prints fib(10), then run it.",
@@ -86,10 +87,10 @@ export const AiTools = () => (
     <p>
       <code>@sandbox-sdk/ai</code> wraps a configured sandbox into ready-made
       tools for agent frameworks. The kit includes prompt context plus file,
-      command, directory, and preview tools with JSON-schema inputs. Pick the
-      framework that matches your stack; each tool is just a thin shim around{" "}
-      <code>files</code>, <code>process</code>, and <code>ports</code> on the
-      underlying sandbox.
+      command, directory, preview tools, and an AI SDK-compatible sandbox object
+      with JSON-schema inputs. Pick the framework that matches your stack; each
+      tool is just a thin shim around <code>files</code>, <code>process</code>,
+      and <code>ports</code> on the underlying sandbox.
     </p>
 
     <section>
@@ -107,7 +108,8 @@ export const AiTools = () => (
         Pass a configured sandbox into <code>tools()</code>. The return value is
         prompt context and a record of tool definitions, each with a{" "}
         <code>description</code>, <code>inputSchema</code>, and{" "}
-        <code>execute</code> function.
+        <code>execute</code> function. The <code>sandbox</code> property matches
+        AI SDK's <code>{`{ description, executeCommand }`}</code> shape.
       </p>
       <CodeBlock code={QUICK_START} lang="tsx" />
       <Accordion className="rounded-md border-dotted" type="multiple">
@@ -151,9 +153,9 @@ export const AiTools = () => (
         >
           Vercel AI SDK
         </a>
-        's <code>tools</code> field. The model can read files, write files, and
-        run commands inside the sandbox without you wiring up shell access in
-        your app.
+        's <code>tools</code> and <code>sandbox</code> fields. The model can
+        read files, write files, and run commands inside the sandbox without you
+        wiring up shell access in your app.
       </p>
       <CodeBlock code={AI_SDK_EXAMPLE} lang="tsx" />
     </section>

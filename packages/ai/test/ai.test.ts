@@ -22,6 +22,7 @@ test("tools returns prompt context and selected tools", async () => {
     "read",
     "write",
   ]);
+  expect(kit.sandbox.description).toBe(kit.description);
   expect(kit.tools.exec?.strict).toBe(true);
 
   await sandbox.stop();
@@ -58,6 +59,24 @@ test("tools can read, write, list, and execute", async () => {
   expect(exec?.stdout.trim()).toBe("hello");
   expect(shell?.stdout).toBe("shell");
   expect(env?.stdout.trim()).toBe("ok");
+
+  await sandbox.stop();
+});
+
+test("tools expose an ai sdk sandbox shape", async () => {
+  const sandbox = await create({ adapter: local(), cwd: "/workspace" });
+  const kit = tools(sandbox, { timeout: 10_000 });
+
+  const output = await kit.sandbox.executeCommand({
+    command: "printf ai",
+    workingDirectory: "/workspace",
+  });
+
+  expect(output).toEqual({
+    exitCode: 0,
+    stderr: "",
+    stdout: "ai",
+  });
 
   await sandbox.stop();
 });
