@@ -28,7 +28,8 @@ test("local supports sandbox absolute paths", async () => {
 test("local creates and checks directories", async () => {
   const sandbox = await create({ adapter: local() });
 
-  expect(await sandbox.files.exists("/workspace")).toBe(false);
+  expect(sandbox.cwd).toBe("/workspace");
+  expect(await sandbox.files.exists("/workspace")).toBe(true);
   await sandbox.files.mkdir("/workspace/cache");
   expect(await sandbox.files.exists("/workspace")).toBe(true);
 

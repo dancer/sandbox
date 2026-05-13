@@ -178,7 +178,7 @@ export const local = (options: Local = {}): Adapter<Raw> => ({
       : await mkdtemp(join(tmpdir(), "sandbox-sdk-"));
 
     await mkdir(root, { recursive: true });
-    const cwd = input.cwd ?? ".";
+    const cwd = input.cwd ?? "/workspace";
     await mkdir(safe(root, cwd), { recursive: true });
 
     const sandbox: Sandbox<Raw> = {
