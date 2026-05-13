@@ -40,12 +40,18 @@ test("tools can read, write, list, and execute", async () => {
     args: ["hello"],
     command: "echo",
   });
+  const env = await kit.tools.exec?.execute({
+    args: ["SANDBOX_VALUE"],
+    command: "printenv",
+    env: { SANDBOX_VALUE: "ok" },
+  });
 
   expect(read?.text).toBe("hello");
   expect(
     list?.entries.some((entry) => entry.path === "workspace/file.txt")
   ).toBe(true);
   expect(exec?.stdout.trim()).toBe("hello");
+  expect(env?.stdout.trim()).toBe("ok");
 
   await sandbox.stop();
 });

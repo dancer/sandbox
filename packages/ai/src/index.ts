@@ -41,6 +41,7 @@ export type Exec = Readonly<{
   args?: readonly string[];
   command: string;
   cwd?: string;
+  env?: Readonly<Record<string, string>>;
 }>;
 
 export type Path = Readonly<{
@@ -59,6 +60,7 @@ export type Preview = Readonly<{
 export type ExecResult = Readonly<{
   code: number;
   ok: boolean;
+  signal?: string;
   stderr: string;
   stdout: string;
 }>;
@@ -88,12 +90,20 @@ const trim = (value: string, limit: number): string => {
   return `${value.slice(0, limit)}\n[truncated ${value.length - limit} bytes]`;
 };
 
-const result = (output: Result, limit: number): ExecResult => ({
-  code: output.code,
-  ok: output.ok,
-  stderr: trim(output.stderr, limit),
-  stdout: trim(output.stdout, limit),
-});
+const result = (output: Result, limit: number): ExecResult => {
+  const value: ExecResult = {
+    code: output.code,
+    ok: output.ok,
+    stderr: trim(output.stderr, limit),
+    stdout: trim(output.stdout, limit),
+  };
+
+  if (output.signal === undefined) {
+    return value;
+  }
+
+  return { ...value, signal: output.signal };
+};
 
 const schema = (
   properties: Readonly<Record<string, unknown>>,
@@ -180,19 +190,27 @@ export const tools = (sandbox: Sandbox, options: Options = {}): Kit => {
   if (enabled.has("exec")) {
     output.exec = {
       description: "Run a command inside the sandbox.",
-      execute: async (input: Exec): Promise<ExecResult> =>
-        result(
-          await sandbox.process.exec(input.command, input.args, {
-            cwd: input.cwd ?? cwd,
-            timeout,
-          }),
+      execute: async (input: Exec): Promise<ExecResult> => {
+        const run = {
+          cwd: input.cwd ?? cwd,
+          timeout,
+          ...(input.env === undefined ? {} : { env: input.env }),
+        };
+
+        return result(
+          await sandbox.process.exec(input.command, input.args, run),
           maxOutput
-        ),
+        );
+      },
       inputSchema: schema(
         {
           args: { items: { type: "string" }, type: "array" },
           command: { type: "string" },
           cwd: { type: "string" },
+          env: {
+            additionalProperties: { type: "string" },
+            type: "object",
+          },
         },
         ["command"]
       ),
