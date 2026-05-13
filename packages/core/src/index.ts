@@ -1,13 +1,30 @@
 export type Capability =
-  | "files"
-  | "process"
-  | "ports"
-  | "snapshots"
-  | "secrets"
+  | "desktop"
   | "environment"
-  | "streaming";
+  | "files"
+  | "git"
+  | "network"
+  | "ports"
+  | "process"
+  | "pty"
+  | "secrets"
+  | "snapshots"
+  | "streaming"
+  | "volumes";
 
-export type Capabilities = Readonly<Partial<Record<Capability, boolean>>>;
+export type Mode =
+  | boolean
+  | "combined"
+  | "create-time"
+  | "derived"
+  | "disk"
+  | "dynamic"
+  | "filesystem"
+  | "memory"
+  | "separate"
+  | "volume";
+
+export type Capabilities = Readonly<Partial<Record<Capability, Mode>>>;
 
 export type Input =
   | string
@@ -25,6 +42,7 @@ export type Entry = Readonly<{
 
 export type Result = Readonly<{
   code: number;
+  ok: boolean;
   signal?: string;
   stdout: string;
   stderr: string;
@@ -91,14 +109,15 @@ export type Port = Readonly<{
 }>;
 
 export type Sandbox<Raw = unknown> = Readonly<{
-  id: string;
-  provider: string;
   capabilities: Capabilities;
+  cwd: string;
   files: Files;
+  id: string;
   process: Process;
+  provider: string;
   ports: Ports;
-  snapshots: Snapshots;
   raw: Raw;
+  snapshots: Snapshots;
   stop(): Promise<void>;
 }>;
 
@@ -109,9 +128,12 @@ export type Adapter<Raw = unknown> = Readonly<{
 }>;
 
 export type Options = Readonly<{
-  id?: string;
   cwd?: string;
   env?: Readonly<Record<string, string>>;
+  id?: string;
+  metadata?: Readonly<Record<string, string>>;
+  ports?: readonly number[];
+  template?: string;
   timeout?: number;
 }>;
 
@@ -119,14 +141,23 @@ export type Cause = Readonly<{
   cause?: unknown;
 }>;
 
+export type Code =
+  | "aborted"
+  | "not_found"
+  | "path_escape"
+  | "process"
+  | "provider"
+  | "timeout"
+  | "unsupported";
+
 export class SandboxError extends Error {
-  readonly code: string;
+  readonly code: Code;
 
   readonly provider?: string;
 
   constructor(
     message: string,
-    options: Cause & { code: string; provider?: string }
+    options: Cause & { code: Code; provider?: string }
   ) {
     super(message, { cause: options.cause });
     this.name = "SandboxError";
@@ -138,8 +169,19 @@ export class SandboxError extends Error {
 }
 
 export const create = <Raw = unknown>(
-  options: Options & { adapter: Adapter<Raw> }
-): Promise<Sandbox<Raw>> => options.adapter.create(options);
+  input: Options & { adapter: Adapter<Raw> }
+): Promise<Sandbox<Raw>> => {
+  const { adapter, ...options } = input;
+  return adapter.create(options);
+};
+
+export const supports = (
+  subject: { capabilities: Capabilities },
+  capability: Capability
+): boolean => {
+  const value = subject.capabilities[capability];
+  return value !== undefined && value !== false;
+};
 
 export const unsupported = (provider: string, feature: string): never => {
   throw new SandboxError(`${provider} does not support ${feature}`, {
