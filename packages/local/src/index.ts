@@ -184,6 +184,17 @@ export const local = (options: Local = {}): Adapter<Raw> => ({
       capabilities: this.capabilities,
       cwd,
       files: {
+        exists: async (path) => {
+          try {
+            await stat(safe(root, path));
+            return true;
+          } catch (error) {
+            if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+              return false;
+            }
+            throw error;
+          }
+        },
         list: async (path = ".") => {
           const base = safe(root, path);
           const names = await readdir(base);
@@ -203,6 +214,7 @@ export const local = (options: Local = {}): Adapter<Raw> => ({
             left.path.localeCompare(right.path)
           );
         },
+        mkdir: (path) => mkdir(safe(root, path), { recursive: true }),
         read: (path) => readFile(safe(root, path)),
         remove: (path) =>
           rm(safe(root, path), { force: true, recursive: true }),

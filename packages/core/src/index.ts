@@ -73,6 +73,8 @@ export type Files = Readonly<{
   text(path: string): Promise<string>;
   write(path: string, input: Input): Promise<void>;
   list(path?: string): Promise<readonly Entry[]>;
+  exists(path: string): Promise<boolean>;
+  mkdir(path: string): Promise<void>;
   remove(path: string): Promise<void>;
 }>;
 

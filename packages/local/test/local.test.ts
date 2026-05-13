@@ -25,6 +25,24 @@ test("local supports sandbox absolute paths", async () => {
   await rm(root, { force: true, recursive: true });
 });
 
+test("local creates and checks directories", async () => {
+  const sandbox = await create({ adapter: local() });
+
+  expect(await sandbox.files.exists("/workspace")).toBe(false);
+  await sandbox.files.mkdir("/workspace/cache");
+  expect(await sandbox.files.exists("/workspace")).toBe(true);
+
+  const entries = await sandbox.files.list("/workspace");
+  expect(entries).toEqual([
+    expect.objectContaining({
+      kind: "directory",
+      path: "workspace/cache",
+    }),
+  ]);
+
+  await sandbox.stop();
+});
+
 test("local prevents paths escaping the sandbox root", async () => {
   const sandbox = await create({ adapter: local() });
 

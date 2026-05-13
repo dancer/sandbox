@@ -7,7 +7,9 @@ const sandbox = (capabilities: Sandbox["capabilities"]): Sandbox => ({
   capabilities,
   cwd: ".",
   files: {
+    exists: () => Promise.resolve(false),
     list: () => Promise.resolve([]),
+    mkdir: () => Promise.resolve(),
     read: () => Promise.resolve(new Uint8Array()),
     remove: () => Promise.resolve(),
     text: () => Promise.resolve(""),
