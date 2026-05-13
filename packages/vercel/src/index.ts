@@ -74,7 +74,11 @@ const capabilities: Capabilities = {
   network: "dynamic",
   ports: "create-time",
   process: true,
-  snapshots: "disk",
+  processExec: true,
+  processSpawn: "separate",
+  snapshotCreate: "disk",
+  snapshotRestore: false,
+  snapshots: false,
   streaming: "separate",
 };
 

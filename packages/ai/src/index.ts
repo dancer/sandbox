@@ -147,7 +147,9 @@ const description = (
 ): string => {
   const unavailable = [
     supports(sandbox, "ports") ? undefined : "ports",
-    supports(sandbox, "snapshots") ? undefined : "snapshots",
+    supports(sandbox, "snapshotCreate") ? undefined : "snapshot creation",
+    supports(sandbox, "snapshotRestore") ? undefined : "snapshot restore",
+    supports(sandbox, "processSpawn") ? undefined : "background processes",
     supports(sandbox, "pty") ? undefined : "pty",
     supports(sandbox, "desktop") ? undefined : "desktop",
   ].filter((item): item is string => item !== undefined);

@@ -15,6 +15,8 @@ test("tools returns prompt context and selected tools", async () => {
 
   expect(kit.description).toContain("isolated local sandbox");
   expect(kit.description).toContain("/workspace");
+  expect(kit.description).not.toContain("snapshot creation");
+  expect(kit.description).not.toContain("snapshot restore");
   expect(Object.keys(kit.tools).toSorted()).toEqual([
     "exec",
     "list",

@@ -6,8 +6,12 @@ export type Capability =
   | "network"
   | "ports"
   | "process"
+  | "processExec"
+  | "processSpawn"
   | "pty"
   | "secrets"
+  | "snapshotCreate"
+  | "snapshotRestore"
   | "snapshots"
   | "streaming"
   | "volumes";

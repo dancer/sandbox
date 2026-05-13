@@ -49,8 +49,12 @@ const capabilities: Capabilities = {
   network: true,
   ports: "derived",
   process: true,
+  processExec: true,
+  processSpawn: "combined",
   pty: true,
-  snapshots: "disk",
+  snapshotCreate: "disk",
+  snapshotRestore: false,
+  snapshots: false,
   streaming: "combined",
 };
 

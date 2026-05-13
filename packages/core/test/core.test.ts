@@ -151,11 +151,19 @@ test("supports handles boolean and mode capabilities", () => {
   const current = sandbox({
     files: true,
     ports: "create-time",
+    processExec: true,
+    processSpawn: false,
+    snapshotCreate: "disk",
+    snapshotRestore: false,
     snapshots: false,
   });
 
   expect(supports(current, "files")).toBe(true);
   expect(supports(current, "ports")).toBe(true);
+  expect(supports(current, "processExec")).toBe(true);
+  expect(supports(current, "processSpawn")).toBe(false);
+  expect(supports(current, "snapshotCreate")).toBe(true);
+  expect(supports(current, "snapshotRestore")).toBe(false);
   expect(supports(current, "snapshots")).toBe(false);
   expect(supports(current, "desktop")).toBe(false);
 });

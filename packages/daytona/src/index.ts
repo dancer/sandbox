@@ -64,6 +64,10 @@ const capabilities: Capabilities = {
   network: "dynamic",
   ports: "dynamic",
   process: true,
+  processExec: true,
+  processSpawn: false,
+  snapshotCreate: false,
+  snapshotRestore: false,
   snapshots: false,
   volumes: true,
 };
