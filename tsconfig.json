@@ -9,6 +9,9 @@
     },
     {
       "path": "./packages/ai"
+    },
+    {
+      "path": "./packages/vercel"
     }
   ],
   "compilerOptions": {
