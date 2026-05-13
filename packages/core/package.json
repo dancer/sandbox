@@ -1,6 +1,23 @@
 {
   "name": "@sandbox-sdk/core",
   "version": "0.0.0",
+  "description": "Typed primitives for sandbox providers",
+  "keywords": [
+    "agent",
+    "sandbox",
+    "sdk",
+    "typescript"
+  ],
+  "homepage": "https://github.com/dancer/sandbox#readme",
+  "bugs": {
+    "url": "https://github.com/dancer/sandbox/issues"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/dancer/sandbox.git",
+    "directory": "packages/core"
+  },
   "files": [
     "dist"
   ],
@@ -11,6 +28,9 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     }
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
