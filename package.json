@@ -14,8 +14,8 @@
     "check": "ultracite check",
     "fix": "ultracite fix",
     "pack:packages": "for p in packages/core packages/local packages/ai packages/vercel packages/e2b packages/daytona packages/cloudflare; do (cd $p && bun pm pack --dry-run); done",
-    "test": "bun test packages",
-    "test:live": "bun test packages/daytona/test/live.test.ts packages/e2b/test/live.test.ts packages/vercel/test/live.test.ts",
+    "test": "bun run build:packages && bun test packages",
+    "test:live": "bun run build:packages && bun test packages/daytona/test/live.test.ts packages/e2b/test/live.test.ts packages/vercel/test/live.test.ts",
     "typecheck": "bun run build:packages && bun run --cwd apps/site typecheck",
     "prepare": "husky"
   },
