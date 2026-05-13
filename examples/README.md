@@ -8,6 +8,7 @@ credentials.
 
 - `local.ts`
 - `blaxel.ts`
+- `codesandbox.ts`
 - `e2b.ts`
 - `daytona.ts`
 - `vercel.ts`

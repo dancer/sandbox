@@ -1,0 +1,51 @@
+{
+  "name": "@sandbox-sdk/codesandbox",
+  "version": "0.0.0",
+  "description": "CodeSandbox adapter for Sandbox SDK",
+  "keywords": [
+    "agent",
+    "codesandbox",
+    "sandbox",
+    "sdk",
+    "typescript"
+  ],
+  "homepage": "https://sandbox-sdk.sh",
+  "bugs": {
+    "url": "https://github.com/dancer/sandbox/issues"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/dancer/sandbox.git",
+    "directory": "packages/codesandbox"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepack": "bun run build",
+    "test": "bun test test"
+  },
+  "dependencies": {
+    "@codesandbox/sdk": "^2.4.2",
+    "@sandbox-sdk/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.41",
+    "typescript": "^5.9.3"
+  }
+}
