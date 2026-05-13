@@ -1,9 +1,12 @@
 import { Heading } from "@/components/heading";
 
+import { Blaxel } from "./blaxel";
 import { Cloudflare } from "./cloudflare";
+import { CodeSandbox } from "./codesandbox";
 import { Daytona } from "./daytona";
 import { E2B } from "./e2b";
 import { Local } from "./local";
+import { Modal } from "./modal";
 import { Vercel } from "./vercel";
 
 export const Adapters = () => (
@@ -21,9 +24,12 @@ export const Adapters = () => (
       for what's supported right now.
     </p>
     <Local />
+    <Blaxel />
     <Cloudflare />
+    <CodeSandbox />
     <Daytona />
     <E2B />
+    <Modal />
     <Vercel />
   </section>
 );

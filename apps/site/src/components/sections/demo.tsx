@@ -8,10 +8,22 @@ const ADAPTERS = [
     label: "Local",
   },
   {
+    config: `blaxel({ image: "blaxel/base-image:latest" })`,
+    id: "blaxel",
+    import: `import { blaxel } from "@sandbox-sdk/blaxel";`,
+    label: "Blaxel",
+  },
+  {
     config: `cloudflare({ binding: env.SANDBOX })`,
     id: "cloudflare",
     import: `import { cloudflare } from "@sandbox-sdk/cloudflare";`,
     label: "Cloudflare",
+  },
+  {
+    config: `codesandbox({ template: "template-sandbox-id" })`,
+    id: "codesandbox",
+    import: `import { codesandbox } from "@sandbox-sdk/codesandbox";`,
+    label: "CodeSandbox",
   },
   {
     config: `daytona({ image: "ubuntu:22.04" })`,
@@ -24,6 +36,12 @@ const ADAPTERS = [
     id: "e2b",
     import: `import { e2b } from "@sandbox-sdk/e2b";`,
     label: "E2B",
+  },
+  {
+    config: `modal({ image: "alpine:3.21" })`,
+    id: "modal",
+    import: `import { modal } from "@sandbox-sdk/modal";`,
+    label: "Modal",
   },
   {
     config: `vercel({ runtime: "node22" })`,

@@ -25,9 +25,12 @@ const no = (note: string): Cell => ({ note, status: "no" });
 
 const COLUMNS = [
   { key: "local", label: "Local", parent: "Local" },
+  { key: "blaxel", label: "Blaxel", parent: "Blaxel" },
   { key: "cloudflare", label: "Cloudflare", parent: "Cloudflare" },
+  { key: "codesandbox", label: "CodeSandbox", parent: "CodeSandbox" },
   { key: "daytona", label: "Daytona", parent: "Daytona" },
   { key: "e2b", label: "E2B", parent: "E2B" },
+  { key: "modal", label: "Modal", parent: "Modal" },
   { key: "vercel", label: "Vercel", parent: "Vercel" },
 ] as const;
 
@@ -37,43 +40,59 @@ const ROWS: { capability: string; cells: Record<ColumnKey, Cell> }[] = [
   {
     capability: "files",
     cells: {
+      blaxel: ok,
       cloudflare: ok,
+      codesandbox: ok,
       daytona: ok,
       e2b: ok,
       local: ok,
+      modal: ok,
       vercel: ok,
     },
   },
   {
     capability: "process exec",
     cells: {
+      blaxel: ok,
       cloudflare: ok,
+      codesandbox: ok,
       daytona: ok,
       e2b: ok,
       local: ok,
+      modal: ok,
       vercel: ok,
     },
   },
   {
     capability: "process spawn",
     cells: {
+      blaxel: ok,
       cloudflare: ok,
+      codesandbox: ok,
       daytona: no(
         "Daytona exposes buffered exec and shell commands in this adapter. Background process spawn stays behind raw until the provider surface is stable."
       ),
       e2b: ok,
       local: ok,
+      modal: no(
+        "Modal exposes one-shot command execution in this adapter. Background process handles are not normalized because the current SDK process object has no stable kill handle."
+      ),
       vercel: ok,
     },
   },
   {
     capability: "ports",
     cells: {
+      blaxel: ok,
       cloudflare: ok,
+      codesandbox: ok,
       daytona: ok,
       e2b: ok,
       local: warn(
         "Local previews are derived localhost URLs. There is no tunnel because the process already runs on the host."
+      ),
+      modal: warn(
+        "Modal ports must be declared when the sandbox is created, then exposed through Modal tunnels."
       ),
       vercel: ok,
     },
@@ -81,8 +100,14 @@ const ROWS: { capability: string; cells: Record<ColumnKey, Cell> }[] = [
   {
     capability: "snapshot create",
     cells: {
+      blaxel: no(
+        "Blaxel snapshot behavior is provider-specific today and stays behind raw until the normalized contract is right."
+      ),
       cloudflare: no(
         "Cloudflare Sandbox backups and hibernation are provider-specific today. The adapter keeps them behind raw until the normalized snapshot contract is right."
+      ),
+      codesandbox: no(
+        "CodeSandbox hibernation is provider-specific today and stays behind raw until the normalized snapshot contract is right."
       ),
       daytona: no(
         "Daytona snapshot and fork APIs are still experimental in the current adapter surface. Use raw for provider-specific snapshot workflows."
@@ -93,6 +118,9 @@ const ROWS: { capability: string; cells: Record<ColumnKey, Cell> }[] = [
       local: warn(
         "Local snapshots copy the sandbox filesystem to a temporary host directory."
       ),
+      modal: warn(
+        "Modal supports filesystem snapshot creation. Restore is tracked separately because in-place restore is not normalized yet."
+      ),
       vercel: warn(
         "Vercel supports snapshot creation. Creating a snapshot stops the running sandbox."
       ),
@@ -101,8 +129,14 @@ const ROWS: { capability: string; cells: Record<ColumnKey, Cell> }[] = [
   {
     capability: "snapshot restore",
     cells: {
+      blaxel: no(
+        "Blaxel restore and fork flows are provider-specific in this adapter today."
+      ),
       cloudflare: no(
         "Cloudflare backup and restore is provider-specific today and stays behind raw until the normalized contract is right."
+      ),
+      codesandbox: no(
+        "CodeSandbox resume and hibernation are provider-specific in this adapter today."
       ),
       daytona: no(
         "Daytona restore and fork flows are provider-specific in this adapter today."
@@ -113,6 +147,9 @@ const ROWS: { capability: string; cells: Record<ColumnKey, Cell> }[] = [
       local: warn(
         "Local restore works for snapshots created by the same sandbox instance."
       ),
+      modal: no(
+        "Modal can create filesystem snapshots, but in-place restore is not exposed by the normalized adapter."
+      ),
       vercel: no(
         "Vercel can create a new sandbox from a snapshot through the snapshot create option, but in-place restore is not supported."
       ),
@@ -121,8 +158,14 @@ const ROWS: { capability: string; cells: Record<ColumnKey, Cell> }[] = [
   {
     capability: "snapshot source",
     cells: {
+      blaxel: no(
+        "Blaxel snapshot source flows stay behind raw until the normalized create-from-snapshot contract is right."
+      ),
       cloudflare: no(
         "Cloudflare backup and hibernation flows stay behind raw until the normalized create-from-snapshot contract is right."
+      ),
+      codesandbox: no(
+        "CodeSandbox templates use the shared template option, not the snapshot source option."
       ),
       daytona: warn(
         "Daytona can create a new sandbox from a snapshot id at create time."
@@ -133,6 +176,9 @@ const ROWS: { capability: string; cells: Record<ColumnKey, Cell> }[] = [
       local: no(
         "Local snapshots are in-process filesystem checkpoints, not portable snapshot sources."
       ),
+      modal: warn(
+        "Modal can create a sandbox from a Modal image id through the shared snapshot create option."
+      ),
       vercel: warn(
         "Vercel can create a new sandbox from a snapshot id at create time."
       ),
@@ -141,18 +187,27 @@ const ROWS: { capability: string; cells: Record<ColumnKey, Cell> }[] = [
   {
     capability: "environment",
     cells: {
+      blaxel: ok,
       cloudflare: ok,
+      codesandbox: ok,
       daytona: ok,
       e2b: ok,
       local: ok,
+      modal: ok,
       vercel: ok,
     },
   },
   {
     capability: "secrets",
     cells: {
+      blaxel: no(
+        "Secrets are not normalized in this adapter. Pass environment values explicitly or use Blaxel-native features through raw."
+      ),
       cloudflare: no(
         "Secrets are not normalized in this adapter. Pass environment values explicitly or use Cloudflare-native bindings outside the shared SDK surface."
+      ),
+      codesandbox: no(
+        "Secrets are not normalized in this adapter. Pass environment values explicitly or use CodeSandbox-native session configuration."
       ),
       daytona: no(
         "Secrets are not normalized in this adapter. Pass environment values explicitly or use Daytona-native features through raw."
@@ -162,6 +217,9 @@ const ROWS: { capability: string; cells: Record<ColumnKey, Cell> }[] = [
       ),
       local: no(
         "No secret store. Local sandboxes inherit the host environment. Manage secrets at the OS level."
+      ),
+      modal: no(
+        "Secrets are not normalized in this adapter. Pass environment values explicitly or use Modal-native secrets through raw."
       ),
       vercel: no(
         "Secrets are not normalized in this adapter. Pass environment values explicitly or use Vercel-native project configuration outside the shared SDK surface."
