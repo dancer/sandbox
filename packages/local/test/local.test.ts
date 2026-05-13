@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { mkdtemp, rm } from "node:fs/promises";
+import { access, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -111,4 +111,46 @@ test("local applies command timeouts", async () => {
   ).rejects.toMatchObject({ code: "timeout" });
 
   await sandbox.stop();
+});
+
+test("local writes bytes and removes files", async () => {
+  const sandbox = await create({ adapter: local(), cwd: "/workspace" });
+  const value = new Uint8Array([104, 101, 108, 108, 111]);
+
+  await sandbox.files.write("/workspace/data.bin", value);
+
+  expect(await sandbox.files.read("/workspace/data.bin")).toEqual(value);
+  expect(await sandbox.files.exists("/workspace/data.bin")).toBe(true);
+
+  await sandbox.files.remove("/workspace/data.bin");
+  expect(await sandbox.files.exists("/workspace/data.bin")).toBe(false);
+
+  await sandbox.stop();
+});
+
+test("local streams spawned process output", async () => {
+  const sandbox = await create({ adapter: local() });
+  const running = await sandbox.process.spawn("sh", ["-c", "printf hello"]);
+  const streamed = await new Response(running.output).text();
+  const completed = await running.result;
+
+  expect(running.id).toBeString();
+  expect(streamed).toBe("hello");
+  expect(completed).toMatchObject({
+    code: 0,
+    ok: true,
+    stdout: "hello",
+  });
+
+  await sandbox.stop();
+});
+
+test("local removes temporary roots on stop", async () => {
+  const sandbox = await create({ adapter: local() });
+  const { root } = sandbox.raw;
+
+  await access(root);
+  await sandbox.stop();
+
+  await expect(access(root)).rejects.toMatchObject({ code: "ENOENT" });
 });

@@ -67,3 +67,20 @@ test("tools can expose local previews", async () => {
 
   await sandbox.stop();
 });
+
+test("tools trim command output for agent payloads", async () => {
+  const sandbox = await create({ adapter: local() });
+  const kit = tools(sandbox, {
+    allow: ["exec"],
+    maxOutput: 4,
+  });
+
+  const output = await kit.tools.exec?.execute({
+    args: ["hello"],
+    command: "printf",
+  });
+
+  expect(output?.stdout).toBe("hell\n[truncated 1 bytes]");
+
+  await sandbox.stop();
+});
