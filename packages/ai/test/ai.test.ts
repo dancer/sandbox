@@ -22,7 +22,10 @@ test("tools returns prompt context and selected tools", async () => {
     "read",
     "write",
   ]);
+  expect(kit.sandbox.capabilities.files).toBe(true);
   expect(kit.sandbox.description).toBe(kit.description);
+  expect(kit.sandbox.provider).toBe("local");
+  expect(kit.sandbox.workingDirectory).toBe("/workspace");
   expect(kit.tools.exec?.inputSchema.additionalProperties).toBe(false);
   expect(kit.tools.exec?.strict).toBe(true);
 

@@ -31,8 +31,11 @@ export type Kit = Readonly<{
 }>;
 
 export type AgentSandbox = Readonly<{
+  capabilities: Sandbox["capabilities"];
   description: string;
   executeCommand(input: Command): Promise<CommandResult>;
+  provider: string;
+  workingDirectory: string;
 }>;
 
 interface Draft {
@@ -170,6 +173,7 @@ const agent = (
   cwd: string,
   timeout: number
 ): AgentSandbox => ({
+  capabilities: sandbox.capabilities,
   description: details,
   executeCommand: async (input) => {
     const output = await sandbox.process.shell(input.command, {
@@ -183,6 +187,8 @@ const agent = (
       stdout: output.stdout,
     };
   },
+  provider: sandbox.provider,
+  workingDirectory: cwd,
 });
 
 export const tools = (sandbox: Sandbox, options: Options = {}): Kit => {
