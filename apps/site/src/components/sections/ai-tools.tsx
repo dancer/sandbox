@@ -1,0 +1,189 @@
+import { CodeBlock } from "@/components/code-block";
+import { CodeTabs } from "@/components/code-tabs";
+import { Heading } from "@/components/heading";
+import { PropAccordionItem } from "@/components/prop-accordion-item";
+import { Accordion } from "@/components/ui/accordion";
+
+const INSTALL_TABS = [
+  {
+    code: "bun add @sandbox-sdk/ai",
+    id: "bun",
+    label: "bun",
+    lang: "bash",
+  },
+  {
+    code: "pnpm add @sandbox-sdk/ai",
+    id: "pnpm",
+    label: "pnpm",
+    lang: "bash",
+  },
+  {
+    code: "npm install @sandbox-sdk/ai",
+    id: "npm",
+    label: "npm",
+    lang: "bash",
+  },
+  {
+    code: "yarn add @sandbox-sdk/ai",
+    id: "yarn",
+    label: "yarn",
+    lang: "bash",
+  },
+] as const;
+
+const QUICK_START = `import { create } from "@sandbox-sdk/core";
+import { local } from "@sandbox-sdk/local";
+import { tools } from "@sandbox-sdk/ai";
+
+const sandbox = await create({ adapter: local() });
+const fileTools = tools(sandbox);
+
+// fileTools.read.execute({ path: "main.ts" })
+// fileTools.write.execute({ path: "main.ts", text: "console.log('hi')" })
+// fileTools.command.execute({ command: "bun", args: ["main.ts"] })`;
+
+const AI_SDK_EXAMPLE = `import { generateText } from "ai";
+import { create } from "@sandbox-sdk/core";
+import { local } from "@sandbox-sdk/local";
+import { tools } from "@sandbox-sdk/ai";
+
+const sandbox = await create({ adapter: local() });
+
+const result = await generateText({
+  model: yourModel,
+  tools: tools(sandbox),
+  prompt: "Write a TypeScript program that prints fib(10), then run it.",
+});`;
+
+const CLAUDE_EXAMPLE = `import { query } from "@anthropic-ai/claude-agent-sdk";
+import { create } from "@sandbox-sdk/core";
+import { local } from "@sandbox-sdk/local";
+import { tools } from "@sandbox-sdk/ai";
+
+const sandbox = await create({ adapter: local() });
+const t = tools(sandbox);
+
+for await (const message of query({
+  prompt: "Set up a Bun project, install zod, and write a parser.",
+  options: {
+    tools: [t.read, t.write, t.command],
+  },
+})) {
+  // handle messages
+}`;
+
+export const AiTools = () => (
+  <section>
+    <Heading as="h2" id="ai-tools">
+      AI tools
+    </Heading>
+    <p>
+      <code>@sandbox-sdk/ai</code> wraps a configured sandbox into ready-made
+      tools for agent frameworks. Same three operations (<code>read</code>,{" "}
+      <code>write</code>, <code>command</code>), same JSON-schema inputs, same
+      isolated runtime. Pick the framework that matches your stack; each tool is
+      just a thin shim around <code>files</code> and <code>process</code> on the
+      underlying sandbox.
+    </p>
+
+    <section>
+      <Heading as="h3" id="ai-tools-installation">
+        Installation
+      </Heading>
+      <CodeTabs tabs={INSTALL_TABS} />
+    </section>
+
+    <section>
+      <Heading as="h3" id="ai-tools-quick-start">
+        Quick start
+      </Heading>
+      <p>
+        Pass a configured sandbox into <code>tools()</code>. The return value is
+        a record of three tool definitions, each with a <code>description</code>
+        , <code>inputSchema</code>, and <code>execute</code> function.
+      </p>
+      <CodeBlock code={QUICK_START} lang="tsx" />
+      <Accordion className="rounded-md border-dotted" type="multiple">
+        <PropAccordionItem name="read" value="ai-read">
+          <p>
+            Reads a UTF-8 text file at <code>{`{ path }`}</code> through{" "}
+            <code>sandbox.files.text()</code>. Returns <code>{`{ text }`}</code>
+            .
+          </p>
+        </PropAccordionItem>
+        <PropAccordionItem name="write" value="ai-write">
+          <p>
+            Writes <code>{`{ path, text }`}</code> to the sandbox via{" "}
+            <code>sandbox.files.write()</code>. Returns{" "}
+            <code>{`{ ok: true }`}</code> on success.
+          </p>
+        </PropAccordionItem>
+        <PropAccordionItem name="command" value="ai-command">
+          <p>
+            Runs <code>{`{ command, args?, cwd? }`}</code> through{" "}
+            <code>sandbox.process.exec()</code> and returns the buffered{" "}
+            <code>{`{ code, stdout, stderr }`}</code> result. The cwd is
+            path-checked against the sandbox root before the process starts.
+          </p>
+        </PropAccordionItem>
+      </Accordion>
+    </section>
+
+    <section>
+      <Heading as="h3" id="ai-sdk-tools">
+        Vercel AI SDK
+      </Heading>
+      <p>
+        The shape returned by <code>tools()</code> plugs straight into the{" "}
+        <a
+          className="underline decoration-dotted underline-offset-4 hover:text-foreground"
+          href="https://ai-sdk.dev"
+          rel="noreferrer"
+          target="_blank"
+        >
+          Vercel AI SDK
+        </a>
+        's <code>tools</code> field. The model can read files, write files, and
+        run commands inside the sandbox without you wiring up shell access in
+        your app.
+      </p>
+      <CodeBlock code={AI_SDK_EXAMPLE} lang="tsx" />
+    </section>
+
+    <section>
+      <Heading as="h3" id="claude-tools">
+        Claude Agent SDK
+      </Heading>
+      <p>
+        Hand the same tool definitions to the{" "}
+        <a
+          className="underline decoration-dotted underline-offset-4 hover:text-foreground"
+          href="https://docs.claude.com/en/api/agent-sdk/overview"
+          rel="noreferrer"
+          target="_blank"
+        >
+          Claude Agent SDK
+        </a>{" "}
+        and the model can drive a real isolated runtime, handy for codegen
+        agents that need to install packages, run tests, and inspect output
+        without touching the host.
+      </p>
+      <CodeBlock code={CLAUDE_EXAMPLE} lang="tsx" />
+    </section>
+
+    <section>
+      <Heading as="h3" id="openai-tools">
+        OpenAI
+      </Heading>
+      <p>
+        OpenAI's Responses and Agents SDKs both accept tool definitions keyed by{" "}
+        <code>name</code> with a JSON-schema <code>parameters</code> block.{" "}
+        <code>@sandbox-sdk/ai</code> already returns that shape, so wire{" "}
+        <code>definitions</code> into <code>responses.create()</code> and
+        dispatch on <code>function_call</code> output as usual. A dedicated
+        OpenAI subpath is on the roadmap once the Responses approval flow
+        stabilizes.
+      </p>
+    </section>
+  </section>
+);

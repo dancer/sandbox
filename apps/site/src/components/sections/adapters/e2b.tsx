@@ -1,0 +1,56 @@
+import { CodeBlock } from "@/components/code-block";
+import { Heading } from "@/components/heading";
+import { PropAccordionItem } from "@/components/prop-accordion-item";
+import { Accordion } from "@/components/ui/accordion";
+
+const E2B_EXAMPLE = `import { create } from "@sandbox-sdk/core";
+import { e2b } from "@sandbox-sdk/e2b";
+
+const sandbox = await create({
+  adapter: e2b({
+    template: "base",
+    // apiKey auto-loaded from E2B_API_KEY
+  }),
+});`;
+
+export const E2B = () => (
+  <section>
+    <Heading as="h3" id="adapter-e2b">
+      E2B
+    </Heading>
+    <p>
+      E2B's microVM sandboxes via <code>@e2b/code-interpreter</code>. The
+      adapter pins a template at construction and threads writes, commands, and
+      ports through the E2B SDK. Auto-loads the API key from{" "}
+      <code>E2B_API_KEY</code>.
+    </p>
+    <CodeBlock code={E2B_EXAMPLE} lang="ts" />
+    <div className="flex flex-col gap-2">
+      <Heading as="h4" id="adapter-e2b-options">
+        Options
+      </Heading>
+      <Accordion className="rounded-md border-dotted" type="multiple">
+        <PropAccordionItem name="template" status="required" value="template">
+          <p>
+            E2B sandbox template id or name. Pre-baked templates ship with
+            common stacks (Node, Python, Bun) and you can build your own via the
+            E2B CLI.
+          </p>
+        </PropAccordionItem>
+        <PropAccordionItem name="apiKey" status="optional" value="apiKey">
+          <p>
+            E2B API key. Falls back to <code>E2B_API_KEY</code>; required if no
+            env var is set.
+          </p>
+        </PropAccordionItem>
+        <PropAccordionItem name="timeoutMs" status="optional" value="timeoutMs">
+          <p>
+            Maximum lifetime of the sandbox in milliseconds. After it elapses
+            E2B kills the sandbox server-side. Defaults to E2B's account
+            default.
+          </p>
+        </PropAccordionItem>
+      </Accordion>
+    </div>
+  </section>
+);
