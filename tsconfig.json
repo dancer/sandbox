@@ -12,6 +12,9 @@
     },
     {
       "path": "./packages/vercel"
+    },
+    {
+      "path": "./packages/e2b"
     }
   ],
   "compilerOptions": {
