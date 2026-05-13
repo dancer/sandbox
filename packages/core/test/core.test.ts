@@ -1,10 +1,15 @@
 import { expect, test } from "bun:test";
+import { setTimeout as delay } from "node:timers/promises";
 
 import {
   SandboxError,
+  bytes,
+  command,
   create,
   isSandboxError,
+  result,
   supports,
+  timeout,
   unsupported,
 } from "../src/index";
 import type { Adapter, Options, Sandbox } from "../src/index";
@@ -110,4 +115,57 @@ test("isSandboxError narrows sandbox errors", () => {
 
   expect(isSandboxError(error)).toBe(true);
   expect(isSandboxError(new Error("Failed"))).toBe(false);
+});
+
+test("bytes normalizes supported input shapes", async () => {
+  expect(await bytes("hello")).toBe("hello");
+  expect(await bytes(new Uint8Array([1, 2, 3]))).toEqual(
+    new Uint8Array([1, 2, 3])
+  );
+  expect(await bytes(new Blob(["hello"]))).toEqual(
+    new TextEncoder().encode("hello")
+  );
+  expect(
+    await bytes(
+      new ReadableStream({
+        start(controller) {
+          controller.enqueue(new Uint8Array([1, 2]));
+          controller.enqueue(new Uint8Array([3]));
+          controller.close();
+        },
+      })
+    )
+  ).toEqual(new Uint8Array([1, 2, 3]));
+});
+
+test("command quotes shell arguments safely", () => {
+  expect(command("echo", ["hello", "two words", "it's ok"])).toBe(
+    "echo hello 'two words' 'it'\\''s ok'"
+  );
+});
+
+test("result normalizes command status", () => {
+  expect(result(0, "out", "err")).toEqual({
+    code: 0,
+    ok: true,
+    stderr: "err",
+    stdout: "out",
+  });
+  expect(result(7, "", "", "SIGTERM")).toEqual({
+    code: 7,
+    ok: false,
+    signal: "SIGTERM",
+    stderr: "",
+    stdout: "",
+  });
+});
+
+test("timeout exposes an abort signal and clear hook", async () => {
+  const deadline = timeout(1);
+
+  await delay(5);
+
+  expect(deadline.signal?.aborted).toBe(true);
+  expect(deadline.aborted()).toBe(true);
+  deadline.clear();
 });
