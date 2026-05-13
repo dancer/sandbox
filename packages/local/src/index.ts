@@ -186,7 +186,7 @@ export const local = (options: Local = {}): Adapter<Raw> => ({
   capabilities: {
     environment: true,
     files: true,
-    ports: false,
+    ports: "derived",
     process: true,
     secrets: false,
     snapshots: false,
@@ -250,7 +250,11 @@ export const local = (options: Local = {}): Adapter<Raw> => ({
       },
       id: input.id ?? randomUUID(),
       ports: {
-        expose: () => unsupported("local", "ports"),
+        expose: (port) =>
+          Promise.resolve({
+            port,
+            url: `http://localhost:${port}`,
+          }),
       },
       process: {
         exec: (command, args = [], run = {}) =>

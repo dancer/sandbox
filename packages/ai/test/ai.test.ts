@@ -8,7 +8,7 @@ import { tools } from "../src/index";
 test("tools returns prompt context and selected tools", async () => {
   const sandbox = await create({ adapter: local(), cwd: "/workspace" });
   const kit = tools(sandbox, {
-    allow: ["read", "write", "list", "exec"],
+    allow: ["read", "write", "list", "exec", "preview"],
     cwd: "/workspace",
     maxOutput: 5,
   });
@@ -18,6 +18,7 @@ test("tools returns prompt context and selected tools", async () => {
   expect(Object.keys(kit.tools).toSorted()).toEqual([
     "exec",
     "list",
+    "preview",
     "read",
     "write",
   ]);
@@ -52,6 +53,16 @@ test("tools can read, write, list, and execute", async () => {
   ).toBe(true);
   expect(exec?.stdout.trim()).toBe("hello");
   expect(env?.stdout.trim()).toBe("ok");
+
+  await sandbox.stop();
+});
+
+test("tools can expose local previews", async () => {
+  const sandbox = await create({ adapter: local() });
+  const kit = tools(sandbox);
+  const preview = await kit.tools.preview?.execute({ port: 3000 });
+
+  expect(preview?.url).toBe("http://localhost:3000");
 
   await sandbox.stop();
 });

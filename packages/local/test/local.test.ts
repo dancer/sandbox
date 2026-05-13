@@ -43,6 +43,18 @@ test("local creates and checks directories", async () => {
   await sandbox.stop();
 });
 
+test("local derives preview urls", async () => {
+  const sandbox = await create({ adapter: local() });
+  const preview = await sandbox.ports.expose(3000);
+
+  expect(preview).toEqual({
+    port: 3000,
+    url: "http://localhost:3000",
+  });
+
+  await sandbox.stop();
+});
+
 test("local prevents paths escaping the sandbox root", async () => {
   const sandbox = await create({ adapter: local() });
 
