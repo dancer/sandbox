@@ -25,6 +25,8 @@ const REMOVE_EXAMPLE = `await sandbox.files.remove("dist");
 const SHELL_EXAMPLE = `const result = await sandbox.process.shell("bun main.ts", {
   cwd: "src",
   env: { NODE_ENV: "production" },
+  signal: controller.signal,
+  timeout: 30_000,
 });
 // → { code, signal?, stdout, stderr }`;
 
@@ -156,6 +158,14 @@ export const ApiReference = () => (
               Maximum runtime in milliseconds. After it elapses the adapter
               kills the process and rejects with <code>SandboxError</code>{" "}
               carrying the partial output.
+            </p>
+          </PropAccordionItem>
+          <PropAccordionItem name="signal" status="optional" value="signal">
+            <p>
+              <code>AbortSignal</code> for caller-driven cancellation. The local
+              and Vercel adapters cancel in flight; other providers fail fast
+              when already aborted and keep provider-specific cancellation
+              behind <code>raw</code>.
             </p>
           </PropAccordionItem>
         </Accordion>

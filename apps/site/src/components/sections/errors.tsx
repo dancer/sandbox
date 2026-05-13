@@ -45,6 +45,10 @@ export const Errors = () => (
           partial output is attached to <code>cause</code>.
         </li>
         <li className="px-4 py-3">
+          <code>"aborted"</code>: caller cancellation through{" "}
+          <code>options.signal</code>.
+        </li>
+        <li className="px-4 py-3">
           <code>"provider"</code>: anything else. Inspect <code>cause</code> for
           the underlying error.
         </li>
