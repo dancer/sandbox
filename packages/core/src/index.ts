@@ -54,11 +54,13 @@ export type Process = Readonly<{
     args?: readonly string[],
     options?: Exec
   ): Promise<Result>;
+  shell(command: string, options?: Exec): Promise<Result>;
   spawn(
     command: string,
     args?: readonly string[],
     options?: Spawn
   ): Promise<Running>;
+  spawnShell(command: string, options?: Spawn): Promise<Running>;
 }>;
 
 export type Running = Readonly<{

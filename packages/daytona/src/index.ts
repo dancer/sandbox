@@ -145,16 +145,15 @@ const content = async (input: Input): Promise<Buffer> => {
   return typeof value === "string" ? Buffer.from(value) : Buffer.from(value);
 };
 
-const execute = async (
+const executeLine = async (
   raw: Raw,
   cwd: string,
-  executable: string,
-  args: readonly string[],
+  line: string,
   options: Exec
 ): Promise<Result> => {
   try {
     const output = await raw.process.executeCommand(
-      command(executable, args),
+      line,
       options.cwd ?? cwd,
       options.env === undefined ? undefined : { ...options.env },
       seconds(options.timeout)
@@ -164,6 +163,14 @@ const execute = async (
     throw sandboxError(provider, "Command failed", "process", error);
   }
 };
+
+const execute = (
+  raw: Raw,
+  cwd: string,
+  executable: string,
+  args: readonly string[],
+  options: Exec
+): Promise<Result> => executeLine(raw, cwd, command(executable, args), options);
 
 const createSandbox = (
   raw: Raw,
@@ -233,7 +240,9 @@ const createSandbox = (
   process: {
     exec: (executable, args = [], run = {}) =>
       execute(raw, cwd, executable, args, run),
+    shell: (script, run = {}) => executeLine(raw, cwd, script, run),
     spawn: () => unsupported(provider, "background process spawn"),
+    spawnShell: () => unsupported(provider, "background shell process spawn"),
   },
   provider,
   raw,

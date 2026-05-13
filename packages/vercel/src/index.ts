@@ -296,8 +296,12 @@ const createSandbox = (
   process: {
     exec: (command, args = [], options = {}) =>
       execute(raw, cwd, sudo, command, args, options),
+    shell: (command, options = {}) =>
+      execute(raw, cwd, sudo, "sh", ["-lc", command], options),
     spawn: (command, args = [], options = {}) =>
       spawn(raw, cwd, sudo, command, args, options),
+    spawnShell: (command, options = {}) =>
+      spawn(raw, cwd, sudo, "sh", ["-lc", command], options),
   },
   provider,
   raw,

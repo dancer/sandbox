@@ -73,15 +73,14 @@ const write = async (raw: Raw, path: string, input: Input): Promise<void> => {
   await raw.writeFile(path, stream(value));
 };
 
-const execute = async (
+const executeLine = async (
   raw: Raw,
   cwd: string,
-  executable: string,
-  args: readonly string[],
+  line: string,
   options: Exec
 ): Promise<Result> => {
   try {
-    const output = await raw.exec(command(executable, args), {
+    const output = await raw.exec(line, {
       cwd: options.cwd ?? cwd,
       ...(options.env === undefined ? {} : { env: { ...options.env } }),
       ...(options.timeout === undefined ? {} : { timeout: options.timeout }),
@@ -92,6 +91,14 @@ const execute = async (
   }
 };
 
+const execute = (
+  raw: Raw,
+  cwd: string,
+  executable: string,
+  args: readonly string[],
+  options: Exec
+): Promise<Result> => executeLine(raw, cwd, command(executable, args), options);
+
 const wait = async (
   raw: Raw,
   process: Awaited<ReturnType<Raw["startProcess"]>>
@@ -101,15 +108,14 @@ const wait = async (
   return result(output.exitCode, logs.stdout, logs.stderr);
 };
 
-const spawn = async (
+const spawnLine = async (
   raw: Raw,
   cwd: string,
-  executable: string,
-  args: readonly string[],
+  line: string,
   options: Exec
 ): Promise<Running> => {
   try {
-    const process = await raw.startProcess(command(executable, args), {
+    const process = await raw.startProcess(line, {
       cwd: options.cwd ?? cwd,
       ...(options.env === undefined ? {} : { env: { ...options.env } }),
       ...(options.timeout === undefined ? {} : { timeout: options.timeout }),
@@ -127,6 +133,14 @@ const spawn = async (
     throw sandboxError(provider, "Process spawn failed", "process", error);
   }
 };
+
+const spawn = (
+  raw: Raw,
+  cwd: string,
+  executable: string,
+  args: readonly string[],
+  options: Exec
+): Promise<Running> => spawnLine(raw, cwd, command(executable, args), options);
 
 const createSandbox = (
   raw: Raw,
@@ -193,8 +207,10 @@ const createSandbox = (
   process: {
     exec: (executable, args = [], run = {}) =>
       execute(raw, cwd, executable, args, run),
+    shell: (script, run = {}) => executeLine(raw, cwd, script, run),
     spawn: (executable, args = [], run = {}) =>
       spawn(raw, cwd, executable, args, run),
+    spawnShell: (script, run = {}) => spawnLine(raw, cwd, script, run),
   },
   provider,
   raw,

@@ -95,17 +95,16 @@ const output = (value: {
   stdout: string;
 }): Result => result(value.exitCode, value.stdout, value.stderr);
 
-const execute = async (
+const executeLine = async (
   raw: Raw,
   cwd: string,
   user: string | undefined,
-  executable: string,
-  args: readonly string[],
+  line: string,
   options: Exec
 ): Promise<Result> => {
   try {
     return output(
-      await raw.commands.run(command(executable, args), {
+      await raw.commands.run(line, {
         cwd: options.cwd ?? cwd,
         ...(options.env === undefined ? {} : { envs: { ...options.env } }),
         ...(options.timeout === undefined
@@ -121,6 +120,16 @@ const execute = async (
     throw sandboxError(provider, "Command failed", "process", error);
   }
 };
+
+const execute = (
+  raw: Raw,
+  cwd: string,
+  user: string | undefined,
+  executable: string,
+  args: readonly string[],
+  options: Exec
+): Promise<Result> =>
+  executeLine(raw, cwd, user, command(executable, args), options);
 
 const stream = (): {
   append(chunk: string): void;
@@ -157,17 +166,16 @@ const wait = async (handle: CommandHandle): Promise<Result> => {
   }
 };
 
-const spawn = async (
+const spawnLine = async (
   raw: Raw,
   cwd: string,
   user: string | undefined,
-  executable: string,
-  args: readonly string[],
+  line: string,
   options: Exec
 ): Promise<Running> => {
   const logs = stream();
   try {
-    const handle = await raw.commands.run(command(executable, args), {
+    const handle = await raw.commands.run(line, {
       background: true,
       cwd: options.cwd ?? cwd,
       ...(options.env === undefined ? {} : { envs: { ...options.env } }),
@@ -194,6 +202,16 @@ const spawn = async (
     throw sandboxError(provider, "Command failed", "process", error);
   }
 };
+
+const spawn = (
+  raw: Raw,
+  cwd: string,
+  user: string | undefined,
+  executable: string,
+  args: readonly string[],
+  options: Exec
+): Promise<Running> =>
+  spawnLine(raw, cwd, user, command(executable, args), options);
 
 const content = async (input: Input): Promise<ArrayBuffer | string> => {
   const value = await bytes(input);
@@ -268,8 +286,12 @@ const createSandbox = (
   process: {
     exec: (executable, args = [], options = {}) =>
       execute(raw, cwd, user, executable, args, options),
+    shell: (script, options = {}) =>
+      executeLine(raw, cwd, user, script, options),
     spawn: (executable, args = [], options = {}) =>
       spawn(raw, cwd, user, executable, args, options),
+    spawnShell: (script, options = {}) =>
+      spawnLine(raw, cwd, user, script, options),
   },
   provider,
   raw,

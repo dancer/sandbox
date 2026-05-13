@@ -39,7 +39,26 @@ const sandbox = (capabilities: Sandbox["capabilities"]): Sandbox => ({
         stderr: "",
         stdout: "",
       }),
+    shell: () =>
+      Promise.resolve({
+        code: 0,
+        ok: true,
+        stderr: "",
+        stdout: "",
+      }),
     spawn: () =>
+      Promise.resolve({
+        id: "process",
+        kill: () => Promise.resolve(),
+        output: new ReadableStream(),
+        result: Promise.resolve({
+          code: 0,
+          ok: true,
+          stderr: "",
+          stdout: "",
+        }),
+      }),
+    spawnShell: () =>
       Promise.resolve({
         id: "process",
         kill: () => Promise.resolve(),

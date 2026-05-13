@@ -39,6 +39,13 @@ live("daytona runs a live sandbox workflow", async () => {
       stdout: "hello from daytona",
     });
 
+    const shell = await sandbox.process.shell(`cat ${file}`);
+    expect(shell).toMatchObject({
+      code: 0,
+      ok: true,
+      stdout: "hello from daytona",
+    });
+
     const failure = await sandbox.process.exec("sh", [
       "-lc",
       "echo failed >&2; exit 7",

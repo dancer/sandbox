@@ -83,10 +83,12 @@ test("local normalizes missing path errors", async () => {
 test("local returns command status and output", async () => {
   const sandbox = await create({ adapter: local(), cwd: "/workspace" });
   const result = await sandbox.process.exec("echo", ["hello"]);
+  const shell = await sandbox.process.shell("printf shell");
 
   expect(result.ok).toBe(true);
   expect(result.code).toBe(0);
   expect(result.stdout.trim()).toBe("hello");
+  expect(shell.stdout).toBe("shell");
 
   await sandbox.stop();
 });
@@ -131,8 +133,11 @@ test("local writes bytes and removes files", async () => {
 test("local streams spawned process output", async () => {
   const sandbox = await create({ adapter: local() });
   const running = await sandbox.process.spawn("sh", ["-c", "printf hello"]);
+  const shell = await sandbox.process.spawnShell("printf shell");
   const streamed = await new Response(running.output).text();
+  const shellStreamed = await new Response(shell.output).text();
   const completed = await running.result;
+  const shellCompleted = await shell.result;
 
   expect(running.id).toBeString();
   expect(streamed).toBe("hello");
@@ -141,6 +146,8 @@ test("local streams spawned process output", async () => {
     ok: true,
     stdout: "hello",
   });
+  expect(shellStreamed).toBe("shell");
+  expect(shellCompleted.stdout).toBe("shell");
 
   await sandbox.stop();
 });

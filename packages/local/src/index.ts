@@ -146,6 +146,19 @@ const execute = (
   return settle(child, options.timeout);
 };
 
+const start = (
+  root: string,
+  cwd: string,
+  env: Readonly<Record<string, string>> | undefined,
+  command: string,
+  args: readonly string[],
+  options: Exec
+) =>
+  spawn(command, args, {
+    cwd: safe(root, options.cwd ?? cwd),
+    env: { ...process.env, ...env, ...options.env },
+  });
+
 export const local = (options: Local = {}): Adapter<Raw> => ({
   capabilities: {
     environment: true,
@@ -223,11 +236,30 @@ export const local = (options: Local = {}): Adapter<Raw> => ({
       process: {
         exec: (command, args = [], run = {}) =>
           execute(root, cwd, input.env, command, args, run),
+        shell: (command, run = {}) =>
+          execute(root, cwd, input.env, "sh", ["-lc", command], run),
         spawn: (command, args = [], run = {}) => {
-          const child = spawn(command, args, {
-            cwd: safe(root, run.cwd ?? cwd),
-            env: { ...process.env, ...input.env, ...run.env },
+          const child = start(root, cwd, input.env, command, args, run);
+          const output = stream(child);
+          return Promise.resolve({
+            id: randomUUID(),
+            kill: (signal = "SIGTERM") => {
+              child.kill(signal as NodeJS.Signals);
+              return Promise.resolve();
+            },
+            output,
+            result: settle(child, run.timeout),
           });
+        },
+        spawnShell: (command, run = {}) => {
+          const child = start(
+            root,
+            cwd,
+            input.env,
+            "sh",
+            ["-lc", command],
+            run
+          );
           const output = stream(child);
           return Promise.resolve({
             id: randomUUID(),
