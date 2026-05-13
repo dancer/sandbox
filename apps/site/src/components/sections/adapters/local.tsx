@@ -24,7 +24,8 @@ export const Local = () => (
       directory and it implements the same <code>Sandbox</code> contract as the
       cloud adapters using <code>node:fs/promises</code> and{" "}
       <code>node:child_process</code>. Every path is resolved against the
-      sandbox root and rejected if it escapes. Ports and snapshots throw.
+      sandbox root and rejected if it escapes. Ports return localhost URLs, and
+      filesystem snapshots support create and restore in the same process.
     </p>
     <CodeBlock code={LOCAL_EXAMPLE} lang="ts" />
     <div className="flex flex-col gap-2">

@@ -1,6 +1,6 @@
 # Sandbox SDK
 
-One TypeScript API for agent sandboxes. A small, typed runtime layer for files, commands, ports, snapshots, capabilities, and provider escape hatches.
+One TypeScript API for agent sandboxes. A small, typed runtime layer for files, commands, ports, capability-gated snapshots, and provider escape hatches.
 
 https://sandbox-sdk.sh
 
@@ -35,7 +35,7 @@ Swap the adapter import to target a provider and keep the rest of your agent loo
 
 ## What You Get
 
-- One API across providers: create sandboxes, read and write files, run commands, expose ports, create snapshots, and clean up
+- One API across providers: create sandboxes, read and write files, run commands, expose ports, use snapshots where supported, and clean up
 - Capability checks: branch on provider support instead of guessing what works
 - Provider escape hatch: every adapter exposes its native client through `sandbox.raw`
 - Safe cleanup: `withSandbox` stops sandboxes after success or failure

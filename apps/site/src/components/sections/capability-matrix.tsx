@@ -45,7 +45,7 @@ const ROWS: { capability: string; cells: Record<ColumnKey, Cell> }[] = [
     },
   },
   {
-    capability: "process",
+    capability: "process exec",
     cells: {
       cloudflare: ok,
       daytona: ok,
@@ -55,11 +55,11 @@ const ROWS: { capability: string; cells: Record<ColumnKey, Cell> }[] = [
     },
   },
   {
-    capability: "streaming",
+    capability: "process spawn",
     cells: {
       cloudflare: ok,
       daytona: no(
-        "Daytona exposes stable buffered command execution in this adapter. Background process streaming stays behind raw until the provider surface is stable."
+        "Daytona exposes buffered exec and shell commands in this adapter. Background process spawn stays behind raw until the provider surface is stable."
       ),
       e2b: ok,
       local: ok,
@@ -79,7 +79,7 @@ const ROWS: { capability: string; cells: Record<ColumnKey, Cell> }[] = [
     },
   },
   {
-    capability: "snapshots",
+    capability: "snapshot create",
     cells: {
       cloudflare: no(
         "Cloudflare Sandbox backups and hibernation are provider-specific today. The adapter keeps them behind raw until the normalized snapshot contract is right."
@@ -88,13 +88,33 @@ const ROWS: { capability: string; cells: Record<ColumnKey, Cell> }[] = [
         "Daytona snapshot and fork APIs are still experimental in the current adapter surface. Use raw for provider-specific snapshot workflows."
       ),
       e2b: warn(
-        "E2B supports snapshot creation. In-place restore is not normalized yet, so restore() throws unsupported."
+        "E2B supports snapshot creation. Restore is tracked separately because in-place restore is not normalized yet."
       ),
       local: warn(
-        "Local snapshots copy the sandbox filesystem to a temporary host directory and support restore in the same process."
+        "Local snapshots copy the sandbox filesystem to a temporary host directory."
       ),
       vercel: warn(
-        "Vercel supports snapshot creation. In-place restore is not normalized yet, so restore() throws unsupported."
+        "Vercel supports snapshot creation. Creating a snapshot stops the running sandbox."
+      ),
+    },
+  },
+  {
+    capability: "snapshot restore",
+    cells: {
+      cloudflare: no(
+        "Cloudflare backup and restore is provider-specific today and stays behind raw until the normalized contract is right."
+      ),
+      daytona: no(
+        "Daytona restore and fork flows are provider-specific in this adapter today."
+      ),
+      e2b: no(
+        "E2B restore is not exposed as an in-place restore operation in this adapter."
+      ),
+      local: warn(
+        "Local restore works for snapshots created by the same sandbox instance."
+      ),
+      vercel: no(
+        "Vercel can create a new sandbox from a snapshot through the template input, but in-place restore is not supported."
       ),
     },
   },
@@ -182,7 +202,7 @@ export const CapabilityMatrix = () => (
   <section>
     <Heading as="h2">Capability matrix</Heading>
     <p>
-      Every adapter implements the same seven-capability surface, but providers
+      Every adapter implements the same core capability surface, but providers
       differ on what they natively support. Branch on{" "}
       <code>sandbox.capabilities</code> at runtime, or read this table at design
       time. Hover the warning and error icons for the why behind each one.
