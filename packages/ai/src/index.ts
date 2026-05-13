@@ -10,6 +10,7 @@ export type Schema = Readonly<{
 export type Tool<Input, Output> = Readonly<{
   description: string;
   inputSchema: Schema;
+  strict?: boolean;
   execute(input: Input): Promise<Output>;
 }>;
 
@@ -160,6 +161,7 @@ export const tools = (sandbox: Sandbox, options: Options = {}): Kit => {
         text: await sandbox.files.text(input.path),
       }),
       inputSchema: schema({ path: { type: "string" } }, ["path"]),
+      strict: true,
     };
   }
 
@@ -174,6 +176,7 @@ export const tools = (sandbox: Sandbox, options: Options = {}): Kit => {
         { path: { type: "string" }, text: { type: "string" } },
         ["path", "text"]
       ),
+      strict: true,
     };
   }
 
@@ -184,6 +187,7 @@ export const tools = (sandbox: Sandbox, options: Options = {}): Kit => {
         entries: await sandbox.files.list(input.path),
       }),
       inputSchema: schema({ path: { type: "string" } }, []),
+      strict: true,
     };
   }
 
@@ -214,6 +218,7 @@ export const tools = (sandbox: Sandbox, options: Options = {}): Kit => {
         },
         ["command"]
       ),
+      strict: true,
     };
   }
 
@@ -225,6 +230,7 @@ export const tools = (sandbox: Sandbox, options: Options = {}): Kit => {
         return { url: preview.url };
       },
       inputSchema: schema({ port: { type: "number" } }, ["port"]),
+      strict: true,
     };
   }
 

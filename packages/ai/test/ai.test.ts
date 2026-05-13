@@ -22,6 +22,7 @@ test("tools returns prompt context and selected tools", async () => {
     "read",
     "write",
   ]);
+  expect(kit.tools.exec?.strict).toBe(true);
 
   await sandbox.stop();
 });
