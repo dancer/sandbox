@@ -253,6 +253,14 @@ const execute = (
   options: Exec
 ): Promise<Result> => executeLine(raw, cwd, command(executable, args), options);
 
+const rejectUnsupported = (feature: string): Promise<never> => {
+  try {
+    unsupported(provider, feature);
+  } catch (error) {
+    return Promise.reject(error);
+  }
+};
+
 const createSandbox = (
   raw: Raw,
   cwd: string,
@@ -322,8 +330,8 @@ const createSandbox = (
     exec: (executable, args = [], run = {}) =>
       execute(raw, cwd, executable, args, run),
     shell: (script, run = {}) => executeLine(raw, cwd, script, run),
-    spawn: () => unsupported(provider, "background process spawn"),
-    spawnShell: () => unsupported(provider, "background shell process spawn"),
+    spawn: () => rejectUnsupported("background process spawn"),
+    spawnShell: () => rejectUnsupported("background shell process spawn"),
   },
   provider,
   raw,

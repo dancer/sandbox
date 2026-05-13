@@ -87,3 +87,109 @@ test("daytona accepts api key config without target", async () => {
     client.create = original;
   }
 });
+
+test("daytona maps create options without running a real provider", async () => {
+  type Client = InstanceType<typeof DaytonaClient>;
+  type Create = Client["create"];
+
+  const client = DaytonaClient.prototype as Client;
+  const original = client.create;
+  let folderSeen: unknown;
+  let paramsSeen: unknown;
+  let settingsSeen: unknown;
+  const raw = {
+    fs: {
+      createFolder: (path: string, mode: string) => {
+        folderSeen = { mode, path };
+        return Promise.resolve();
+      },
+    },
+    getWorkDir: () => Promise.resolve("/provider"),
+    id: "sandbox",
+    stop: () => Promise.resolve(),
+  };
+
+  client.create = ((params?: unknown, settings?: unknown) => {
+    paramsSeen = params;
+    settingsSeen = settings;
+    return Promise.resolve(raw);
+  }) as Create;
+
+  try {
+    const sandbox = await create({
+      adapter: daytona({
+        apiKey: "key",
+        autoStopInterval: 5,
+        env: { A: "1" },
+        labels: { owner: "sdk" },
+        language: "typescript",
+        name: "option-name",
+        networkBlockAll: true,
+        public: true,
+        snapshot: "option-snapshot",
+        timeout: 1000,
+        user: "daytona",
+      }),
+      cwd: "/work",
+      env: { B: "2" },
+      metadata: { task: "test" },
+      snapshot: "input-snapshot",
+      timeout: 2500,
+    });
+
+    expect(sandbox.id).toBe("sandbox");
+    expect(sandbox.cwd).toBe("/work");
+    expect(paramsSeen).toMatchObject({
+      autoStopInterval: 5,
+      envVars: { A: "1", B: "2" },
+      labels: { owner: "sdk", task: "test" },
+      language: "typescript",
+      name: "option-name",
+      networkBlockAll: true,
+      public: true,
+      snapshot: "input-snapshot",
+      user: "daytona",
+    });
+    expect(settingsSeen).toEqual({ timeout: 3 });
+    expect(folderSeen).toEqual({ mode: "755", path: "/work" });
+  } finally {
+    client.create = original;
+  }
+});
+
+test("daytona rejects unsupported background process APIs", async () => {
+  type Client = InstanceType<typeof DaytonaClient>;
+  type Create = Client["create"];
+
+  const client = DaytonaClient.prototype as Client;
+  const original = client.create;
+  const raw = {
+    fs: {
+      createFolder: () => Promise.resolve(),
+    },
+    getWorkDir: () => Promise.resolve("/workspace"),
+    id: "sandbox",
+    stop: () => Promise.resolve(),
+  };
+
+  client.create = (() => Promise.resolve(raw)) as Create;
+
+  try {
+    const sandbox = await create({
+      adapter: daytona({
+        apiKey: "key",
+      }),
+    });
+
+    await expect(sandbox.process.spawn("sleep")).rejects.toMatchObject({
+      code: "unsupported",
+      provider: "daytona",
+    });
+    await expect(sandbox.process.spawnShell("sleep 1")).rejects.toMatchObject({
+      code: "unsupported",
+      provider: "daytona",
+    });
+  } finally {
+    client.create = original;
+  }
+});
