@@ -113,3 +113,91 @@ test("tools trim command output for agent payloads", async () => {
 
   await sandbox.stop();
 });
+
+test("tools run write policy before file writes", async () => {
+  const sandbox = await create({ adapter: local(), cwd: "/workspace" });
+  const seen: string[] = [];
+  const kit = tools(sandbox, {
+    beforeWrite(input, context) {
+      seen.push(`${context.tool}:${context.cwd}:${context.sandbox.provider}`);
+      if (!input.path.startsWith("/workspace/")) {
+        throw new Error("write blocked");
+      }
+    },
+  });
+
+  await expect(
+    kit.tools.write?.execute({
+      path: "/tmp/file.txt",
+      text: "no",
+    })
+  ).rejects.toThrow("write blocked");
+
+  await kit.tools.write?.execute({
+    path: "/workspace/file.txt",
+    text: "yes",
+  });
+
+  expect(await sandbox.files.exists("/tmp/file.txt")).toBe(false);
+  expect(await sandbox.files.text("/workspace/file.txt")).toBe("yes");
+  expect(seen).toEqual(["write:/workspace:local", "write:/workspace:local"]);
+
+  await sandbox.stop();
+});
+
+test("tools run exec policy before commands", async () => {
+  const sandbox = await create({ adapter: local(), cwd: "/workspace" });
+  const commands: string[] = [];
+  const kit = tools(sandbox, {
+    beforeExec(input) {
+      commands.push(input.command);
+      if (input.command === "rm") {
+        throw new Error("exec blocked");
+      }
+    },
+  });
+
+  await expect(
+    kit.tools.exec?.execute({
+      args: ["-rf", "/workspace"],
+      command: "rm",
+    })
+  ).rejects.toThrow("exec blocked");
+
+  const output = await kit.tools.exec?.execute({
+    args: ["ok"],
+    command: "printf",
+  });
+
+  expect(output?.stdout).toBe("ok");
+  expect(commands).toEqual(["rm", "printf"]);
+
+  await sandbox.stop();
+});
+
+test("agent command execution uses exec policy", async () => {
+  const sandbox = await create({ adapter: local(), cwd: "/workspace" });
+  const kit = tools(sandbox, {
+    beforeExec(input) {
+      if (input.command.includes("blocked")) {
+        throw new Error("agent blocked");
+      }
+    },
+  });
+
+  await expect(
+    kit.sandbox.executeCommand({
+      command: "printf blocked",
+      workingDirectory: "/workspace",
+    })
+  ).rejects.toThrow("agent blocked");
+
+  const output = await kit.sandbox.executeCommand({
+    command: "printf allowed",
+    workingDirectory: "/workspace",
+  });
+
+  expect(output.stdout).toBe("allowed");
+
+  await sandbox.stop();
+});
