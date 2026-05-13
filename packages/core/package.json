@@ -13,7 +13,8 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json"
+    "build": "tsc -p tsconfig.json",
+    "test": "bun test test"
   },
   "devDependencies": {
     "typescript": "^5.9.3"
