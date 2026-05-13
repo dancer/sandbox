@@ -57,6 +57,18 @@ const capabilities: Capabilities = {
   volumes: "volume",
 };
 
+const validate = (options: Cloudflare): void => {
+  if (options.binding !== undefined) {
+    return;
+  }
+
+  throw sandboxError(
+    provider,
+    "Cloudflare binding missing. Pass the Durable Object binding from env.Sandbox to cloudflare().",
+    "configuration"
+  );
+};
+
 const binary = (content: string): Uint8Array =>
   Uint8Array.from(atob(content), (char) => char.codePointAt(0) ?? 0);
 
@@ -238,6 +250,7 @@ const createSandbox = (
 export const cloudflare = (options: Cloudflare): Adapter<Raw> => ({
   capabilities,
   async create(input = {}) {
+    validate(options);
     const id = input.id ?? options.id ?? crypto.randomUUID();
     const cwd = input.cwd ?? options.cwd ?? "/workspace";
     const { getSandbox } = await import("@cloudflare/sandbox");

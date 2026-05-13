@@ -154,6 +154,7 @@ export type Timer = ReturnType<typeof setTimeout>;
 
 export type Code =
   | "aborted"
+  | "configuration"
   | "not_found"
   | "path_escape"
   | "process"

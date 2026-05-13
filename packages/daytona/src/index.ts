@@ -72,6 +72,56 @@ const capabilities: Capabilities = {
   volumes: true,
 };
 
+const present = (value: string | undefined): boolean =>
+  value !== undefined && value.length > 0;
+
+const validate = (options: Daytona): void => {
+  const apiKey = options.apiKey ?? process.env.DAYTONA_API_KEY;
+  const jwtToken = options.jwtToken ?? process.env.DAYTONA_JWT_TOKEN;
+  const organizationId =
+    options.organizationId ?? process.env.DAYTONA_ORGANIZATION_ID;
+  const target = options.target ?? process.env.DAYTONA_TARGET;
+  if (present(options.jwtToken) && !present(organizationId)) {
+    throw sandboxError(
+      provider,
+      "Daytona JWT authentication requires DAYTONA_ORGANIZATION_ID or organizationId.",
+      "configuration"
+    );
+  }
+  if (present(apiKey)) {
+    if (present(target)) {
+      return;
+    }
+    throw sandboxError(
+      provider,
+      "Daytona target missing. Set DAYTONA_TARGET or pass target to daytona().",
+      "configuration"
+    );
+  }
+  if (present(jwtToken) && !present(organizationId)) {
+    throw sandboxError(
+      provider,
+      "Daytona JWT authentication requires DAYTONA_ORGANIZATION_ID or organizationId.",
+      "configuration"
+    );
+  }
+  if (present(jwtToken) && present(organizationId) && present(target)) {
+    return;
+  }
+  if (present(jwtToken) && present(organizationId)) {
+    throw sandboxError(
+      provider,
+      "Daytona target missing. Set DAYTONA_TARGET or pass target to daytona().",
+      "configuration"
+    );
+  }
+  throw sandboxError(
+    provider,
+    "Daytona credentials missing. Set DAYTONA_API_KEY, or set DAYTONA_JWT_TOKEN and DAYTONA_ORGANIZATION_ID.",
+    "configuration"
+  );
+};
+
 const config = (options: Daytona): DaytonaConfig => ({
   ...(options.apiKey === undefined ? {} : { apiKey: options.apiKey }),
   ...(options.apiUrl === undefined ? {} : { apiUrl: options.apiUrl }),
@@ -274,6 +324,7 @@ const createSandbox = (
 export const daytona = (options: Daytona = {}): Adapter<Raw> => ({
   capabilities,
   async create(input = {}) {
+    validate(options);
     const client = new DaytonaClient(config(options));
     const createTimeout = seconds(input.timeout ?? options.timeout);
     const createSettings =

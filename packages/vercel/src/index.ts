@@ -82,6 +82,43 @@ const capabilities: Capabilities = {
   streaming: "separate",
 };
 
+const present = (value: string | undefined): boolean =>
+  value !== undefined && value.length > 0;
+
+const validate = (options: Vercel): void => {
+  const token = options.token ?? process.env.VERCEL_TOKEN;
+  const teamId = options.teamId ?? process.env.VERCEL_TEAM_ID;
+  const projectId = options.projectId ?? process.env.VERCEL_PROJECT_ID;
+  if (present(options.token) && present(teamId) && present(projectId)) {
+    return;
+  }
+  if (present(options.token)) {
+    throw sandboxError(
+      provider,
+      "Vercel access token authentication requires VERCEL_TEAM_ID and VERCEL_PROJECT_ID, or pass teamId and projectId to vercel().",
+      "configuration"
+    );
+  }
+  if (present(process.env.VERCEL_OIDC_TOKEN)) {
+    return;
+  }
+  if (present(token) && present(teamId) && present(projectId)) {
+    return;
+  }
+  if (present(token)) {
+    throw sandboxError(
+      provider,
+      "Vercel access token authentication requires VERCEL_TEAM_ID and VERCEL_PROJECT_ID.",
+      "configuration"
+    );
+  }
+  throw sandboxError(
+    provider,
+    "Vercel credentials missing. Set VERCEL_OIDC_TOKEN, or set VERCEL_TOKEN, VERCEL_TEAM_ID, and VERCEL_PROJECT_ID.",
+    "configuration"
+  );
+};
+
 const auth = (
   options: Vercel
 ): Pick<VercelCreate, "fetch"> & {
@@ -350,6 +387,7 @@ const createSandbox = (
 export const vercel = (options: Vercel = {}): Adapter<Raw> => ({
   capabilities,
   async create(input = {}) {
+    validate(options);
     const cwd = input.cwd ?? options.cwd ?? "/vercel/sandbox";
     const ports = input.ports ?? options.ports ?? [];
     const raw =

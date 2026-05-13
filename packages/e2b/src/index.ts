@@ -58,6 +58,26 @@ const capabilities: Capabilities = {
   streaming: "combined",
 };
 
+const present = (value: string | undefined): boolean =>
+  value !== undefined && value.length > 0;
+
+const validate = (options: E2B): void => {
+  if (
+    present(options.apiKey) ||
+    present(options.accessToken) ||
+    present(process.env.E2B_API_KEY) ||
+    present(process.env.E2B_ACCESS_TOKEN)
+  ) {
+    return;
+  }
+
+  throw sandboxError(
+    provider,
+    "E2B credentials missing. Set E2B_API_KEY or pass apiKey to e2b().",
+    "configuration"
+  );
+};
+
 const connection = (options: E2B): SandboxConnectOpts => ({
   ...(options.accessToken === undefined
     ? {}
@@ -323,6 +343,7 @@ const createSandbox = (
 export const e2b = (options: E2B = {}): Adapter<Raw> => ({
   capabilities,
   async create(input = {}) {
+    validate(options);
     const cwd = input.cwd ?? options.cwd ?? "/home/user";
     const raw =
       input.id === undefined
