@@ -18,6 +18,9 @@
     },
     {
       "path": "./packages/daytona"
+    },
+    {
+      "path": "./packages/cloudflare"
     }
   ],
   "compilerOptions": {

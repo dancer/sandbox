@@ -1,0 +1,229 @@
+import { getSandbox } from "@cloudflare/sandbox";
+import type {
+  ListFilesOptions,
+  Sandbox as CloudflareSandbox,
+  SandboxOptions,
+} from "@cloudflare/sandbox";
+import {
+  bytes,
+  command,
+  error as sandboxError,
+  result,
+  unsupported,
+} from "@sandbox-sdk/core";
+import type {
+  Adapter,
+  Capabilities,
+  Entry,
+  Exec,
+  Input,
+  Result,
+  Running,
+  Sandbox,
+} from "@sandbox-sdk/core";
+
+export { Sandbox as CloudflareSandbox } from "@cloudflare/sandbox";
+
+export type Cloudflare = Readonly<{
+  binding: DurableObjectNamespace<CloudflareSandbox>;
+  cwd?: string;
+  env?: Readonly<Record<string, string>>;
+  hostname?: string;
+  id?: string;
+  list?: ListFilesOptions;
+  name?: string;
+  options?: SandboxOptions;
+  timeout?: number;
+}>;
+
+type Raw = CloudflareSandbox;
+
+const provider = "cloudflare";
+
+const capabilities: Capabilities = {
+  desktop: true,
+  environment: true,
+  files: true,
+  git: true,
+  network: true,
+  ports: "dynamic",
+  process: true,
+  snapshots: false,
+  streaming: "separate",
+  volumes: "volume",
+};
+
+const binary = (content: string): Uint8Array =>
+  Uint8Array.from(atob(content), (char) => char.codePointAt(0) ?? 0);
+
+const stream = (content: Uint8Array): ReadableStream<Uint8Array> =>
+  new ReadableStream({
+    start(controller) {
+      controller.enqueue(content);
+      controller.close();
+    },
+  });
+
+const write = async (raw: Raw, path: string, input: Input): Promise<void> => {
+  const value = await bytes(input);
+  if (typeof value === "string") {
+    await raw.writeFile(path, value, { encoding: "utf-8" });
+    return;
+  }
+  await raw.writeFile(path, stream(value));
+};
+
+const execute = async (
+  raw: Raw,
+  cwd: string,
+  executable: string,
+  args: readonly string[],
+  options: Exec
+): Promise<Result> => {
+  try {
+    const output = await raw.exec(command(executable, args), {
+      cwd: options.cwd ?? cwd,
+      ...(options.env === undefined ? {} : { env: { ...options.env } }),
+      ...(options.timeout === undefined ? {} : { timeout: options.timeout }),
+    });
+    return result(output.exitCode, output.stdout, output.stderr);
+  } catch (error) {
+    throw sandboxError(provider, "Command failed", "process", error);
+  }
+};
+
+const wait = async (
+  raw: Raw,
+  process: Awaited<ReturnType<Raw["startProcess"]>>
+): Promise<Result> => {
+  const output = await process.waitForExit();
+  const logs = await raw.getProcessLogs(process.id);
+  return result(output.exitCode, logs.stdout, logs.stderr);
+};
+
+const spawn = async (
+  raw: Raw,
+  cwd: string,
+  executable: string,
+  args: readonly string[],
+  options: Exec
+): Promise<Running> => {
+  try {
+    const process = await raw.startProcess(command(executable, args), {
+      cwd: options.cwd ?? cwd,
+      ...(options.env === undefined ? {} : { env: { ...options.env } }),
+      ...(options.timeout === undefined ? {} : { timeout: options.timeout }),
+    });
+    const output = await raw.streamProcessLogs(process.id);
+    return {
+      id: process.id,
+      kill: async (signal = "SIGTERM") => {
+        await process.kill(signal);
+      },
+      output,
+      result: wait(raw, process),
+    };
+  } catch (error) {
+    throw sandboxError(provider, "Process spawn failed", "process", error);
+  }
+};
+
+const createSandbox = (
+  raw: Raw,
+  cwd: string,
+  options: Cloudflare
+): Sandbox<Raw> => ({
+  capabilities,
+  cwd,
+  files: {
+    exists: async (path) => {
+      const output = await raw.exists(path);
+      return output.exists;
+    },
+    list: async (path = cwd) => {
+      const entries = await raw.listFiles(path, options.list);
+      return entries.files
+        .map(
+          (entry): Entry => ({
+            kind: entry.type === "directory" ? "directory" : "file",
+            modified: new Date(entry.modifiedAt),
+            path: entry.absolutePath,
+            size: entry.size,
+          })
+        )
+        .toSorted((left, right) => left.path.localeCompare(right.path));
+    },
+    mkdir: async (path) => {
+      await raw.mkdir(path, { recursive: true });
+    },
+    read: async (path) => {
+      const output = await raw.readFile(path, { encoding: "base64" });
+      return binary(output.content);
+    },
+    remove: async (path) => {
+      await raw.deleteFile(path);
+    },
+    text: async (path) => {
+      const output = await raw.readFile(path, { encoding: "utf-8" });
+      return output.content;
+    },
+    write: (path, input) => write(raw, path, input),
+  },
+  id: options.id ?? "default",
+  ports: {
+    expose: async (port, input) => {
+      const hostname = input?.host ?? options.hostname;
+      if (!hostname) {
+        throw sandboxError(
+          provider,
+          "Cloudflare preview URLs require a hostname",
+          "unsupported"
+        );
+      }
+      const output = await raw.exposePort(port, {
+        hostname,
+        ...(options.name === undefined ? {} : { name: options.name }),
+      });
+      return {
+        port,
+        url: output.url,
+      };
+    },
+  },
+  process: {
+    exec: (executable, args = [], run = {}) =>
+      execute(raw, cwd, executable, args, run),
+    spawn: (executable, args = [], run = {}) =>
+      spawn(raw, cwd, executable, args, run),
+  },
+  provider,
+  raw,
+  snapshots: {
+    create: () => unsupported(provider, "snapshots"),
+    restore: () => unsupported(provider, "snapshots"),
+  },
+  stop: async () => {
+    await raw.destroy();
+  },
+});
+
+export const cloudflare = (options: Cloudflare): Adapter<Raw> => ({
+  capabilities,
+  async create(input = {}) {
+    const id = input.id ?? options.id ?? crypto.randomUUID();
+    const cwd = input.cwd ?? options.cwd ?? "/workspace";
+    const raw = getSandbox(options.binding, id, {
+      normalizeId: true,
+      ...options.options,
+    });
+    const env = { ...options.env, ...input.env };
+
+    if (Object.keys(env).length > 0) {
+      await raw.setEnvVars(env);
+    }
+    await raw.mkdir(cwd, { recursive: true });
+
+    return createSandbox(raw, cwd, { ...options, id });
+  },
+  provider,
+});
