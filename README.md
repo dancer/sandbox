@@ -11,20 +11,22 @@ bun add @sandbox-sdk/core @sandbox-sdk/local
 ## Quick Start
 
 ```ts
-import { create } from "@sandbox-sdk/core";
+import { withSandbox } from "@sandbox-sdk/core";
 import { local } from "@sandbox-sdk/local";
 
-const sandbox = await create({
-  adapter: local(),
-  cwd: "/workspace",
-});
+await withSandbox(
+  {
+    adapter: local(),
+    cwd: "/workspace",
+  },
+  async (sandbox) => {
+    await sandbox.files.write("/workspace/main.ts", "console.log('hello')");
 
-await sandbox.files.write("/workspace/main.ts", "console.log('hello')");
-const result = await sandbox.process.exec("bun", ["main.ts"]);
+    const result = await sandbox.process.shell("bun /workspace/main.ts");
 
-console.log(result.stdout);
-
-await sandbox.stop();
+    console.log(result.stdout);
+  }
+);
 ```
 
 Swap the adapter import once provider packages land and keep the rest of your agent loop the same.
@@ -34,6 +36,7 @@ Swap the adapter import once provider packages land and keep the rest of your ag
 - One API across providers: create sandboxes, read and write files, run commands, expose ports, create snapshots, and clean up
 - Capability checks: branch on provider support instead of guessing what works
 - Provider escape hatch: every adapter exposes its native client through `sandbox.raw`
+- Safe cleanup: `withSandbox` stops sandboxes after success or failure
 - Local-first development: test agent loops without remote credentials
 - TypeScript-first packages: each adapter ships as its own package so apps only install what they use
 
