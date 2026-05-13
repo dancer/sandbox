@@ -75,12 +75,14 @@ const capabilities: Capabilities = {
 const present = (value: string | undefined): boolean =>
   value !== undefined && value.length > 0;
 
+const env = (name: string): string | undefined => globalThis.process?.env[name];
+
 const validate = (options: Daytona): void => {
-  const apiKey = options.apiKey ?? process.env.DAYTONA_API_KEY;
-  const jwtToken = options.jwtToken ?? process.env.DAYTONA_JWT_TOKEN;
+  const apiKey = options.apiKey ?? env("DAYTONA_API_KEY");
+  const jwtToken = options.jwtToken ?? env("DAYTONA_JWT_TOKEN");
   const organizationId =
-    options.organizationId ?? process.env.DAYTONA_ORGANIZATION_ID;
-  const target = options.target ?? process.env.DAYTONA_TARGET;
+    options.organizationId ?? env("DAYTONA_ORGANIZATION_ID");
+  const target = options.target ?? env("DAYTONA_TARGET");
   if (present(options.jwtToken) && !present(organizationId)) {
     throw sandboxError(
       provider,

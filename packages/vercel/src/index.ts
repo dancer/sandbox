@@ -85,10 +85,12 @@ const capabilities: Capabilities = {
 const present = (value: string | undefined): boolean =>
   value !== undefined && value.length > 0;
 
+const env = (name: string): string | undefined => globalThis.process?.env[name];
+
 const validate = (options: Vercel): void => {
-  const token = options.token ?? process.env.VERCEL_TOKEN;
-  const teamId = options.teamId ?? process.env.VERCEL_TEAM_ID;
-  const projectId = options.projectId ?? process.env.VERCEL_PROJECT_ID;
+  const token = options.token ?? env("VERCEL_TOKEN");
+  const teamId = options.teamId ?? env("VERCEL_TEAM_ID");
+  const projectId = options.projectId ?? env("VERCEL_PROJECT_ID");
   if (present(options.token) && present(teamId) && present(projectId)) {
     return;
   }
@@ -99,7 +101,7 @@ const validate = (options: Vercel): void => {
       "configuration"
     );
   }
-  if (present(process.env.VERCEL_OIDC_TOKEN)) {
+  if (present(env("VERCEL_OIDC_TOKEN"))) {
     return;
   }
   if (present(token) && present(teamId) && present(projectId)) {

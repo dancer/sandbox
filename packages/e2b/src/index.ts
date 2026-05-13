@@ -61,12 +61,14 @@ const capabilities: Capabilities = {
 const present = (value: string | undefined): boolean =>
   value !== undefined && value.length > 0;
 
+const env = (name: string): string | undefined => globalThis.process?.env[name];
+
 const validate = (options: E2B): void => {
   if (
     present(options.apiKey) ||
     present(options.accessToken) ||
-    present(process.env.E2B_API_KEY) ||
-    present(process.env.E2B_ACCESS_TOKEN)
+    present(env("E2B_API_KEY")) ||
+    present(env("E2B_ACCESS_TOKEN"))
   ) {
     return;
   }
