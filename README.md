@@ -119,8 +119,8 @@ AI SDK v7 can use the returned sandbox object directly:
 ```ts
 await generateText({
   model,
+  experimental_sandbox: kit.sandbox,
   tools: kit.tools,
-  sandbox: kit.sandbox,
   system: kit.description,
   prompt: "run the tests",
 });

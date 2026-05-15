@@ -55,7 +55,7 @@ const kit = tools(sandbox);
 
 const result = await generateText({
   model: yourModel,
-  sandbox: kit.sandbox,
+  experimental_sandbox: kit.sandbox,
   system: kit.description,
   tools: kit.tools,
   prompt: "Write a TypeScript program that prints fib(10), then run it.",
@@ -153,9 +153,9 @@ export const AiTools = () => (
         >
           Vercel AI SDK
         </a>
-        's <code>tools</code> and <code>sandbox</code> fields. The model can
-        read files, write files, and run commands inside the sandbox without you
-        wiring up shell access in your app.
+        's <code>tools</code> and <code>experimental_sandbox</code> fields. The
+        model can read files, write files, and run commands inside the sandbox
+        without you wiring up shell access in your app.
       </p>
       <CodeBlock code={AI_SDK_EXAMPLE} lang="tsx" />
     </section>
@@ -186,13 +186,12 @@ export const AiTools = () => (
         OpenAI
       </Heading>
       <p>
-        OpenAI's Responses and Agents SDKs both accept tool definitions keyed by{" "}
-        <code>name</code> with a JSON-schema <code>parameters</code> block.{" "}
-        <code>@sandbox-sdk/ai</code> already returns that shape, so wire{" "}
-        <code>definitions</code> into <code>responses.create()</code> and
-        dispatch on <code>function_call</code> output as usual. A dedicated
-        OpenAI subpath is on the roadmap once the Responses approval flow
-        stabilizes.
+        OpenAI's Responses and Agents SDKs accept tool definitions keyed by{" "}
+        <code>name</code> with a JSON-schema <code>parameters</code> block. The
+        current kit exposes the same underlying JSON Schema on{" "}
+        <code>inputSchema.jsonSchema</code>, so map it deliberately before
+        sending tools to OpenAI. A dedicated OpenAI subpath is on the roadmap
+        once the Responses approval flow stabilizes.
       </p>
     </section>
   </section>
