@@ -97,6 +97,28 @@ test("tools can expose local previews", async () => {
   await sandbox.stop();
 });
 
+test("tools omit preview when ports are unsupported", async () => {
+  const sandbox = await create({ adapter: local() });
+  const kit = tools(
+    {
+      ...sandbox,
+      capabilities: {
+        ...sandbox.capabilities,
+        ports: false,
+      },
+    },
+    {
+      allow: ["preview"],
+    }
+  );
+
+  expect(kit.tools.preview).toBeUndefined();
+  expect(kit.description).toContain("Allowed sandbox tools: none");
+  expect(kit.description).toContain("Unavailable capabilities: ports");
+
+  await sandbox.stop();
+});
+
 test("tools trim command output for agent payloads", async () => {
   const sandbox = await create({ adapter: local() });
   const kit = tools(sandbox, {

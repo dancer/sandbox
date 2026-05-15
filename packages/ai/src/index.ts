@@ -253,6 +253,7 @@ const description = (
   timeout: number,
   maxOutput: number
 ): string => {
+  const labels = allowed.length === 0 ? "none" : allowed.join(", ");
   const unavailable = [
     supports(sandbox, "ports") ? undefined : "ports",
     supports(sandbox, "snapshotCreate") ? undefined : "snapshot creation",
@@ -265,7 +266,7 @@ const description = (
   return [
     `You have access to an isolated ${sandbox.provider} sandbox.`,
     `Default working directory: ${cwd}.`,
-    `Allowed sandbox tools: ${allowed.join(", ")}.`,
+    `Allowed sandbox tools: ${labels}.`,
     "Use read/list before editing when you need file context.",
     "Use write only for files that belong in the sandbox workspace.",
     `Commands run with a default timeout of ${timeout}ms.`,
@@ -314,10 +315,13 @@ export const tools = (sandbox: Sandbox, options: Options = {}): Kit => {
   const cwd = options.cwd ?? sandbox.cwd;
   const timeout = options.timeout ?? 30_000;
   const maxOutput = options.maxOutput ?? 20_000;
-  const allow = options.allow ?? [
+  const requested = options.allow ?? [
     ...names,
     ...(supports(sandbox, "ports") ? (["preview"] as const) : []),
   ];
+  const allow = requested.filter(
+    (name) => name !== "preview" || supports(sandbox, "ports")
+  );
   const enabled = new Set<Name>(allow);
   const output: Draft = {};
 
