@@ -6,6 +6,7 @@ import { create } from "@sandbox-sdk/core";
 import { cloudflare } from "../src/index";
 
 let exposeCalls = 0;
+let exposeSeen: unknown;
 let executeSeen: unknown;
 let getSeen: unknown;
 let mkdirSeen: unknown;
@@ -21,8 +22,9 @@ const raw = {
       stdout: "ok",
     });
   },
-  exposePort: () => {
+  exposePort: (port: number, options: unknown) => {
     exposeCalls += 1;
+    exposeSeen = { options, port };
     return Promise.resolve({ url: "https://preview.example.com" });
   },
   mkdir: (path: string, options: unknown) => {
@@ -156,6 +158,35 @@ test("cloudflare rejects reserved preview ports before provider calls", async ()
       provider: "cloudflare",
     });
     expect(exposeCalls).toBe(0);
+  } finally {
+    await sandbox.stop();
+  }
+});
+
+test("cloudflare allows low preview ports except reserved control plane", async () => {
+  exposeCalls = 0;
+  exposeSeen = undefined;
+  const sandbox = await create({
+    adapter: cloudflare({
+      binding,
+      hostname: "example.com",
+      name: "api",
+    }),
+  });
+
+  try {
+    await expect(sandbox.ports.expose(80)).resolves.toEqual({
+      port: 80,
+      url: "https://preview.example.com",
+    });
+    expect(exposeCalls).toBe(1);
+    expect(exposeSeen).toEqual({
+      options: {
+        hostname: "example.com",
+        name: "api",
+      },
+      port: 80,
+    });
   } finally {
     await sandbox.stop();
   }

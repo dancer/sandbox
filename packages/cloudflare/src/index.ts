@@ -118,7 +118,7 @@ const rejectUnsupported = (feature: string): Promise<never> => {
 const validatePort = (value: number): void => {
   if (
     Number.isInteger(value) &&
-    value >= 1024 &&
+    value >= 1 &&
     value <= 65_535 &&
     value !== 3000
   ) {
@@ -127,7 +127,7 @@ const validatePort = (value: number): void => {
 
   throw sandboxError(
     provider,
-    "Cloudflare preview ports must be integers from 1024 to 65535, excluding 3000",
+    "Cloudflare preview ports must be integers from 1 to 65535, excluding 3000",
     "unsupported"
   );
 };
