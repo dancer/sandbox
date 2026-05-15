@@ -232,6 +232,17 @@ const integer = (name: string, value: number): void => {
   );
 };
 
+const port = (value: number): void => {
+  if (Number.isInteger(value) && value >= 1 && value <= 65_535) {
+    return;
+  }
+  throw sandboxError(
+    "ai",
+    "port must be an integer from 1 to 65535",
+    "configuration"
+  );
+};
+
 const result = (output: Result, limit: number): ExecResult => {
   const value: ExecResult = {
     code: output.code,
@@ -420,11 +431,15 @@ export const tools = (sandbox: Sandbox, options: Options = {}): Kit => {
     output.preview = {
       description: "Expose or retrieve a preview URL for a sandbox port.",
       execute: async (input: Preview): Promise<PreviewResult> => {
+        port(input.port);
         await options.beforePreview?.(input, context(sandbox, cwd, "preview"));
         const preview = await sandbox.ports.expose(input.port);
         return { url: preview.url };
       },
-      inputSchema: schema({ port: { type: "number" } }, ["port"]),
+      inputSchema: schema(
+        { port: { maximum: 65_535, minimum: 1, type: "integer" } },
+        ["port"]
+      ),
       strict: true,
     };
   }

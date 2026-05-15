@@ -93,8 +93,32 @@ test("tools can expose local previews", async () => {
   const preview = await kit.tools.preview?.execute({ port: 3000 });
 
   expect(preview?.url).toBe("http://localhost:3000");
+  expect(kit.tools.preview?.inputSchema.properties.port).toMatchObject({
+    maximum: 65_535,
+    minimum: 1,
+    type: "integer",
+  });
 
   await sandbox.stop();
+});
+
+test("tools validate preview ports", async () => {
+  const sandbox = await create({ adapter: local() });
+  const kit = tools(sandbox);
+
+  try {
+    await kit.tools.preview?.execute({ port: 0 });
+    throw new Error("expected validation to fail");
+  } catch (error) {
+    expect(isSandboxError(error)).toBe(true);
+    expect(error).toMatchObject({
+      code: "configuration",
+      message: "port must be an integer from 1 to 65535",
+      provider: "ai",
+    });
+  } finally {
+    await sandbox.stop();
+  }
 });
 
 test("tools omit preview when ports are unsupported", async () => {
