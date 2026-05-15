@@ -111,7 +111,67 @@ const name = (node: ts.Node): string => {
   return "export";
 };
 
-const entry = (source: ts.SourceFile, statement: ts.Statement): Entry[] => {
+const localFile = (
+  source: ts.SourceFile,
+  statement: ts.ExportDeclaration
+): string | undefined => {
+  if (
+    !statement.moduleSpecifier ||
+    !ts.isStringLiteral(statement.moduleSpecifier)
+  ) {
+    return undefined;
+  }
+  const value = statement.moduleSpecifier.text;
+  if (!value.startsWith(".")) {
+    return undefined;
+  }
+  return join(dirname(source.fileName), value.replace(/\.js$/u, ".d.ts"));
+};
+
+const localNames = (
+  statement: ts.ExportDeclaration
+): ReadonlySet<string> | undefined => {
+  if (
+    statement.exportClause === undefined ||
+    !ts.isNamedExports(statement.exportClause)
+  ) {
+    return undefined;
+  }
+  return new Set(
+    statement.exportClause.elements.map(
+      (element) => element.propertyName?.text ?? element.name.text
+    )
+  );
+};
+
+const reexport = (source: ts.SourceFile, statement: ts.ExportDeclaration) => [
+  {
+    docs: "",
+    kind: "exports",
+    name: "re-export",
+    signature: code(source, statement),
+  } satisfies Entry,
+];
+
+const parseFile = async (
+  file: string,
+  parseStatement: (
+    source: ts.SourceFile,
+    statement: ts.Statement
+  ) => Promise<Entry[]>
+): Promise<Entry[]> => {
+  const text = await readFile(file, "utf-8");
+  const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest);
+  const entries = await Promise.all(
+    source.statements.map((statement) => parseStatement(source, statement))
+  );
+  return entries.flat();
+};
+
+const entry = async (
+  source: ts.SourceFile,
+  statement: ts.Statement
+): Promise<Entry[]> => {
   if (ts.isExportDeclaration(statement)) {
     const empty =
       statement.moduleSpecifier === undefined &&
@@ -122,14 +182,20 @@ const entry = (source: ts.SourceFile, statement: ts.Statement): Entry[] => {
     if (empty) {
       return [];
     }
-    return [
-      {
-        docs: "",
-        kind: "exports",
-        name: "re-export",
-        signature: code(source, statement),
-      },
-    ];
+    const file = localFile(source, statement);
+    const names = localNames(statement);
+    if (file !== undefined && names !== undefined) {
+      try {
+        const entries = await parseFile(file, entry);
+        const selected = entries.filter((item) => names.has(item.name));
+        if (selected.length === names.size) {
+          return selected;
+        }
+      } catch {
+        return reexport(source, statement);
+      }
+    }
+    return reexport(source, statement);
   }
   if (!exported(statement)) {
     return [];
@@ -164,11 +230,7 @@ const entry = (source: ts.SourceFile, statement: ts.Statement): Entry[] => {
   return [];
 };
 
-const parse = async (item: Package): Promise<Entry[]> => {
-  const text = await readFile(item.file, "utf-8");
-  const source = ts.createSourceFile(item.file, text, ts.ScriptTarget.Latest);
-  return source.statements.flatMap((statement) => entry(source, statement));
-};
+const parse = (item: Package): Promise<Entry[]> => parseFile(item.file, entry);
 
 const title = (value: Entry["kind"]): string => {
   if (value === "types") {
