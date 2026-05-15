@@ -53,9 +53,15 @@ const PORTS_EXAMPLE = `const { url, port } = await sandbox.ports.expose(3000, {
 });
 // → { url: "https://abc-3000.sandbox-sdk.sh", port: 3000 }`;
 
-const SNAPSHOTS_EXAMPLE = `const snap = await sandbox.snapshots.create("after-bun-install");
+const SNAPSHOTS_EXAMPLE = `import { supports } from "@sandbox-sdk/core";
 
-await sandbox.snapshots.restore(snap.id);`;
+if (supports(sandbox, "snapshotCreate")) {
+  const snap = await sandbox.snapshots.create("after-bun-install");
+
+  if (supports(sandbox, "snapshotRestore")) {
+    await sandbox.snapshots.restore(snap.id);
+  }
+}`;
 
 export const ApiReference = () => (
   <section>
