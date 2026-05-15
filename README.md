@@ -160,6 +160,9 @@ The default test suite runs without provider credentials and covers core behavio
 - Daytona: `DAYTONA_API_KEY`, or `DAYTONA_JWT_TOKEN` and `DAYTONA_ORGANIZATION_ID`; set `DAYTONA_TARGET` when you need a specific region
 - Vercel: `VERCEL_OIDC_TOKEN`, or `VERCEL_TOKEN`, `VERCEL_TEAM_ID`, and `VERCEL_PROJECT_ID`
 - Cloudflare: deploy `apps/cloudflare` and set `CLOUDFLARE_SANDBOX_WORKER_URL`; set `CLOUDFLARE_SANDBOX_TOKEN` when the Worker uses `SANDBOX_SDK_TOKEN`
+- Modal: `MODAL_TOKEN_ID` and `MODAL_TOKEN_SECRET`
+- Blaxel: `BL_WORKSPACE` with `BL_API_KEY` or `BL_CLIENT_CREDENTIALS`; set `BL_REGION` when you need a specific region
+- CodeSandbox: `CSB_API_KEY`
 
 ## License
 

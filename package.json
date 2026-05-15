@@ -16,7 +16,7 @@
     "fix": "ultracite fix",
     "pack:packages": "for p in packages/core packages/local packages/ai packages/vercel packages/e2b packages/daytona packages/cloudflare packages/modal packages/blaxel packages/codesandbox; do (cd $p && bun pm pack --dry-run); done",
     "test": "bun run build:packages && bun test packages test",
-    "test:live": "bun run build:packages && bun test packages/cloudflare/test/live.test.ts packages/daytona/test/live.test.ts packages/e2b/test/live.test.ts packages/vercel/test/live.test.ts",
+    "test:live": "bun run build:packages && bun test packages/blaxel/test/live.test.ts packages/cloudflare/test/live.test.ts packages/codesandbox/test/live.test.ts packages/daytona/test/live.test.ts packages/e2b/test/live.test.ts packages/modal/test/live.test.ts packages/vercel/test/live.test.ts",
     "typecheck": "bun run build:packages && bun run --cwd apps/site typecheck && bun run --cwd apps/cloudflare typecheck && tsc -p examples/tsconfig.json",
     "prepare": "husky"
   },
