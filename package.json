@@ -17,6 +17,13 @@
     "pack:packages": "for p in packages/core packages/local packages/ai packages/vercel packages/e2b packages/daytona packages/cloudflare packages/modal packages/blaxel packages/codesandbox; do (cd $p && bun pm pack --dry-run); done",
     "test": "bun run build:packages && bun test packages test",
     "test:live": "bun run build:packages && bun test packages/blaxel/test/live.test.ts packages/cloudflare/test/live.test.ts packages/codesandbox/test/live.test.ts packages/daytona/test/live.test.ts packages/e2b/test/live.test.ts packages/modal/test/live.test.ts packages/vercel/test/live.test.ts",
+    "test:live:blaxel": "bun run --cwd packages/blaxel build && bun test packages/blaxel/test/live.test.ts",
+    "test:live:cloudflare": "bun run --cwd packages/cloudflare build && bun test packages/cloudflare/test/live.test.ts",
+    "test:live:codesandbox": "bun run --cwd packages/codesandbox build && bun test packages/codesandbox/test/live.test.ts",
+    "test:live:daytona": "bun run --cwd packages/daytona build && bun test packages/daytona/test/live.test.ts",
+    "test:live:e2b": "bun run --cwd packages/e2b build && bun test packages/e2b/test/live.test.ts",
+    "test:live:modal": "bun run --cwd packages/modal build && bun test packages/modal/test/live.test.ts",
+    "test:live:vercel": "bun run --cwd packages/vercel build && bun test packages/vercel/test/live.test.ts",
     "typecheck": "bun run build:packages && bun run --cwd apps/site typecheck && bun run --cwd apps/cloudflare typecheck && tsc -p examples/tsconfig.json",
     "prepare": "husky"
   },

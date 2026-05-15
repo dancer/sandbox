@@ -160,9 +160,11 @@ Preview ports must follow Cloudflare's provider rules: integers from 1024 to
 ```bash
 bun run test
 bun run test:live
+bun run test:live:e2b
 ```
 
 The default test suite runs without provider credentials and covers core behavior, the local adapter, AI tool execution, and package exports. Live provider tests are skipped unless credentials are present.
+Use the provider-specific live commands while adding credentials so one failing provider does not block the rest of the validation pass.
 
 - E2B: `E2B_API_KEY` or `E2B_ACCESS_TOKEN`
 - Daytona: `DAYTONA_API_KEY`, or `DAYTONA_JWT_TOKEN` and `DAYTONA_ORGANIZATION_ID`; set `DAYTONA_TARGET` when you need a specific region
