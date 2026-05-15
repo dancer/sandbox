@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 
-import { create } from "@sandbox-sdk/core";
+import { create, isSandboxError } from "@sandbox-sdk/core";
 import { local } from "@sandbox-sdk/local";
 
 import { tools } from "../src/index";
@@ -134,6 +134,38 @@ test("tools trim command output for agent payloads", async () => {
   expect(output?.stdout).toBe("hell\n[truncated 1 bytes]");
 
   await sandbox.stop();
+});
+
+test("tools validate numeric configuration", async () => {
+  const sandbox = await create({ adapter: local() });
+
+  try {
+    try {
+      tools(sandbox, { maxOutput: -1 });
+      throw new Error("expected validation to fail");
+    } catch (error) {
+      expect(isSandboxError(error)).toBe(true);
+      expect(error).toMatchObject({
+        code: "configuration",
+        message: "maxOutput must be a non-negative integer",
+        provider: "ai",
+      });
+    }
+
+    try {
+      tools(sandbox, { timeout: Number.POSITIVE_INFINITY });
+      throw new Error("expected validation to fail");
+    } catch (error) {
+      expect(isSandboxError(error)).toBe(true);
+      expect(error).toMatchObject({
+        code: "configuration",
+        message: "timeout must be a non-negative integer",
+        provider: "ai",
+      });
+    }
+  } finally {
+    await sandbox.stop();
+  }
 });
 
 test("tools run write policy before file writes", async () => {

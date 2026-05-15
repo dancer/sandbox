@@ -1,4 +1,4 @@
-import { supports } from "@sandbox-sdk/core";
+import { error as sandboxError, supports } from "@sandbox-sdk/core";
 import type { Result, Sandbox } from "@sandbox-sdk/core";
 
 /** json schema object accepted by AI SDK tools */
@@ -221,6 +221,17 @@ const trim = (value: string, limit: number): string => {
   return `${value.slice(0, limit)}\n[truncated ${value.length - limit} bytes]`;
 };
 
+const integer = (name: string, value: number): void => {
+  if (Number.isInteger(value) && value >= 0) {
+    return;
+  }
+  throw sandboxError(
+    "ai",
+    `${name} must be a non-negative integer`,
+    "configuration"
+  );
+};
+
 const result = (output: Result, limit: number): ExecResult => {
   const value: ExecResult = {
     code: output.code,
@@ -315,6 +326,8 @@ export const tools = (sandbox: Sandbox, options: Options = {}): Kit => {
   const cwd = options.cwd ?? sandbox.cwd;
   const timeout = options.timeout ?? 30_000;
   const maxOutput = options.maxOutput ?? 20_000;
+  integer("timeout", timeout);
+  integer("maxOutput", maxOutput);
   const requested = options.allow ?? [
     ...names,
     ...(supports(sandbox, "ports") ? (["preview"] as const) : []),
