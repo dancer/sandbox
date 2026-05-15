@@ -336,15 +336,25 @@ low-level vendor contract that keeps large I/O stream-first
 
 ```ts
 export type SimpleInsecureSandbox<Raw = unknown> = Readonly<{
+  /** advertised runtime feature support */
   capabilities: Capabilities;
+  /** default sandbox working directory */
   cwd: string;
+  /** stream-first filesystem operations scoped to the sandbox */
   files: SimpleInsecureFiles;
+  /** provider sandbox id */
   id: string;
+  /** preview URL operations */
   ports: Ports;
+  /** process operations scoped to the sandbox */
   process: SimpleInsecureProcess;
+  /** provider name */
   provider: string;
+  /** raw provider object for advanced provider-specific usage */
   raw: Raw;
+  /** snapshot operations gated by capabilities */
   snapshots: Snapshots;
+  /** stop, destroy, or release the sandbox according to adapter semantics */
   stop(): Promise<void>;
 }>;
 ```
@@ -391,19 +401,26 @@ export type Options = Readonly<{
 
 #### `Cause`
 
+optional cause metadata used by normalized errors
+
 ```ts
 export type Cause = Readonly<{
+  /** original provider, runtime, or platform failure */
   cause?: unknown;
 }>;
 ```
 
 #### `Timer`
 
+runtime timeout handle type used across browser and node targets
+
 ```ts
 export type Timer = ReturnType<typeof setTimeout>;
 ```
 
 #### `Code`
+
+normalized error code for sandbox sdk failures
 
 ```ts
 export type Code =
