@@ -28,7 +28,23 @@ test("tools returns prompt context and selected tools", async () => {
   expect(kit.sandbox.description).toBe(kit.description);
   expect(kit.sandbox.provider).toBe("local");
   expect(kit.sandbox.workingDirectory).toBe("/workspace");
-  expect(kit.tools.exec?.inputSchema.additionalProperties).toBe(false);
+  expect(kit.tools.exec?.inputSchema.jsonSchema).toMatchObject({
+    additionalProperties: false,
+  });
+  const schema = kit.tools.exec?.inputSchema;
+  if (!schema) {
+    throw new Error("missing exec tool");
+  }
+  const value = schema();
+  expect(Object.getOwnPropertySymbols(value)).toContain(
+    Symbol.for("vercel.ai.schema")
+  );
+  expect(value).toMatchObject({
+    jsonSchema: {
+      additionalProperties: false,
+    },
+    validate: undefined,
+  });
   expect(kit.tools.exec?.strict).toBe(true);
 
   await sandbox.stop();
@@ -93,10 +109,14 @@ test("tools can expose local previews", async () => {
   const preview = await kit.tools.preview?.execute({ port: 3000 });
 
   expect(preview?.url).toBe("http://localhost:3000");
-  expect(kit.tools.preview?.inputSchema.properties.port).toMatchObject({
-    maximum: 65_535,
-    minimum: 1,
-    type: "integer",
+  expect(kit.tools.preview?.inputSchema.jsonSchema).toMatchObject({
+    properties: {
+      port: {
+        maximum: 65_535,
+        minimum: 1,
+        type: "integer",
+      },
+    },
   });
 
   await sandbox.stop();

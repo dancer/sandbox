@@ -668,21 +668,26 @@ Agent tool helpers for Sandbox SDK
 
 ### types
 
-#### `Schema`
+#### `JsonSchema`
 
-json schema object accepted by AI SDK tools
+json schema payload exposed to the AI SDK
 
 ```ts
-export type Schema = Readonly<{
-  /** whether unknown properties are rejected */
-  additionalProperties: false;
-  /** json schema property map */
-  properties: Readonly<Record<string, unknown>>;
-  /** required property names */
-  required?: readonly string[];
-  /** schema root type */
-  type: "object";
-}>;
+export type JsonSchema = Readonly<Record<string, unknown>>;
+```
+
+#### `Schema`
+
+lazy AI SDK schema created from json schema
+
+```ts
+export type Schema<Input = unknown> = (() => never) &
+  Readonly<{
+    /** json schema passed to the model provider */
+    jsonSchema: JsonSchema;
+    /** type-only input marker for editor inference */
+    _type?: Input;
+  }>;
 ```
 
 #### `Tool`
@@ -693,12 +698,12 @@ provider-agnostic tool shape compatible with the AI SDK
 export type Tool<Input, Output> = Readonly<{
   /** prompt-facing tool description */
   description: string;
-  /** strict json schema for tool input */
-  inputSchema: Schema;
+  /** AI SDK-compatible lazy input schema */
+  inputSchema: Schema<Input>;
   /** true when model output should match the schema exactly */
   strict?: boolean;
   /** tool implementation */
-  execute(input: Input): Promise<Output>;
+  execute(input: Input, options?: unknown): Promise<Output>;
 }>;
 ```
 

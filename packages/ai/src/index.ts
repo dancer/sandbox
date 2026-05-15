@@ -1,28 +1,30 @@
 import { error as sandboxError, supports } from "@sandbox-sdk/core";
 import type { Result, Sandbox } from "@sandbox-sdk/core";
 
-/** json schema object accepted by AI SDK tools */
-export type Schema = Readonly<{
-  /** whether unknown properties are rejected */
-  additionalProperties: false;
-  /** json schema property map */
-  properties: Readonly<Record<string, unknown>>;
-  /** required property names */
-  required?: readonly string[];
-  /** schema root type */
-  type: "object";
-}>;
+const schemaKey = Symbol.for("vercel.ai.schema");
+
+/** json schema payload exposed to the AI SDK */
+export type JsonSchema = Readonly<Record<string, unknown>>;
+
+/** lazy AI SDK schema created from json schema */
+export type Schema<Input = unknown> = (() => never) &
+  Readonly<{
+    /** json schema passed to the model provider */
+    jsonSchema: JsonSchema;
+    /** type-only input marker for editor inference */
+    _type?: Input;
+  }>;
 
 /** provider-agnostic tool shape compatible with the AI SDK */
 export type Tool<Input, Output> = Readonly<{
   /** prompt-facing tool description */
   description: string;
-  /** strict json schema for tool input */
-  inputSchema: Schema;
+  /** AI SDK-compatible lazy input schema */
+  inputSchema: Schema<Input>;
   /** true when model output should match the schema exactly */
   strict?: boolean;
   /** tool implementation */
-  execute(input: Input): Promise<Output>;
+  execute(input: Input, options?: unknown): Promise<Output>;
 }>;
 
 /** built-in sandbox tool name */
@@ -258,15 +260,24 @@ const result = (output: Result, limit: number): ExecResult => {
   return { ...value, signal: output.signal };
 };
 
-const schema = (
+const schema = <Input>(
   properties: Readonly<Record<string, unknown>>,
   required: readonly string[]
-): Schema => ({
-  additionalProperties: false,
-  properties,
-  required,
-  type: "object",
-});
+): Schema<Input> => {
+  const jsonSchema = {
+    additionalProperties: false,
+    properties,
+    required,
+    type: "object",
+  } satisfies JsonSchema;
+  const value = {
+    _type: undefined as Input,
+    [schemaKey]: true,
+    jsonSchema,
+    validate: undefined,
+  };
+  return Object.assign(() => value, { jsonSchema }) as unknown as Schema<Input>;
+};
 
 const description = (
   sandbox: Sandbox,
@@ -358,7 +369,7 @@ export const tools = (sandbox: Sandbox, options: Options = {}): Kit => {
           text: await sandbox.files.text(input.path),
         };
       },
-      inputSchema: schema({ path: { type: "string" } }, ["path"]),
+      inputSchema: schema<Path>({ path: { type: "string" } }, ["path"]),
       strict: true,
     };
   }
@@ -371,7 +382,7 @@ export const tools = (sandbox: Sandbox, options: Options = {}): Kit => {
         await sandbox.files.write(input.path, input.text);
         return { ok: true };
       },
-      inputSchema: schema(
+      inputSchema: schema<Write>(
         { path: { type: "string" }, text: { type: "string" } },
         ["path", "text"]
       ),
@@ -388,7 +399,7 @@ export const tools = (sandbox: Sandbox, options: Options = {}): Kit => {
           entries: await sandbox.files.list(input.path),
         };
       },
-      inputSchema: schema({ path: { type: "string" } }, []),
+      inputSchema: schema<Partial<Path>>({ path: { type: "string" } }, []),
       strict: true,
     };
   }
@@ -411,7 +422,7 @@ export const tools = (sandbox: Sandbox, options: Options = {}): Kit => {
 
         return result(executed, maxOutput);
       },
-      inputSchema: schema(
+      inputSchema: schema<Exec>(
         {
           args: { items: { type: "string" }, type: "array" },
           command: { type: "string" },
@@ -436,7 +447,7 @@ export const tools = (sandbox: Sandbox, options: Options = {}): Kit => {
         const preview = await sandbox.ports.expose(input.port);
         return { url: preview.url };
       },
-      inputSchema: schema(
+      inputSchema: schema<Preview>(
         { port: { maximum: 65_535, minimum: 1, type: "integer" } },
         ["port"]
       ),
