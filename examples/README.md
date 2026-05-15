@@ -7,6 +7,7 @@ provider credentials configured. The local example runs without remote
 credentials.
 
 - `local.ts`
+- `core.ts`
 - `blaxel.ts`
 - `codesandbox.ts`
 - `e2b.ts`
