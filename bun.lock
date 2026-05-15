@@ -82,7 +82,7 @@
       "name": "@sandbox-sdk/blaxel",
       "version": "0.0.0",
       "dependencies": {
-        "@blaxel/core": "^0.2.82",
+        "@blaxel/core": "^0.2.83",
         "@sandbox-sdk/core": "workspace:*",
       },
       "devDependencies": {
@@ -329,7 +329,7 @@
 
     "@babel/types": ["@babel/types@7.29.0", "", { "dependencies": { "@babel/helper-string-parser": "^7.27.1", "@babel/helper-validator-identifier": "^7.28.5" } }, "sha512-LwdZHpScM4Qz8Xw2iKSzS+cfglZzJGvofQICy7W7v4caru4EaAmyUuO6BGrbyQ2mYV11W0U8j5mBhd14dd3B0A=="],
 
-    "@blaxel/core": ["@blaxel/core@0.2.82", "", { "dependencies": { "@hey-api/client-fetch": "^0.10.0", "@modelcontextprotocol/sdk": "^1.20.0", "archiver": "^7.0.1", "axios": "^1.9.0", "dockerfile-ast": "^0.7.1", "dotenv": "^16.5.0", "form-data": "^4.0.2", "jwt-decode": "^4.0.0", "toml": "^3.0.0", "uuid": "^11.1.0", "ws": "^8.18.2", "yaml": "^2.7.1", "zod": "^3.24.3" } }, "sha512-h6chpMNGr2ybIjQTVSAxSaXMjIQv+165szfWG4WjtsrNp8qvYLcwYXmgPeud/dyWYLeMFenWWFQCBiAelrcMKg=="],
+    "@blaxel/core": ["@blaxel/core@0.2.83", "", { "dependencies": { "@hey-api/client-fetch": "^0.10.0", "@modelcontextprotocol/sdk": "^1.20.0", "archiver": "^7.0.1", "axios": "^1.9.0", "dockerfile-ast": "^0.7.1", "dotenv": "^16.5.0", "form-data": "^4.0.2", "jwt-decode": "^4.0.0", "toml": "^3.0.0", "uuid": "^11.1.0", "ws": "^8.18.2", "yaml": "^2.7.1", "zod": "^3.24.3" } }, "sha512-o6z7/Gibwoe6qk7yCVpEQHwNCKuv8SZJZQ6n+Jtf7IEf8Bt1H6m5sCJqol58T5rfN1zxosDwVCHS7uhvY0rsEg=="],
 
     "@bufbuild/protobuf": ["@bufbuild/protobuf@2.12.0", "", {}, "sha512-B/XlCaFIP8LOwzo+bz5uFzATYokcwCKQcghqnlfwSmM5eX/qTkvDBnDPs+gXtX/RyjxJ4DRikECcPJbyALA8FA=="],
 
