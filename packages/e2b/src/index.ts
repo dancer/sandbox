@@ -357,9 +357,13 @@ const createSandbox = (
   provider,
   raw,
   snapshots: {
-    create: async () => {
-      const snapshot = await raw.createSnapshot();
-      return { id: snapshot.snapshotId };
+    create: async (name) => {
+      const snapshot = await raw.createSnapshot(
+        name === undefined ? undefined : { name }
+      );
+      return name === undefined
+        ? { id: snapshot.snapshotId }
+        : { id: snapshot.snapshotId, name };
     },
     restore: () => rejectUnsupported("in-place snapshot restore"),
   },

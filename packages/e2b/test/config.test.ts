@@ -31,6 +31,7 @@ test("e2b maps create and command options without running a real provider", asyn
   let commandSeen: unknown;
   let createSeen: unknown;
   let mkdirSeen: unknown;
+  let snapshotSeen: unknown;
   let snapshotted = false;
   const raw = {
     commands: {
@@ -43,7 +44,8 @@ test("e2b maps create and command options without running a real provider", asyn
         });
       },
     },
-    createSnapshot: () => {
+    createSnapshot: (options?: unknown) => {
+      snapshotSeen = options;
       snapshotted = true;
       return Promise.resolve({ snapshotId: "snapshot-id" });
     },
@@ -120,9 +122,11 @@ test("e2b maps create and command options without running a real provider", asyn
       },
     });
 
-    await expect(sandbox.snapshots.create()).resolves.toEqual({
+    await expect(sandbox.snapshots.create("ready")).resolves.toEqual({
       id: "snapshot-id",
+      name: "ready",
     });
+    expect(snapshotSeen).toEqual({ name: "ready" });
     expect(snapshotted).toBe(true);
     await expect(
       sandbox.snapshots.restore("snapshot-id")

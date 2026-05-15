@@ -138,7 +138,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@sandbox-sdk/core": "workspace:*",
-        "e2b": "^2.20.0",
+        "e2b": "^2.20.1",
       },
       "devDependencies": {
         "@types/node": "^20.19.41",
@@ -1319,7 +1319,7 @@
 
     "dunder-proto": ["dunder-proto@1.0.1", "", { "dependencies": { "call-bind-apply-helpers": "^1.0.1", "es-errors": "^1.3.0", "gopd": "^1.2.0" } }, "sha512-KIN/nDJBQRcXw0MLVhZE9iQHmG68qAVIBg9CqmUYjmQIhgij9U5MFvrqkUL5FbtyyzZuOeOt0zdeRe4UY7ct+A=="],
 
-    "e2b": ["e2b@2.20.0", "", { "dependencies": { "@bufbuild/protobuf": "^2.6.2", "@connectrpc/connect": "2.0.0-rc.3", "@connectrpc/connect-web": "2.0.0-rc.3", "chalk": "^5.3.0", "compare-versions": "^6.1.0", "dockerfile-ast": "^0.7.1", "glob": "^11.1.0", "openapi-fetch": "^0.14.1", "platform": "^1.3.6", "tar": "^7.5.11", "undici": "^7.25.0" } }, "sha512-hOrUYfKwfEn5AvM24swOc5LR66PaNqZ35YeOgTpPmTMow+uTFI+ObqOrI4+/w/YscJ+wR0ezigYtTRvc+Lzltw=="],
+    "e2b": ["e2b@2.20.1", "", { "dependencies": { "@bufbuild/protobuf": "^2.6.2", "@connectrpc/connect": "2.0.0-rc.3", "@connectrpc/connect-web": "2.0.0-rc.3", "chalk": "^5.3.0", "compare-versions": "^6.1.0", "dockerfile-ast": "^0.7.1", "glob": "^11.1.0", "openapi-fetch": "^0.14.1", "platform": "^1.3.6", "tar": "^7.5.11", "undici": "^7.25.0" } }, "sha512-egTGZvPTUMN45tF6bBsdzY+WVEp3rsPuXh2pfP0Py1A+bGjrjKIrxyxs1wzDuMC7uuSOoZPNKfDVe/mX9pho5A=="],
 
     "eastasianwidth": ["eastasianwidth@0.2.0", "", {}, "sha512-I88TYZWc9XiYHRQ4/3c5rjjfgkjhLyW2luGIheGERbNQ6OY7yTybanSpDXZa8y7VUP9YmDcYa+eyq4ca7iLqWA=="],
 

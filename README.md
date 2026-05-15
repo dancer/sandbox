@@ -56,6 +56,9 @@ files, long-running commands, and provider-specific behavior.
 
 Snapshot support is capability-gated because providers expose different
 lifecycle shapes.
+Some providers pause or stop a sandbox while creating a snapshot, so snapshot
+creation should be treated as a lifecycle operation rather than a transparent
+file copy.
 
 Use `sandbox.snapshots.create()` when `supports(sandbox, "snapshotCreate")` is
 true. Use `sandbox.snapshots.restore(id)` only when
