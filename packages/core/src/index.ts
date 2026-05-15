@@ -195,6 +195,48 @@ export type Sandbox<Raw = unknown> = Readonly<{
   stop(): Promise<void>;
 }>;
 
+/** stream-first filesystem contract for low-level provider adapters */
+export type SimpleInsecureFiles = Readonly<{
+  /** read a file as a byte stream */
+  read(path: string): Promise<ReadableStream<Uint8Array>>;
+  /** write text, bytes, blobs, array buffers, or readable streams */
+  write(path: string, input: Input): Promise<void>;
+  /** list entries in a directory */
+  list(path?: string): Promise<readonly Entry[]>;
+  /** return true when a path exists */
+  exists(path: string): Promise<boolean>;
+  /** create a directory and missing parents */
+  mkdir(path: string): Promise<void>;
+  /** remove a file or directory */
+  remove(path: string): Promise<void>;
+}>;
+
+/** process contract for low-level provider adapters */
+export type SimpleInsecureProcess = Readonly<{
+  /** start an executable with explicit argv arguments and stream output */
+  spawn(
+    command: string,
+    args?: readonly string[],
+    options?: Spawn
+  ): Promise<Running>;
+  /** start a shell command string and stream output */
+  spawnShell(command: string, options?: Spawn): Promise<Running>;
+}>;
+
+/** low-level vendor contract that keeps large I/O stream-first */
+export type SimpleInsecureSandbox<Raw = unknown> = Readonly<{
+  capabilities: Capabilities;
+  cwd: string;
+  files: SimpleInsecureFiles;
+  id: string;
+  ports: Ports;
+  process: SimpleInsecureProcess;
+  provider: string;
+  raw: Raw;
+  snapshots: Snapshots;
+  stop(): Promise<void>;
+}>;
+
 /** provider adapter contract implemented by each package */
 export type Adapter<Raw = unknown> = Readonly<{
   /** provider name */

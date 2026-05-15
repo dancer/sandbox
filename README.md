@@ -44,6 +44,14 @@ Swap the adapter import to target a provider and keep the rest of your agent loo
 - Local-first development: test agent loops without remote credentials
 - TypeScript-first packages: each adapter ships as its own package so apps only install what they use
 
+## Foundation
+
+`SimpleInsecureSandbox` is the low-level contract for vendor implementations.
+It keeps file reads stream-first, process execution handle-based, and provider
+power available through `raw`. Higher-level helpers can still expose convenient
+methods like `files.text()`, but the foundation stays flexible enough for large
+files, long-running commands, and provider-specific behavior.
+
 ## Snapshots
 
 Snapshot support is capability-gated because providers expose different
