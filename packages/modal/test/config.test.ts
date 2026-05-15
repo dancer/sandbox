@@ -48,6 +48,7 @@ test("modal maps create options, tags, commands, and ports", async () => {
   let appSeen: unknown;
   let createSeen: unknown;
   let imageSeen: unknown;
+  let snapshotted = false;
   let tagsSeen: unknown;
   const raw = {
     exec: (command: string[], options: unknown) => {
@@ -58,6 +59,10 @@ test("modal maps create options, tags, commands, and ports", async () => {
     setTags: (tags: unknown) => {
       tagsSeen = tags;
       return Promise.resolve();
+    },
+    snapshotFilesystem: () => {
+      snapshotted = true;
+      return Promise.resolve({ imageId: "im-snapshot-created" });
     },
     terminate: () => Promise.resolve(),
     tunnels: () =>
@@ -169,6 +174,18 @@ test("modal maps create options, tags, commands, and ports", async () => {
   });
 
   await expect(sandbox.process.spawn("sleep", ["1"])).rejects.toMatchObject({
+    code: "unsupported",
+    provider: "modal",
+  });
+
+  await expect(sandbox.snapshots.create("ready")).resolves.toEqual({
+    id: "im-snapshot-created",
+    name: "ready",
+  });
+  expect(snapshotted).toBe(true);
+  await expect(
+    sandbox.snapshots.restore("im-snapshot-created")
+  ).rejects.toMatchObject({
     code: "unsupported",
     provider: "modal",
   });

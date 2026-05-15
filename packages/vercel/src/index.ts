@@ -227,6 +227,14 @@ const wrap = async <Value>(
   }
 };
 
+const rejectUnsupported = (feature: string): Promise<never> => {
+  try {
+    unsupported(provider, feature);
+  } catch (error) {
+    return Promise.reject(error);
+  }
+};
+
 const read = async (
   raw: Raw,
   path: string,
@@ -417,7 +425,7 @@ const createSandbox = (
       const snapshot = await raw.snapshot();
       return { id: snapshot.snapshotId };
     },
-    restore: () => unsupported(provider, "in-place snapshot restore"),
+    restore: () => rejectUnsupported("in-place snapshot restore"),
   },
   stop: async () => {
     await raw.stop({ blocking: true });

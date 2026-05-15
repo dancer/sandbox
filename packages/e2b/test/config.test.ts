@@ -31,6 +31,7 @@ test("e2b maps create and command options without running a real provider", asyn
   let commandSeen: unknown;
   let createSeen: unknown;
   let mkdirSeen: unknown;
+  let snapshotted = false;
   const raw = {
     commands: {
       run: (line: string, options: unknown) => {
@@ -41,6 +42,10 @@ test("e2b maps create and command options without running a real provider", asyn
           stdout: "ok",
         });
       },
+    },
+    createSnapshot: () => {
+      snapshotted = true;
+      return Promise.resolve({ snapshotId: "snapshot-id" });
     },
     files: {
       makeDir: (path: string, options: unknown) => {
@@ -113,6 +118,17 @@ test("e2b maps create and command options without running a real provider", asyn
         timeoutMs: 321,
         user: "runner",
       },
+    });
+
+    await expect(sandbox.snapshots.create()).resolves.toEqual({
+      id: "snapshot-id",
+    });
+    expect(snapshotted).toBe(true);
+    await expect(
+      sandbox.snapshots.restore("snapshot-id")
+    ).rejects.toMatchObject({
+      code: "unsupported",
+      provider: "e2b",
     });
   } finally {
     E2BSandbox.create = original;

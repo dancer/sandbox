@@ -18,7 +18,6 @@ import type {
   Exec,
   Input,
   Result,
-  Running,
   Sandbox,
 } from "@sandbox-sdk/core";
 import * as ModalSdk from "modal";
@@ -279,7 +278,7 @@ const list = async (raw: Raw, cwd: string, path: string): Promise<Entry[]> => {
     .toSorted((left, right) => left.path.localeCompare(right.path));
 };
 
-const spawnUnsupported = (feature: string): Promise<Running> => {
+const rejectUnsupported = (feature: string): Promise<never> => {
   try {
     unsupported(provider, feature);
   } catch (error) {
@@ -332,8 +331,8 @@ const createSandbox = (
     exec: (executable, args = [], options = {}) =>
       execute(raw, cwd, [executable, ...args], options),
     shell: (script, options = {}) => shell(raw, cwd, script, options),
-    spawn: () => spawnUnsupported("background process spawn"),
-    spawnShell: () => spawnUnsupported("background shell process spawn"),
+    spawn: () => rejectUnsupported("background process spawn"),
+    spawnShell: () => rejectUnsupported("background shell process spawn"),
   },
   provider,
   raw,
@@ -342,7 +341,7 @@ const createSandbox = (
       const snapshot = await raw.snapshotFilesystem();
       return { id: snapshot.imageId, ...(name === undefined ? {} : { name }) };
     },
-    restore: () => unsupported(provider, "in-place snapshot restore"),
+    restore: () => rejectUnsupported("in-place snapshot restore"),
   },
   stop: async () => {
     await raw.terminate();

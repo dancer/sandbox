@@ -30,6 +30,8 @@ import type {
   Options,
 } from "@sandbox-sdk/core";
 
+import { rejectUnsupported } from "./errors.js";
+
 /** blaxel adapter configuration */
 export type Blaxel = Readonly<
   Pick<
@@ -465,8 +467,8 @@ const createSandbox = (raw: Raw, cwd: string): Sandbox<Raw> => ({
   provider,
   raw,
   snapshots: {
-    create: () => unsupported(provider, "normalized snapshot creation"),
-    restore: () => unsupported(provider, "in-place snapshot restore"),
+    create: () => rejectUnsupported(provider, "normalized snapshot creation"),
+    restore: () => rejectUnsupported(provider, "in-place snapshot restore"),
   },
   stop: async () => {
     await raw.delete();

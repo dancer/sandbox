@@ -146,6 +146,14 @@ const check = (signal?: AbortSignal): void => {
   }
 };
 
+const rejectUnsupported = (feature: string): Promise<never> => {
+  try {
+    unsupported(provider, feature);
+  } catch (error) {
+    return Promise.reject(error);
+  }
+};
+
 const executeLine = async (
   raw: Raw,
   cwd: string,
@@ -353,7 +361,7 @@ const createSandbox = (
       const snapshot = await raw.createSnapshot();
       return { id: snapshot.snapshotId };
     },
-    restore: () => unsupported(provider, "in-place snapshot restore"),
+    restore: () => rejectUnsupported("in-place snapshot restore"),
   },
   stop: async () => {
     await raw.kill();

@@ -336,8 +336,8 @@ const createSandbox = (
   provider,
   raw,
   snapshots: {
-    create: () => unsupported(provider, "stable snapshots"),
-    restore: () => unsupported(provider, "stable snapshot restore"),
+    create: () => rejectUnsupported("stable snapshots"),
+    restore: () => rejectUnsupported("stable snapshot restore"),
   },
   stop: async () => {
     if (options.deleteOnStop) {

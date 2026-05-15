@@ -107,6 +107,14 @@ const check = (signal?: AbortSignal): void => {
   }
 };
 
+const rejectUnsupported = (feature: string): Promise<never> => {
+  try {
+    unsupported(provider, feature);
+  } catch (error) {
+    return Promise.reject(error);
+  }
+};
+
 const validatePort = (value: number): void => {
   if (
     Number.isInteger(value) &&
@@ -282,8 +290,8 @@ const createSandbox = (
   provider,
   raw,
   snapshots: {
-    create: () => unsupported(provider, "snapshots"),
-    restore: () => unsupported(provider, "snapshots"),
+    create: () => rejectUnsupported("snapshots"),
+    restore: () => rejectUnsupported("snapshots"),
   },
   stop: async () => {
     await raw.destroy();

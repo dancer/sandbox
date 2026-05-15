@@ -145,6 +145,7 @@ test("vercel maps create options and gates undeclared ports", async () => {
   let createSeen: unknown;
   let domainSeen: unknown;
   let mkdirSeen: unknown;
+  let snapshotted = false;
   const raw = {
     domain: (port: number) => {
       domainSeen = port;
@@ -157,6 +158,10 @@ test("vercel maps create options and gates undeclared ports", async () => {
       },
     },
     sandboxId: "sandbox",
+    snapshot: () => {
+      snapshotted = true;
+      return Promise.resolve({ snapshotId: "snapshot-id" });
+    },
     stop: () => Promise.resolve(),
   } as unknown as VercelSandbox;
 
@@ -214,6 +219,17 @@ test("vercel maps create options and gates undeclared ports", async () => {
       url: "https://preview.example.com/8080",
     });
     expect(domainSeen).toBe(8080);
+
+    await expect(sandbox.snapshots.create()).resolves.toEqual({
+      id: "snapshot-id",
+    });
+    expect(snapshotted).toBe(true);
+    await expect(
+      sandbox.snapshots.restore("snapshot-id")
+    ).rejects.toMatchObject({
+      code: "unsupported",
+      provider: "vercel",
+    });
   } finally {
     VercelSandbox.create = original;
   }
