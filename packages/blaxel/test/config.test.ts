@@ -32,6 +32,33 @@ test("blaxel reports incomplete credentials before provider calls", async () => 
   });
 });
 
+test("blaxel rejects invalid declared ports before provider calls", async () => {
+  const original = SandboxInstance.create;
+  let called = false;
+  SandboxInstance.create = (() => {
+    called = true;
+    return Promise.reject(new Error("provider called"));
+  }) as typeof SandboxInstance.create;
+
+  try {
+    await expect(
+      create({
+        adapter: blaxel({
+          apiKey: "key",
+          workspace: "workspace",
+        }),
+        ports: [0],
+      })
+    ).rejects.toMatchObject({
+      code: "configuration",
+      provider: "blaxel",
+    });
+    expect(called).toBe(false);
+  } finally {
+    SandboxInstance.create = original;
+  }
+});
+
 test("blaxel maps create options and normalized operations", async () => {
   const original = SandboxInstance.create;
   let createSeen: unknown;

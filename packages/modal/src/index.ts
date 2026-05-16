@@ -357,7 +357,9 @@ export const modal = (options: Modal = {}): Adapter<Raw> => ({
     validate(options);
     const modalClient = client(options);
     const cwd = input.cwd ?? options.cwd ?? "/app";
-    const ports = input.ports ?? options.ports ?? [];
+    const ports = (input.ports ?? options.ports ?? []).map((value) =>
+      port(value, provider)
+    );
     const raw =
       input.id === undefined
         ? await modalClient.sandboxes.create(

@@ -43,6 +43,37 @@ test("modal reports missing credentials before provider calls", async () => {
   }
 });
 
+test("modal rejects invalid declared ports before provider calls", async () => {
+  let called = false;
+  const client = {
+    apps: {
+      fromName: () => Promise.resolve({}),
+    },
+    images: {
+      fromRegistry: () => ({}),
+    },
+    sandboxes: {
+      create: () => {
+        called = true;
+        return Promise.reject(new Error("provider called"));
+      },
+    },
+  } as unknown as ModalClient;
+
+  await expect(
+    create({
+      adapter: modal({
+        client,
+      }),
+      ports: [0],
+    })
+  ).rejects.toMatchObject({
+    code: "configuration",
+    provider: "modal",
+  });
+  expect(called).toBe(false);
+});
+
 test("modal maps create options, tags, commands, and ports", async () => {
   const execSeen: unknown[] = [];
   let appSeen: unknown;

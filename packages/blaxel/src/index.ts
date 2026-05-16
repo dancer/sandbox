@@ -433,7 +433,9 @@ export const blaxel = (options: Blaxel = {}): Adapter<Raw> => ({
       unsupported(provider, "snapshot source");
     }
     const cwd = input.cwd ?? options.cwd ?? "/app";
-    const ports = input.ports ?? options.ports ?? [];
+    const ports = (input.ports ?? options.ports ?? []).map((value) =>
+      port(value, provider)
+    );
     const raw =
       input.id === undefined
         ? await SandboxInstance.create(createOptions(options, input, ports), {

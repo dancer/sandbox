@@ -173,14 +173,15 @@ const auth = (
 
 const createInput = (
   options: Vercel,
-  input: Parameters<Adapter<Raw>["create"]>[0] = {}
+  input: NonNullable<Parameters<Adapter<Raw>["create"]>[0]>,
+  ports: readonly number[]
 ): VercelCreate => {
   const snapshot = input.snapshot ?? input.template;
   return {
     ...auth(options),
     env: { ...options.env, ...input.env },
     networkPolicy: options.networkPolicy,
-    ports: [...(input.ports ?? options.ports ?? [])],
+    ports: [...ports],
     resources: options.resources,
     runtime: options.runtime,
     source:
@@ -439,10 +440,12 @@ export const vercel = (options: Vercel = {}): Adapter<Raw> => ({
   async create(input = {}) {
     validate(options);
     const cwd = input.cwd ?? options.cwd ?? "/vercel/sandbox";
-    const ports = input.ports ?? options.ports ?? [];
+    const ports = (input.ports ?? options.ports ?? []).map((value) =>
+      port(value, provider)
+    );
     const raw =
       input.id === undefined
-        ? await VercelSandbox.create(createInput(options, input))
+        ? await VercelSandbox.create(createInput(options, input, ports))
         : await VercelSandbox.get(getInput(options, input.id));
 
     if (input.id === undefined) {
