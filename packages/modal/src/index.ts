@@ -7,6 +7,7 @@ import {
   abort,
   bytes,
   error as sandboxError,
+  port,
   quote,
   result,
   unsupported,
@@ -311,8 +312,9 @@ const createSandbox = (
   },
   id: raw.sandboxId,
   ports: {
-    expose: async (port) => {
-      if (!ports.includes(port)) {
+    expose: async (value) => {
+      const target = port(value, provider);
+      if (!ports.includes(target)) {
         throw sandboxError(
           provider,
           "Modal ports must be declared at sandbox creation",
@@ -320,11 +322,11 @@ const createSandbox = (
         );
       }
       const tunnels = await raw.tunnels();
-      const tunnel = tunnels[port];
+      const tunnel = tunnels[target];
       if (!tunnel) {
         throw sandboxError(provider, "Modal tunnel not found", "not_found");
       }
-      return { port, url: tunnel.url };
+      return { port: target, url: tunnel.url };
     },
   },
   process: {

@@ -152,6 +152,10 @@ test("daytona maps create options without running a real provider", async () => 
     });
     expect(settingsSeen).toEqual({ timeout: 3 });
     expect(folderSeen).toEqual({ mode: "755", path: "/work" });
+    await expect(sandbox.ports.expose(0)).rejects.toMatchObject({
+      code: "configuration",
+      provider: "daytona",
+    });
   } finally {
     client.create = original;
   }

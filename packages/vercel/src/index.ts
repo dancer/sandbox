@@ -3,6 +3,7 @@ import {
   abort,
   bytes,
   error as sandboxError,
+  port,
   result,
   timeout,
   unsupported,
@@ -389,23 +390,23 @@ const createSandbox = (
   },
   id: raw.sandboxId,
   ports: {
-    expose: (port) => {
-      if (!ports.includes(port)) {
-        return Promise.reject(
-          sandboxError(
-            provider,
-            "Vercel ports must be declared at sandbox creation",
-            "unsupported"
-          )
+    expose: async (value) => {
+      const target = port(value, provider);
+      if (!ports.includes(target)) {
+        throw sandboxError(
+          provider,
+          "Vercel ports must be declared at sandbox creation",
+          "unsupported"
         );
       }
-      return wrap(
+      const preview = await wrap(
         () => ({
-          port,
-          url: raw.domain(port),
+          port: target,
+          url: raw.domain(target),
         }),
         "port exposure"
       );
+      return preview;
     },
   },
   process: {

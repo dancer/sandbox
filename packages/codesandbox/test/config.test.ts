@@ -132,6 +132,12 @@ test("codesandbox maps create options and normalized operations", async () => {
     url: "https://preview.csb.app",
   });
   expect(portSeen).toBe(3000);
+  portSeen = undefined;
+  await expect(current.ports.expose(0)).rejects.toMatchObject({
+    code: "configuration",
+    provider: "codesandbox",
+  });
+  expect(portSeen).toBeUndefined();
 
   await expect(
     current.process.exec("echo", ["hello world"], {

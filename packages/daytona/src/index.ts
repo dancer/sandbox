@@ -16,6 +16,7 @@ import {
   bytes,
   command,
   error as sandboxError,
+  port,
   result,
   unsupported,
 } from "@sandbox-sdk/core";
@@ -316,12 +317,13 @@ const createSandbox = (
   },
   id: raw.id,
   ports: {
-    expose: async (port) => {
+    expose: async (value) => {
+      const target = port(value, provider);
       const preview = options.signedPreview
-        ? await raw.getSignedPreviewUrl(port, options.previewExpires)
-        : await raw.getPreviewLink(port);
+        ? await raw.getSignedPreviewUrl(target, options.previewExpires)
+        : await raw.getPreviewLink(target);
       return {
-        port,
+        port: target,
         url: preview.url,
       };
     },

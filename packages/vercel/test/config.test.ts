@@ -213,6 +213,11 @@ test("vercel maps create options and gates undeclared ports", async () => {
       provider: "vercel",
     });
     expect(domainSeen).toBeUndefined();
+    await expect(sandbox.ports.expose(0)).rejects.toMatchObject({
+      code: "configuration",
+      provider: "vercel",
+    });
+    expect(domainSeen).toBeUndefined();
 
     await expect(sandbox.ports.expose(8080)).resolves.toEqual({
       port: 8080,

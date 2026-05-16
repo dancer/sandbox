@@ -3,6 +3,7 @@ import {
   bytes,
   command,
   error as sandboxError,
+  port,
   result,
   unsupported,
 } from "@sandbox-sdk/core";
@@ -334,14 +335,15 @@ const createSandbox = (
   },
   id: raw.sandboxId,
   ports: {
-    expose: (port, options) => {
-      const host = raw.getHost(port);
+    expose: async (value, options) => {
+      const target = port(value, provider);
+      const host = await Promise.resolve(raw.getHost(target));
       const protocol =
         options?.protocol ?? (host.startsWith("localhost") ? "http" : "https");
-      return Promise.resolve({
-        port,
+      return {
+        port: target,
         url: `${protocol}://${host}`,
-      });
+      };
     },
   },
   process: {

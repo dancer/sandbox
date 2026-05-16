@@ -100,6 +100,10 @@ test("e2b maps create and command options without running a real provider", asyn
       options: { user: "runner" },
       path: "/work",
     });
+    await expect(sandbox.ports.expose(0)).rejects.toMatchObject({
+      code: "configuration",
+      provider: "e2b",
+    });
 
     await expect(
       sandbox.process.exec("echo", ["hello world"], {

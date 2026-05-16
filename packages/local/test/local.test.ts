@@ -73,6 +73,17 @@ test("local derives preview urls", async () => {
   await sandbox.stop();
 });
 
+test("local rejects invalid preview ports", async () => {
+  const sandbox = await create({ adapter: local() });
+
+  await expect(sandbox.ports.expose(0)).rejects.toMatchObject({
+    code: "configuration",
+    provider: "local",
+  });
+
+  await sandbox.stop();
+});
+
 test("local prevents paths escaping the sandbox root", async () => {
   const sandbox = await create({ adapter: local() });
 

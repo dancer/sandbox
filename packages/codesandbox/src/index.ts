@@ -6,6 +6,7 @@ import {
   bytes,
   command,
   error as sandboxError,
+  port,
   result,
   timeout,
   unsupported,
@@ -370,12 +371,13 @@ const createSandbox = (
   },
   id: raw.sandbox.id,
   ports: {
-    expose: async (port, options = {}) => {
+    expose: async (value, options = {}) => {
+      const target = port(value, provider);
       if (options.host !== undefined || options.protocol === "tcp") {
         unsupported(provider, "custom preview hosts or tcp previews");
       }
-      const preview = await raw.client.ports.waitForPort(port);
-      return { port, url: preview.host };
+      const preview = await raw.client.ports.waitForPort(target);
+      return { port: target, url: preview.host };
     },
   },
   process: {

@@ -148,6 +148,10 @@ test("blaxel maps create options and normalized operations", async () => {
       port: 8080,
       url: "https://preview.bl.run",
     });
+    await expect(sandbox.ports.expose(0)).rejects.toMatchObject({
+      code: "configuration",
+      provider: "blaxel",
+    });
     expect(previewSeen).toEqual({
       metadata: { name: "sandbox-sdk-8080" },
       spec: { port: 8080, public: true },

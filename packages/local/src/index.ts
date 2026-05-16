@@ -20,7 +20,7 @@ import {
   resolve as pathResolve,
 } from "node:path";
 
-import { SandboxError, abort, bytes } from "@sandbox-sdk/core";
+import { SandboxError, abort, bytes, port } from "@sandbox-sdk/core";
 import type {
   Adapter,
   Entry,
@@ -354,11 +354,13 @@ export const local = (options: Local = {}): Adapter<Raw> => ({
       },
       id: input.id ?? randomUUID(),
       ports: {
-        expose: (port) =>
-          Promise.resolve({
-            port,
-            url: `http://localhost:${port}`,
-          }),
+        expose: async (value) => {
+          const target = await Promise.resolve(port(value, "local"));
+          return {
+            port: target,
+            url: `http://localhost:${target}`,
+          };
+        },
       },
       process: {
         exec: (command, args = [], run = {}) =>

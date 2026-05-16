@@ -163,6 +163,26 @@ test("cloudflare rejects reserved preview ports before provider calls", async ()
   }
 });
 
+test("cloudflare rejects invalid preview ports before provider calls", async () => {
+  exposeCalls = 0;
+  const sandbox = await create({
+    adapter: cloudflare({
+      binding,
+      hostname: "example.com",
+    }),
+  });
+
+  try {
+    await expect(sandbox.ports.expose(0)).rejects.toMatchObject({
+      code: "configuration",
+      provider: "cloudflare",
+    });
+    expect(exposeCalls).toBe(0);
+  } finally {
+    await sandbox.stop();
+  }
+});
+
 test("cloudflare allows low preview ports except reserved control plane", async () => {
   exposeCalls = 0;
   exposeSeen = undefined;

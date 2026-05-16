@@ -8,6 +8,7 @@ import {
   bytes,
   command,
   error as sandboxError,
+  port,
   result,
   unsupported,
 } from "@sandbox-sdk/core";
@@ -115,14 +116,10 @@ const rejectUnsupported = (feature: string): Promise<never> => {
   }
 };
 
-const validatePort = (value: number): void => {
-  if (
-    Number.isInteger(value) &&
-    value >= 1 &&
-    value <= 65_535 &&
-    value !== 3000
-  ) {
-    return;
+const validatePort = (value: number): number => {
+  const target = port(value, provider);
+  if (target !== 3000) {
+    return target;
   }
 
   throw sandboxError(
@@ -258,8 +255,8 @@ const createSandbox = (
   },
   id: options.id ?? "default",
   ports: {
-    expose: async (port, input) => {
-      validatePort(port);
+    expose: async (value, input) => {
+      const target = validatePort(value);
       const hostname = input?.host ?? options.hostname;
       if (!hostname) {
         throw sandboxError(
@@ -269,12 +266,12 @@ const createSandbox = (
         );
       }
       validateHostname(hostname);
-      const output = await raw.exposePort(port, {
+      const output = await raw.exposePort(target, {
         hostname,
         ...(options.name === undefined ? {} : { name: options.name }),
       });
       return {
-        port,
+        port: target,
         url: output.url,
       };
     },

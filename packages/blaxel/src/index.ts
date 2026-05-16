@@ -14,6 +14,7 @@ import {
   bytes,
   command,
   error as sandboxError,
+  port,
   result,
   unsupported,
 } from "@sandbox-sdk/core";
@@ -386,10 +387,11 @@ const createSandbox = (raw: Raw, cwd: string): Sandbox<Raw> => ({
   },
   id: raw.metadata.name,
   ports: {
-    expose: async (port) => {
+    expose: async (value) => {
+      const target = port(value, provider);
       const preview = await raw.previews.createIfNotExists({
-        metadata: { name: `sandbox-sdk-${port}` },
-        spec: { port, public: true },
+        metadata: { name: `sandbox-sdk-${target}` },
+        spec: { port: target, public: true },
       });
       const { url } = preview.spec;
       if (!url) {
@@ -399,7 +401,7 @@ const createSandbox = (raw: Raw, cwd: string): Sandbox<Raw> => ({
           "not_found"
         );
       }
-      return { port, url };
+      return { port: target, url };
     },
   },
   process: {
