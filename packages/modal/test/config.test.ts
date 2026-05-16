@@ -74,6 +74,37 @@ test("modal rejects invalid declared ports before provider calls", async () => {
   expect(called).toBe(false);
 });
 
+test("modal rejects invalid create timeouts before provider calls", async () => {
+  let called = false;
+  const client = {
+    apps: {
+      fromName: () => Promise.resolve({}),
+    },
+    images: {
+      fromRegistry: () => ({}),
+    },
+    sandboxes: {
+      create: () => {
+        called = true;
+        return Promise.reject(new Error("provider called"));
+      },
+    },
+  } as unknown as ModalClient;
+
+  await expect(
+    create({
+      adapter: modal({
+        client,
+      }),
+      timeout: 0,
+    })
+  ).rejects.toMatchObject({
+    code: "configuration",
+    provider: "modal",
+  });
+  expect(called).toBe(false);
+});
+
 test("modal maps create options, tags, commands, and ports", async () => {
   const execSeen: unknown[] = [];
   let appSeen: unknown;
@@ -185,6 +216,17 @@ test("modal maps create options, tags, commands, and ports", async () => {
     port: 8080,
     url: "https://preview.example.com",
   });
+
+  const count = execSeen.length;
+  await expect(
+    sandbox.process.exec("echo", ["hello"], {
+      timeout: 0,
+    })
+  ).rejects.toMatchObject({
+    code: "configuration",
+    provider: "modal",
+  });
+  expect(execSeen).toHaveLength(count);
 
   await expect(
     sandbox.process.exec("echo", ["hello"], {

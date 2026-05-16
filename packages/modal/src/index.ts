@@ -201,8 +201,8 @@ const execute = async (
   options: Exec
 ): Promise<Result> => {
   check(options.signal);
+  const value = duration(options.timeout);
   try {
-    const value = duration(options.timeout);
     const run: ModalSdk.SandboxExecParams & { mode?: "text" } = {
       stderr: "pipe",
       stdout: "pipe",
