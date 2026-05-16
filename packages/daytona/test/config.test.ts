@@ -88,6 +88,37 @@ test("daytona accepts api key config without target", async () => {
   }
 });
 
+test("daytona rejects invalid create timeouts before provider calls", async () => {
+  type Client = InstanceType<typeof DaytonaClient>;
+  type Create = Client["create"];
+
+  const client = DaytonaClient.prototype as Client;
+  const original = client.create;
+  let called = false;
+
+  client.create = (() => {
+    called = true;
+    return Promise.reject(new Error("provider called"));
+  }) as Create;
+
+  try {
+    await expect(
+      create({
+        adapter: daytona({
+          apiKey: "key",
+        }),
+        timeout: -1,
+      })
+    ).rejects.toMatchObject({
+      code: "configuration",
+      provider: "daytona",
+    });
+    expect(called).toBe(false);
+  } finally {
+    client.create = original;
+  }
+});
+
 test("daytona maps create options without running a real provider", async () => {
   type Client = InstanceType<typeof DaytonaClient>;
   type Create = Client["create"];
@@ -156,6 +187,51 @@ test("daytona maps create options without running a real provider", async () => 
       code: "configuration",
       provider: "daytona",
     });
+  } finally {
+    client.create = original;
+  }
+});
+
+test("daytona rejects invalid command timeouts before provider calls", async () => {
+  type Client = InstanceType<typeof DaytonaClient>;
+  type Create = Client["create"];
+
+  const client = DaytonaClient.prototype as Client;
+  const original = client.create;
+  let called = false;
+  const raw = {
+    fs: {
+      createFolder: () => Promise.resolve(),
+    },
+    getWorkDir: () => Promise.resolve("/workspace"),
+    id: "sandbox",
+    process: {
+      executeCommand: () => {
+        called = true;
+        return Promise.reject(new Error("provider called"));
+      },
+    },
+    stop: () => Promise.resolve(),
+  };
+
+  client.create = (() => Promise.resolve(raw)) as Create;
+
+  try {
+    const sandbox = await create({
+      adapter: daytona({
+        apiKey: "key",
+      }),
+    });
+
+    await expect(
+      sandbox.process.exec("echo", ["hello"], {
+        timeout: -1,
+      })
+    ).rejects.toMatchObject({
+      code: "configuration",
+      provider: "daytona",
+    });
+    expect(called).toBe(false);
   } finally {
     client.create = original;
   }

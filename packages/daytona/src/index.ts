@@ -15,6 +15,7 @@ import {
   abort,
   bytes,
   command,
+  duration,
   error as sandboxError,
   port,
   result,
@@ -205,8 +206,12 @@ const params = (
   };
 };
 
-const seconds = (value?: number): number | undefined =>
-  value === undefined ? undefined : Math.max(1, Math.ceil(value / 1000));
+const seconds = (value?: number): number | undefined => {
+  const milliseconds = duration(value, provider);
+  return milliseconds === undefined
+    ? undefined
+    : Math.max(1, Math.ceil(milliseconds / 1000));
+};
 
 const missing = (error: unknown): boolean =>
   error instanceof DaytonaNotFoundError ||
@@ -233,12 +238,13 @@ const executeLine = async (
   options: Exec
 ): Promise<Result> => {
   check(options.signal);
+  const timeout = seconds(options.timeout);
   try {
     const output = await raw.process.executeCommand(
       line,
       options.cwd ?? cwd,
       options.env === undefined ? undefined : { ...options.env },
-      seconds(options.timeout)
+      timeout
     );
     return result(output.exitCode, output.result, "");
   } catch (error) {
