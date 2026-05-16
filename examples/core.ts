@@ -25,6 +25,7 @@ import type {
   Timer,
   Url,
 } from "@sandbox-sdk/core";
+import { duration, port } from "@sandbox-sdk/core";
 
 export type CoreTypes = Readonly<{
   adapter: Adapter;
@@ -61,3 +62,8 @@ export const capabilities = {
   snapshotCreate: "filesystem",
   snapshotRestore: "filesystem",
 } satisfies Capabilities;
+
+export const validated = {
+  port: port(3000),
+  timeout: duration(30_000),
+};

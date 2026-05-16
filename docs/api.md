@@ -544,6 +544,18 @@ validate and return a normalized tcp port number
 export declare const port: (value: number, provider?: string) => number;
 ```
 
+#### `duration`
+
+validate and return a normalized millisecond duration
+
+```ts
+export declare const duration: (
+  value?: number,
+  provider?: string,
+  name?: string
+) => number | undefined;
+```
+
 #### `error`
 
 create a normalized provider error
@@ -616,7 +628,8 @@ create an abort signal that fires when timeout or parent signal fires
 ```ts
 export declare const timeout: (
   value?: number,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  provider?: string
 ) => {
   aborted(): boolean;
   clear(): void;

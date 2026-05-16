@@ -149,6 +149,24 @@ export const port = (value: number, provider = "sandbox"): number => {
   });
 };
 
+/** validate and return a normalized millisecond duration */
+export const duration = (
+  value?: number,
+  provider = "sandbox",
+  name = "timeout"
+): number | undefined => {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (Number.isInteger(value) && value >= 0) {
+    return value;
+  }
+  throw new SandboxError(`${name} must be a non-negative integer`, {
+    code: "configuration",
+    provider,
+  });
+};
+
 /** create a normalized provider error */
 export const error = (
   provider: string,
@@ -234,9 +252,11 @@ const noop = (): void => void 0;
 /** create an abort signal that fires when timeout or parent signal fires */
 export const timeout = (
   value?: number,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  provider = "sandbox"
 ): { aborted(): boolean; clear(): void; signal?: AbortSignal } => {
-  if (value === undefined) {
+  const delay = duration(value, provider);
+  if (delay === undefined) {
     return signal === undefined
       ? { aborted: () => false, clear: noop }
       : { aborted: () => signal.aborted, clear: noop, signal };
@@ -247,7 +267,7 @@ export const timeout = (
   const timer: Timer = setTimeout(() => {
     aborted = true;
     controller.abort();
-  }, value);
+  }, delay);
   signal?.addEventListener(
     "abort",
     () => {

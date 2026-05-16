@@ -8,6 +8,7 @@ import {
   capabilityMode,
   command,
   create,
+  duration,
   isSandboxError,
   port,
   requireCapability,
@@ -266,6 +267,25 @@ test("port validates normalized preview ports", () => {
   }
 });
 
+test("duration validates normalized millisecond values", () => {
+  expect(duration()).toBeUndefined();
+  expect(duration(0, "test")).toBe(0);
+  expect(duration(30_000, "test")).toBe(30_000);
+
+  for (const value of [-1, 1.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+    expect(() => duration(value, "test")).toThrow(SandboxError);
+    try {
+      duration(value, "test");
+    } catch (error) {
+      expect(error).toMatchObject({
+        code: "configuration",
+        message: "timeout must be a non-negative integer",
+        provider: "test",
+      });
+    }
+  }
+});
+
 test("bytes normalizes supported input shapes", async () => {
   expect(await bytes("hello")).toBe("hello");
   expect(await bytes(new Uint8Array([1, 2, 3]))).toEqual(
@@ -317,4 +337,17 @@ test("timeout exposes an abort signal and clear hook", async () => {
   expect(deadline.signal?.aborted).toBe(true);
   expect(deadline.aborted()).toBe(true);
   deadline.clear();
+});
+
+test("timeout rejects invalid duration values", () => {
+  expect(() => timeout(-1, undefined, "test")).toThrow(SandboxError);
+  try {
+    timeout(-1, undefined, "test");
+  } catch (error) {
+    expect(error).toMatchObject({
+      code: "configuration",
+      message: "timeout must be a non-negative integer",
+      provider: "test",
+    });
+  }
 });
