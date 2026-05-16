@@ -196,6 +196,25 @@ test("local applies command timeouts", async () => {
   await sandbox.stop();
 });
 
+test("local rejects invalid command timeouts", async () => {
+  const sandbox = await create({ adapter: local() });
+
+  await expect(
+    sandbox.process.exec("sleep", ["1"], { timeout: -1 })
+  ).rejects.toMatchObject({
+    code: "configuration",
+    provider: "local",
+  });
+  await expect(
+    sandbox.process.spawn("sleep", ["1"], { timeout: -1 })
+  ).rejects.toMatchObject({
+    code: "configuration",
+    provider: "local",
+  });
+
+  await sandbox.stop();
+});
+
 test("local aborts running commands", async () => {
   const sandbox = await create({ adapter: local() });
   const controller = new AbortController();

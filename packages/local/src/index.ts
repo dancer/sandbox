@@ -20,7 +20,7 @@ import {
   resolve as pathResolve,
 } from "node:path";
 
-import { SandboxError, abort, bytes, port } from "@sandbox-sdk/core";
+import { SandboxError, abort, bytes, duration, port } from "@sandbox-sdk/core";
 import type {
   Adapter,
   Entry,
@@ -151,6 +151,11 @@ const check = (signal?: AbortSignal): void => {
   }
 };
 
+const execution = (options: Exec): Exec => {
+  const value = duration(options.timeout, "local");
+  return value === undefined ? options : { ...options, timeout: value };
+};
+
 const stream = (child: ReturnType<typeof spawn>): ReadableStream<Uint8Array> =>
   new ReadableStream({
     start(controller) {
@@ -247,7 +252,7 @@ const settle = async (
   }
 };
 
-const execute = (
+const execute = async (
   root: string,
   cwd: string,
   env: Readonly<Record<string, string>>,
@@ -255,12 +260,14 @@ const execute = (
   args: readonly string[],
   options: Exec
 ): Promise<Result> => {
+  const run = execution(options);
   check(options.signal);
   const child = spawn(command, args, {
-    cwd: safe(root, options.cwd ?? cwd),
-    env: { ...env, ...options.env },
+    cwd: safe(root, run.cwd ?? cwd),
+    env: { ...env, ...run.env },
   });
-  return settle(child, options);
+  const output = await settle(child, run);
+  return output;
 };
 
 const start = (
@@ -270,12 +277,16 @@ const start = (
   command: string,
   args: readonly string[],
   options: Exec
-) => {
-  check(options.signal);
-  return spawn(command, args, {
-    cwd: safe(root, options.cwd ?? cwd),
-    env: { ...env, ...options.env },
-  });
+): Readonly<{ child: ReturnType<typeof spawn>; run: Exec }> => {
+  const run = execution(options);
+  check(run.signal);
+  return {
+    child: spawn(command, args, {
+      cwd: safe(root, run.cwd ?? cwd),
+      env: { ...env, ...run.env },
+    }),
+    run,
+  };
 };
 
 /** create a local adapter that runs against an isolated host directory */
@@ -367,31 +378,37 @@ export const local = (options: Local = {}): Adapter<Raw> => ({
           execute(root, cwd, env, command, args, run),
         shell: (command, run = {}) =>
           execute(root, cwd, env, "sh", ["-lc", command], run),
-        spawn: (command, args = [], run = {}) => {
-          const child = start(root, cwd, env, command, args, run);
+        spawn: async (command, args = [], run = {}) => {
+          const ready = await Promise.resolve(
+            start(root, cwd, env, command, args, run)
+          );
+          const { child } = ready;
           const output = stream(child);
-          return Promise.resolve({
+          return {
             id: randomUUID(),
             kill: (signal = "SIGTERM") => {
               child.kill(signal as NodeJS.Signals);
               return Promise.resolve();
             },
             output,
-            result: settle(child, run),
-          });
+            result: settle(child, ready.run),
+          };
         },
-        spawnShell: (command, run = {}) => {
-          const child = start(root, cwd, env, "sh", ["-lc", command], run);
+        spawnShell: async (command, run = {}) => {
+          const ready = await Promise.resolve(
+            start(root, cwd, env, "sh", ["-lc", command], run)
+          );
+          const { child } = ready;
           const output = stream(child);
-          return Promise.resolve({
+          return {
             id: randomUUID(),
             kill: (signal = "SIGTERM") => {
               child.kill(signal as NodeJS.Signals);
               return Promise.resolve();
             },
             output,
-            result: settle(child, run),
-          });
+            result: settle(child, ready.run),
+          };
         },
       },
       provider: "local",
