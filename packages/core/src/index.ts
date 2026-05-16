@@ -138,6 +138,17 @@ export const supports = (
   capability: Capability
 ): boolean => capabilityMode(subject, capability) !== undefined;
 
+/** validate and return a normalized tcp port number */
+export const port = (value: number, provider = "sandbox"): number => {
+  if (Number.isInteger(value) && value >= 1 && value <= 65_535) {
+    return value;
+  }
+  throw new SandboxError("Port must be an integer from 1 to 65535", {
+    code: "configuration",
+    provider,
+  });
+};
+
 /** create a normalized provider error */
 export const error = (
   provider: string,

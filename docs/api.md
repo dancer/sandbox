@@ -536,6 +536,14 @@ export declare const supports: (
 ) => boolean;
 ```
 
+#### `port`
+
+validate and return a normalized tcp port number
+
+```ts
+export declare const port: (value: number, provider?: string) => number;
+```
+
 #### `error`
 
 create a normalized provider error

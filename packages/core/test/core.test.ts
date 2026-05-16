@@ -9,6 +9,7 @@ import {
   command,
   create,
   isSandboxError,
+  port,
   requireCapability,
   result,
   supports,
@@ -32,8 +33,8 @@ const sandbox = (capabilities: Sandbox["capabilities"]): Sandbox => ({
   },
   id: "test",
   ports: {
-    expose: (port) =>
-      Promise.resolve({ port, url: `http://localhost:${port}` }),
+    expose: (value) =>
+      Promise.resolve({ port: value, url: `http://localhost:${value}` }),
   },
   process: {
     exec: () =>
@@ -245,6 +246,24 @@ test("isSandboxError narrows sandbox errors", () => {
 
   expect(isSandboxError(error)).toBe(true);
   expect(isSandboxError(new Error("Failed"))).toBe(false);
+});
+
+test("port validates normalized preview ports", () => {
+  expect(port(1)).toBe(1);
+  expect(port(65_535, "test")).toBe(65_535);
+
+  for (const value of [0, 65_536, 1.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+    expect(() => port(value, "test")).toThrow(SandboxError);
+    try {
+      port(value, "test");
+    } catch (error) {
+      expect(error).toMatchObject({
+        code: "configuration",
+        message: "Port must be an integer from 1 to 65535",
+        provider: "test",
+      });
+    }
+  }
 });
 
 test("bytes normalizes supported input shapes", async () => {
