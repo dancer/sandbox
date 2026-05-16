@@ -264,7 +264,7 @@ const execute = async (
 ): Promise<Result> => {
   check(options.signal);
   if (options.signal !== undefined || options.timeout !== undefined) {
-    const deadline = timeout(options.timeout, options.signal);
+    const deadline = timeout(options.timeout, options.signal, provider);
     try {
       const run = {
         ...(options.cwd === undefined ? {} : { cwd: options.cwd }),

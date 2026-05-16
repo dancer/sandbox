@@ -257,7 +257,7 @@ const execute = async (
   args: readonly string[],
   options: Exec
 ): Promise<Result> => {
-  const deadline = timeout(options.timeout, options.signal);
+  const deadline = timeout(options.timeout, options.signal, provider);
   const signals =
     deadline.signal === undefined ? {} : { signal: deadline.signal };
   try {
@@ -322,7 +322,7 @@ const spawn = async (
   args: readonly string[],
   options: Exec
 ): Promise<Running> => {
-  const deadline = timeout(options.timeout, options.signal);
+  const deadline = timeout(options.timeout, options.signal, provider);
   const signals =
     deadline.signal === undefined ? {} : { signal: deadline.signal };
   try {

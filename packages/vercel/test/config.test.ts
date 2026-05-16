@@ -299,3 +299,44 @@ test("vercel normalizes provider command errors", async () => {
     VercelSandbox.create = original;
   }
 });
+
+test("vercel rejects invalid command timeouts before provider calls", async () => {
+  const original = VercelSandbox.create;
+  let called = false;
+  const raw = {
+    fs: {
+      mkdir: () => Promise.resolve(),
+    },
+    runCommand: () => {
+      called = true;
+      return Promise.reject(new Error("provider called"));
+    },
+    sandboxId: "sandbox",
+    stop: () => Promise.resolve(),
+  } as unknown as VercelSandbox;
+
+  VercelSandbox.create = (() =>
+    Promise.resolve(raw)) as typeof VercelSandbox.create;
+
+  try {
+    const sandbox = await create({
+      adapter: vercel({
+        projectId: "project",
+        teamId: "team",
+        token: "token",
+      }),
+    });
+
+    await expect(
+      sandbox.process.exec("echo", [], {
+        timeout: -1,
+      })
+    ).rejects.toMatchObject({
+      code: "configuration",
+      provider: "vercel",
+    });
+    expect(called).toBe(false);
+  } finally {
+    VercelSandbox.create = original;
+  }
+});

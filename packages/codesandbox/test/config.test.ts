@@ -141,6 +141,17 @@ test("codesandbox maps create options and normalized operations", async () => {
 
   await expect(
     current.process.exec("echo", ["hello world"], {
+      timeout: -1,
+    })
+  ).rejects.toMatchObject({
+    code: "configuration",
+    provider: "codesandbox",
+  });
+  expect(runSeen).toBeUndefined();
+  expect(backgroundSeen).toBeUndefined();
+
+  await expect(
+    current.process.exec("echo", ["hello world"], {
       cwd: "/tmp",
       env: { C: "3" },
     })
