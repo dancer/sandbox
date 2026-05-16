@@ -168,6 +168,34 @@ test("vercel rejects invalid declared ports before provider calls", async () => 
   }
 });
 
+test("vercel rejects invalid create timeouts before provider calls", async () => {
+  const original = VercelSandbox.create;
+  let called = false;
+  VercelSandbox.create = (() => {
+    called = true;
+    return Promise.reject(new Error("provider called"));
+  }) as typeof VercelSandbox.create;
+
+  try {
+    await expect(
+      create({
+        adapter: vercel({
+          projectId: "project",
+          teamId: "team",
+          token: "token",
+        }),
+        timeout: -1,
+      })
+    ).rejects.toMatchObject({
+      code: "configuration",
+      provider: "vercel",
+    });
+    expect(called).toBe(false);
+  } finally {
+    VercelSandbox.create = original;
+  }
+});
+
 test("vercel maps create options and gates undeclared ports", async () => {
   const original = VercelSandbox.create;
   let createSeen: unknown;

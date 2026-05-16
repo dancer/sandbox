@@ -5,6 +5,7 @@ import {
   abort,
   bytes,
   command,
+  duration,
   error as sandboxError,
   port,
   result,
@@ -116,6 +117,7 @@ const createOptions = (
   input: NonNullable<Parameters<Adapter<Raw>["create"]>[0]>
 ): LocalCreate => {
   const template = input.template ?? options.template;
+  const lifetime = duration(input.timeout, provider);
   return {
     ...(template === undefined ? {} : { id: template }),
     ...(options.privacy === undefined ? {} : { privacy: options.privacy }),
@@ -129,13 +131,10 @@ const createOptions = (
       ? {}
       : { ipcountry: options.ipcountry }),
     ...(options.vmTier === undefined ? {} : { vmTier: options.vmTier }),
-    ...(input.timeout === undefined
+    ...(lifetime === undefined
       ? {}
       : {
-          hibernationTimeoutSeconds: Math.max(
-            1,
-            Math.ceil(input.timeout / 1000)
-          ),
+          hibernationTimeoutSeconds: Math.max(1, Math.ceil(lifetime / 1000)),
         }),
   };
 };

@@ -2,6 +2,7 @@ import {
   SandboxError,
   abort,
   bytes,
+  duration,
   error as sandboxError,
   port,
   result,
@@ -177,6 +178,7 @@ const createInput = (
   ports: readonly number[]
 ): VercelCreate => {
   const snapshot = input.snapshot ?? input.template;
+  const lifetime = duration(input.timeout ?? options.timeout, provider);
   return {
     ...auth(options),
     env: { ...options.env, ...input.env },
@@ -188,7 +190,7 @@ const createInput = (
       snapshot === undefined
         ? options.source
         : { snapshotId: snapshot, type: "snapshot" },
-    timeout: input.timeout ?? options.timeout,
+    ...(lifetime === undefined ? {} : { timeout: lifetime }),
   } as VercelCreate;
 };
 
