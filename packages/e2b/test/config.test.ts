@@ -26,6 +26,33 @@ test("e2b reports missing credentials before provider calls", async () => {
   }
 });
 
+test("e2b rejects invalid request timeouts before provider calls", async () => {
+  const original = E2BSandbox.create;
+  let called = false;
+
+  E2BSandbox.create = (() => {
+    called = true;
+    return Promise.reject(new Error("provider called"));
+  }) as typeof E2BSandbox.create;
+
+  try {
+    await expect(
+      create({
+        adapter: e2b({
+          apiKey: "key",
+          requestTimeout: -1,
+        }),
+      })
+    ).rejects.toMatchObject({
+      code: "configuration",
+      provider: "e2b",
+    });
+    expect(called).toBe(false);
+  } finally {
+    E2BSandbox.create = original;
+  }
+});
+
 test("e2b maps create and command options without running a real provider", async () => {
   const original = E2BSandbox.create;
   let commandSeen: unknown;
@@ -104,6 +131,15 @@ test("e2b maps create and command options without running a real provider", asyn
       code: "configuration",
       provider: "e2b",
     });
+    await expect(
+      sandbox.process.exec("echo", ["hello world"], {
+        timeout: -1,
+      })
+    ).rejects.toMatchObject({
+      code: "configuration",
+      provider: "e2b",
+    });
+    expect(commandSeen).toBeUndefined();
 
     await expect(
       sandbox.process.exec("echo", ["hello world"], {

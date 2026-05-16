@@ -2,6 +2,7 @@ import {
   abort,
   bytes,
   command,
+  duration,
   error as sandboxError,
   port,
   result,
@@ -99,41 +100,45 @@ const validate = (options: E2B): void => {
   );
 };
 
-const connection = (options: E2B): SandboxConnectOpts => ({
-  ...(options.accessToken === undefined
-    ? {}
-    : { accessToken: options.accessToken }),
-  ...(options.apiKey === undefined ? {} : { apiKey: options.apiKey }),
-  ...(options.apiUrl === undefined ? {} : { apiUrl: options.apiUrl }),
-  ...(options.debug === undefined ? {} : { debug: options.debug }),
-  ...(options.domain === undefined ? {} : { domain: options.domain }),
-  ...(options.headers === undefined ? {} : { headers: { ...options.headers } }),
-  ...(options.requestTimeout === undefined
-    ? {}
-    : { requestTimeoutMs: options.requestTimeout }),
-  ...(options.sandboxUrl === undefined
-    ? {}
-    : { sandboxUrl: options.sandboxUrl }),
-});
+const connection = (options: E2B): SandboxConnectOpts => {
+  const request = duration(options.requestTimeout, provider, "requestTimeout");
+  return {
+    ...(options.accessToken === undefined
+      ? {}
+      : { accessToken: options.accessToken }),
+    ...(options.apiKey === undefined ? {} : { apiKey: options.apiKey }),
+    ...(options.apiUrl === undefined ? {} : { apiUrl: options.apiUrl }),
+    ...(options.debug === undefined ? {} : { debug: options.debug }),
+    ...(options.domain === undefined ? {} : { domain: options.domain }),
+    ...(options.headers === undefined
+      ? {}
+      : { headers: { ...options.headers } }),
+    ...(request === undefined ? {} : { requestTimeoutMs: request }),
+    ...(options.sandboxUrl === undefined
+      ? {}
+      : { sandboxUrl: options.sandboxUrl }),
+  };
+};
 
 const createOptions = (
   options: E2B,
   input: Parameters<Adapter<Raw>["create"]>[0] = {}
-): SandboxOpts => ({
-  ...connection(options),
-  ...(options.allowInternetAccess === undefined
-    ? {}
-    : { allowInternetAccess: options.allowInternetAccess }),
-  envs: { ...options.env, ...input.env },
-  metadata: { ...options.metadata, ...input.metadata },
-  ...(options.secure === undefined ? {} : { secure: options.secure }),
-  ...((input.snapshot ?? input.template ?? options.template)
-    ? { template: input.snapshot ?? input.template ?? options.template }
-    : {}),
-  ...((input.timeout ?? options.timeout)
-    ? { timeoutMs: input.timeout ?? options.timeout }
-    : {}),
-});
+): SandboxOpts => {
+  const timeout = duration(input.timeout ?? options.timeout, provider);
+  return {
+    ...connection(options),
+    ...(options.allowInternetAccess === undefined
+      ? {}
+      : { allowInternetAccess: options.allowInternetAccess }),
+    envs: { ...options.env, ...input.env },
+    metadata: { ...options.metadata, ...input.metadata },
+    ...(options.secure === undefined ? {} : { secure: options.secure }),
+    ...((input.snapshot ?? input.template ?? options.template)
+      ? { template: input.snapshot ?? input.template ?? options.template }
+      : {}),
+    ...(timeout === undefined ? {} : { timeoutMs: timeout }),
+  };
+};
 
 const output = (value: {
   exitCode: number;
@@ -163,14 +168,13 @@ const executeLine = async (
   options: Exec
 ): Promise<Result> => {
   check(options.signal);
+  const timeout = duration(options.timeout, provider);
   try {
     return output(
       await raw.commands.run(line, {
         cwd: options.cwd ?? cwd,
         ...(options.env === undefined ? {} : { envs: { ...options.env } }),
-        ...(options.timeout === undefined
-          ? {}
-          : { timeoutMs: options.timeout }),
+        ...(timeout === undefined ? {} : { timeoutMs: timeout }),
         ...(user === undefined ? {} : { user }),
       })
     );
@@ -235,6 +239,7 @@ const spawnLine = async (
   options: Exec
 ): Promise<Running> => {
   check(options.signal);
+  const timeout = duration(options.timeout, provider);
   const logs = stream();
   try {
     const handle = await raw.commands.run(line, {
@@ -243,7 +248,7 @@ const spawnLine = async (
       ...(options.env === undefined ? {} : { envs: { ...options.env } }),
       onStderr: logs.append,
       onStdout: logs.append,
-      ...(options.timeout === undefined ? {} : { timeoutMs: options.timeout }),
+      ...(timeout === undefined ? {} : { timeoutMs: timeout }),
       ...(user === undefined ? {} : { user }),
     });
     return {
