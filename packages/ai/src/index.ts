@@ -6,14 +6,26 @@ const schemaKey = Symbol.for("vercel.ai.schema");
 /** json schema payload exposed to the AI SDK */
 export type JsonSchema = Readonly<Record<string, unknown>>;
 
+/** result returned when the AI SDK resolves a lazy schema */
+export type SchemaResult<Input = unknown> = Readonly<{
+  /** json schema passed to the model provider */
+  jsonSchema: JsonSchema;
+  /** type-only input marker for editor inference */
+  _type: Input;
+  /** optional runtime validator understood by the AI SDK */
+  validate?: (
+    value: unknown
+  ) =>
+    | { error: Error; success: false }
+    | { success: true; value: Input }
+    | PromiseLike<
+        { error: Error; success: false } | { success: true; value: Input }
+      >;
+}>;
+
 /** lazy AI SDK schema created from json schema */
-export type Schema<Input = unknown> = (() => never) &
-  Readonly<{
-    /** json schema passed to the model provider */
-    jsonSchema: JsonSchema;
-    /** type-only input marker for editor inference */
-    _type?: Input;
-  }>;
+export type Schema<Input = unknown> = (() => SchemaResult<Input>) &
+  SchemaResult<Input>;
 
 /** provider-agnostic tool shape compatible with the AI SDK */
 export type Tool<Input, Output> = Readonly<{
@@ -276,7 +288,11 @@ const schema = <Input>(
     jsonSchema,
     validate: undefined,
   };
-  return Object.assign(() => value, { jsonSchema }) as unknown as Schema<Input>;
+  return Object.assign(() => value, {
+    _type: undefined as Input,
+    jsonSchema,
+    validate: undefined,
+  }) as unknown as Schema<Input>;
 };
 
 const description = (

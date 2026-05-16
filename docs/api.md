@@ -676,18 +676,46 @@ json schema payload exposed to the AI SDK
 export type JsonSchema = Readonly<Record<string, unknown>>;
 ```
 
+#### `SchemaResult`
+
+result returned when the AI SDK resolves a lazy schema
+
+```ts
+export type SchemaResult<Input = unknown> = Readonly<{
+  /** json schema passed to the model provider */
+  jsonSchema: JsonSchema;
+  /** type-only input marker for editor inference */
+  _type: Input;
+  /** optional runtime validator understood by the AI SDK */
+  validate?: (value: unknown) =>
+    | {
+        error: Error;
+        success: false;
+      }
+    | {
+        success: true;
+        value: Input;
+      }
+    | PromiseLike<
+        | {
+            error: Error;
+            success: false;
+          }
+        | {
+            success: true;
+            value: Input;
+          }
+      >;
+}>;
+```
+
 #### `Schema`
 
 lazy AI SDK schema created from json schema
 
 ```ts
-export type Schema<Input = unknown> = (() => never) &
-  Readonly<{
-    /** json schema passed to the model provider */
-    jsonSchema: JsonSchema;
-    /** type-only input marker for editor inference */
-    _type?: Input;
-  }>;
+export type Schema<Input = unknown> = (() => SchemaResult<Input>) &
+  SchemaResult<Input>;
 ```
 
 #### `Tool`
