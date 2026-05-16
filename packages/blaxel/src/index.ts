@@ -13,6 +13,7 @@ import {
   abort,
   bytes,
   command,
+  duration,
   error as sandboxError,
   port,
   result,
@@ -143,13 +144,14 @@ const portConfiguration = (
   ports.map((target) => ({ protocol: "HTTP", target }));
 
 const seconds = (milliseconds?: number): number | undefined => {
-  if (milliseconds === undefined) {
+  const value = duration(milliseconds, provider);
+  if (value === undefined) {
     return undefined;
   }
-  if (milliseconds === 0) {
+  if (value === 0) {
     return 0;
   }
-  return Math.max(1, Math.ceil(milliseconds / 1000));
+  return Math.max(1, Math.ceil(value / 1000));
 };
 
 const code = (response: Pick<ProcessResponse, "exitCode" | "status">) =>
@@ -171,8 +173,8 @@ const execute = async (
   options: Exec
 ): Promise<Result> => {
   check(options.signal);
+  const timeout = seconds(options.timeout);
   try {
-    const timeout = seconds(options.timeout);
     const response = await raw.process.exec({
       command: line,
       ...(options.env === undefined ? {} : { env: { ...options.env } }),
@@ -257,8 +259,9 @@ const spawn = async (
   options: Spawn
 ): Promise<Running> => {
   check(options.signal);
+  const timeout = seconds(options.timeout);
+  const maxWait = duration(options.timeout, provider) ?? 600_000;
   try {
-    const timeout = seconds(options.timeout);
     const response = await raw.process.exec({
       command: line,
       ...(options.env === undefined ? {} : { env: { ...options.env } }),
@@ -296,9 +299,7 @@ const spawn = async (
     });
     const process = (async (): Promise<Result> => {
       try {
-        return complete(
-          await raw.process.wait(id, { maxWait: options.timeout ?? 600_000 })
-        );
+        return complete(await raw.process.wait(id, { maxWait }));
       } finally {
         close();
       }
@@ -344,11 +345,11 @@ const createOptions = (
   const image = input.template ?? options.image;
   const envs = { ...options.env, ...input.env };
   const labels = { ...options.labels, ...input.metadata };
+  const timeout =
+    options.ttl === undefined ? seconds(input.timeout) : undefined;
   const ttl =
     options.ttl ??
-    (input.timeout === undefined
-      ? undefined
-      : `${Math.max(1, Math.ceil(input.timeout / 1000))}s`);
+    (timeout === undefined ? undefined : `${Math.max(1, timeout)}s`);
 
   return {
     ...options.options,

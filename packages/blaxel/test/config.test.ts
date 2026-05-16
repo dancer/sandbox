@@ -59,6 +59,33 @@ test("blaxel rejects invalid declared ports before provider calls", async () => 
   }
 });
 
+test("blaxel rejects invalid create timeouts before provider calls", async () => {
+  const original = SandboxInstance.create;
+  let called = false;
+  SandboxInstance.create = (() => {
+    called = true;
+    return Promise.reject(new Error("provider called"));
+  }) as typeof SandboxInstance.create;
+
+  try {
+    await expect(
+      create({
+        adapter: blaxel({
+          apiKey: "key",
+          workspace: "workspace",
+        }),
+        timeout: -1,
+      })
+    ).rejects.toMatchObject({
+      code: "configuration",
+      provider: "blaxel",
+    });
+    expect(called).toBe(false);
+  } finally {
+    SandboxInstance.create = original;
+  }
+});
+
 test("blaxel maps create options and normalized operations", async () => {
   const original = SandboxInstance.create;
   let createSeen: unknown;
@@ -183,6 +210,16 @@ test("blaxel maps create options and normalized operations", async () => {
       metadata: { name: "sandbox-sdk-8080" },
       spec: { port: 8080, public: true },
     });
+
+    await expect(
+      sandbox.process.exec("echo", ["hello world"], {
+        timeout: -1,
+      })
+    ).rejects.toMatchObject({
+      code: "configuration",
+      provider: "blaxel",
+    });
+    expect(processSeen).toHaveLength(0);
 
     await expect(
       sandbox.process.exec("echo", ["hello world"], {
