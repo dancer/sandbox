@@ -7,6 +7,7 @@ import {
   abort,
   bytes,
   command,
+  duration,
   error as sandboxError,
   port,
   result,
@@ -148,11 +149,12 @@ const executeLine = async (
   options: Exec
 ): Promise<Result> => {
   check(options.signal);
+  const timeout = duration(options.timeout, provider);
   try {
     const output = await raw.exec(line, {
       cwd: options.cwd ?? cwd,
       ...(options.env === undefined ? {} : { env: { ...options.env } }),
-      ...(options.timeout === undefined ? {} : { timeout: options.timeout }),
+      ...(timeout === undefined ? {} : { timeout }),
     });
     return result(output.exitCode, output.stdout, output.stderr);
   } catch (error) {
@@ -184,11 +186,12 @@ const spawnLine = async (
   options: Exec
 ): Promise<Running> => {
   check(options.signal);
+  const timeout = duration(options.timeout, provider);
   try {
     const process = await raw.startProcess(line, {
       cwd: options.cwd ?? cwd,
       ...(options.env === undefined ? {} : { env: { ...options.env } }),
-      ...(options.timeout === undefined ? {} : { timeout: options.timeout }),
+      ...(timeout === undefined ? {} : { timeout }),
     });
     const output = await raw.streamProcessLogs(process.id);
     return {

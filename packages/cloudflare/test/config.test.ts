@@ -101,6 +101,16 @@ test("cloudflare maps command options without executing a real provider", async 
   try {
     await expect(
       sandbox.process.exec("echo", ["hello world"], {
+        timeout: -1,
+      })
+    ).rejects.toMatchObject({
+      code: "configuration",
+      provider: "cloudflare",
+    });
+    expect(executeSeen).toBeUndefined();
+
+    await expect(
+      sandbox.process.exec("echo", ["hello world"], {
         cwd: "/tmp",
         env: { A: "1" },
         timeout: 123,
