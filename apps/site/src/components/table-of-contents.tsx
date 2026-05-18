@@ -2,18 +2,25 @@
 
 import { useEffect, useState } from "react";
 
+import { Star } from "@/components/star";
 import { cn } from "@/lib/utils";
+
+interface ChildItem {
+  id: string;
+  label: string;
+}
 
 interface Section {
   id: string;
   label: string;
-  children?: { id: string; label: string }[];
+  number?: number;
+  children?: ChildItem[];
 }
 
 const sections: Section[] = [
-  { id: "why", label: "Why" },
-  { id: "installation", label: "Installation" },
-  { id: "quick-start", label: "Quick start" },
+  { id: "why", label: "Why", number: 1 },
+  { id: "installation", label: "Installation", number: 2 },
+  { id: "quick-start", label: "Quick start", number: 3 },
   {
     children: [
       { id: "adapter-local", label: "Local" },
@@ -27,6 +34,7 @@ const sections: Section[] = [
     ],
     id: "adapters",
     label: "Adapters",
+    number: 4,
   },
   {
     children: [
@@ -41,10 +49,11 @@ const sections: Section[] = [
     ],
     id: "api-reference",
     label: "API reference",
+    number: 5,
   },
-  { id: "the-sandbox-type", label: "The Sandbox type" },
-  { id: "errors", label: "Errors" },
-  { id: "escape-hatch", label: "Escape hatch" },
+  { id: "the-sandbox-type", label: "The Sandbox type", number: 6 },
+  { id: "errors", label: "Errors", number: 7 },
+  { id: "escape-hatch", label: "Escape hatch", number: 8 },
   {
     children: [
       { id: "ai-sdk-tools", label: "Vercel AI SDK" },
@@ -53,9 +62,13 @@ const sections: Section[] = [
     ],
     id: "ai-tools",
     label: "AI tools",
+    number: 9,
   },
-  { id: "capability-matrix", label: "Capability matrix" },
+  { id: "capability-matrix", label: "Capability matrix", number: 10 },
 ];
+
+const rowBase =
+  "group/row -mx-2 grid grid-cols-[14px_22px_1fr] items-center gap-x-2.5 rounded-md px-2 py-1 text-xs leading-relaxed transition-colors";
 
 export const TableOfContents = () => {
   const [activeId, setActiveId] = useState<string>(sections[0].id);
@@ -99,8 +112,14 @@ export const TableOfContents = () => {
 
   return (
     <nav aria-label="On this page">
+      <div className="mb-3 flex items-center gap-2">
+        <Star className="size-2.5 text-foreground/40" />
+        <p className="font-mono text-[0.6875rem] uppercase tracking-wider text-muted-foreground">
+          On this page
+        </p>
+      </div>
       <ul className="flex list-none flex-col gap-0 pl-0">
-        {sections.map(({ id, label, children }) => {
+        {sections.map(({ id, label, number, children }) => {
           const expanded = activeParentId === id;
           const active = activeId === id || expanded;
 
@@ -109,13 +128,26 @@ export const TableOfContents = () => {
               <a
                 href={`#${id}`}
                 className={cn(
-                  "block -ml-px border-l py-1 pl-4 text-xs leading-relaxed transition-colors",
+                  rowBase,
                   active
-                    ? "border-foreground text-foreground"
-                    : "border-transparent text-muted-foreground hover:text-foreground"
+                    ? "text-foreground"
+                    : "text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground"
                 )}
               >
-                {label}
+                <span className="flex items-center justify-center">
+                  <Star
+                    className={cn(
+                      "size-2.5 transition-colors",
+                      active
+                        ? "text-foreground"
+                        : "text-foreground/25 group-hover/row:text-foreground/55"
+                    )}
+                  />
+                </span>
+                <span className="font-mono tabular-nums text-[0.7rem] text-foreground/40">
+                  {number !== undefined ? String(number).padStart(2, "0") : ""}
+                </span>
+                <span className="truncate">{label}</span>
               </a>
               {children ? (
                 <div
@@ -128,21 +160,35 @@ export const TableOfContents = () => {
                   )}
                 >
                   <ul className="flex min-h-0 list-none flex-col gap-0 overflow-hidden pl-0">
-                    {children.map((child) => (
-                      <li key={child.id}>
-                        <a
-                          href={`#${child.id}`}
-                          className={cn(
-                            "block -ml-px border-l py-1 pl-8 text-xs leading-relaxed transition-colors",
-                            activeId === child.id
-                              ? "border-foreground text-foreground"
-                              : "border-transparent text-muted-foreground hover:text-foreground"
-                          )}
-                        >
-                          {child.label}
-                        </a>
-                      </li>
-                    ))}
+                    {children.map((child) => {
+                      const childActive = activeId === child.id;
+                      return (
+                        <li key={child.id}>
+                          <a
+                            href={`#${child.id}`}
+                            className={cn(
+                              rowBase,
+                              childActive
+                                ? "text-foreground"
+                                : "text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground"
+                            )}
+                          >
+                            <span aria-hidden="true" />
+                            <span className="flex items-center justify-center">
+                              <span
+                                className={cn(
+                                  "size-1 rounded-full transition-colors",
+                                  childActive
+                                    ? "bg-foreground"
+                                    : "bg-foreground/25 group-hover/row:bg-foreground/55"
+                                )}
+                              />
+                            </span>
+                            <span className="truncate">{child.label}</span>
+                          </a>
+                        </li>
+                      );
+                    })}
                   </ul>
                 </div>
               ) : null}

@@ -1,9 +1,9 @@
 "use client";
 
-import { Check, TriangleAlert, X } from "lucide-react";
-import type { ComponentType, ReactNode } from "react";
+import type { ReactNode } from "react";
 
 import { Heading } from "@/components/heading";
+import { Star } from "@/components/star";
 import {
   Tooltip,
   TooltipContent,
@@ -228,22 +228,46 @@ const ROWS: { capability: string; cells: Record<ColumnKey, Cell> }[] = [
   },
 ];
 
-const ICON_BY_STATUS: Record<
-  Status,
-  { Icon: ComponentType<{ className?: string }>; cls: string; label: string }
-> = {
-  no: { Icon: X, cls: "text-red-500", label: "Not supported" },
-  ok: { Icon: Check, cls: "text-emerald-500", label: "Supported" },
-  warn: { Icon: TriangleAlert, cls: "text-amber-500", label: "Caveat" },
+const LABEL_BY_STATUS: Record<Status, string> = {
+  no: "Not supported",
+  ok: "Supported",
+  warn: "Supported with caveat",
+};
+
+const StarBullet = ({
+  status,
+  size = "default",
+}: {
+  status: Status;
+  size?: "default" | "sm";
+}) => {
+  const px = size === "sm" ? "size-3" : "size-3.5";
+  if (status === "ok") {
+    return <Star className={cn(px, "text-foreground")} />;
+  }
+  if (status === "warn") {
+    return <Star className={cn(px, "text-foreground/40")} />;
+  }
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        px,
+        "inline-block rounded-full border border-foreground/15"
+      )}
+    />
+  );
 };
 
 const StatusIcon = ({ cell }: { cell: Cell }) => {
-  const { Icon, cls, label } = ICON_BY_STATUS[cell.status];
-  const icon = (
-    <Icon className={cn("size-4 shrink-0", cls)} aria-label={label} />
-  );
+  const label = LABEL_BY_STATUS[cell.status];
+  const bullet = <StarBullet status={cell.status} />;
   if (!cell.note) {
-    return <span className="inline-flex">{icon}</span>;
+    return (
+      <span aria-label={label} className="inline-flex">
+        {bullet}
+      </span>
+    );
   }
   return (
     <Tooltip>
@@ -253,7 +277,7 @@ const StatusIcon = ({ cell }: { cell: Cell }) => {
           className="inline-flex cursor-help focus-visible:outline-1 focus-visible:outline-ring rounded-sm"
           aria-label={`${label}: ${cell.note}`}
         >
-          {icon}
+          {bullet}
         </button>
       </TooltipTrigger>
       <TooltipContent>{cell.note}</TooltipContent>
@@ -262,23 +286,21 @@ const StatusIcon = ({ cell }: { cell: Cell }) => {
 };
 
 const Legend = ({
-  icon: Icon,
-  cls,
+  status,
   children,
 }: {
-  icon: ComponentType<{ className?: string }>;
-  cls: string;
+  status: Status;
   children: ReactNode;
 }) => (
   <span className="inline-flex items-center gap-1.5">
-    <Icon className={cn("size-3.5", cls)} />
+    <StarBullet size="sm" status={status} />
     <span>{children}</span>
   </span>
 );
 
 export const CapabilityMatrix = () => (
   <section>
-    <Heading as="h2">Capability matrix</Heading>
+    <Heading as="h2" number={10}>Capability matrix</Heading>
     <p>
       Every adapter implements the same core capability surface, but providers
       differ on what they natively support. Branch on{" "}
@@ -286,10 +308,10 @@ export const CapabilityMatrix = () => (
       time. Hover the warning and error icons for the why behind each one.
     </p>
     <TooltipProvider delayDuration={150}>
-      <div className="overflow-x-auto rounded-md border border-dotted">
+      <div className="overflow-x-auto rounded-md border border-border/40">
         <table className="w-full border-collapse text-xs">
           <thead>
-            <tr className="border-b border-dotted">
+            <tr className="border-b border-border/40">
               <th className="sticky left-0 bg-background px-3 py-2 text-left font-medium text-muted-foreground">
                 Capability
               </th>
@@ -297,7 +319,7 @@ export const CapabilityMatrix = () => (
                 <th
                   className={cn(
                     "px-2 py-2 text-center font-medium text-foreground whitespace-nowrap",
-                    i < COLUMNS.length - 1 && "border-r border-dotted"
+                    i < COLUMNS.length - 1 && "border-r border-border/40"
                   )}
                   key={col.key}
                 >
@@ -309,7 +331,7 @@ export const CapabilityMatrix = () => (
           <tbody>
             {ROWS.map((row) => (
               <tr
-                className="border-b border-dotted last:border-b-0"
+                className="border-b border-border/40 last:border-b-0"
                 key={row.capability}
               >
                 <th className="sticky left-0 bg-background px-3 py-2 text-left font-mono font-normal whitespace-nowrap">
@@ -319,7 +341,7 @@ export const CapabilityMatrix = () => (
                   <td
                     className={cn(
                       "px-2 py-2 text-center",
-                      i < COLUMNS.length - 1 && "border-r border-dotted"
+                      i < COLUMNS.length - 1 && "border-r border-border/40"
                     )}
                     key={col.key}
                   >
@@ -333,15 +355,9 @@ export const CapabilityMatrix = () => (
       </div>
     </TooltipProvider>
     <p className="text-xs text-muted-foreground flex flex-wrap gap-x-4 gap-y-1">
-      <Legend cls="text-emerald-500" icon={Check}>
-        Supported
-      </Legend>
-      <Legend cls="text-amber-500" icon={TriangleAlert}>
-        Supported with caveat
-      </Legend>
-      <Legend cls="text-red-500" icon={X}>
-        Not supported
-      </Legend>
+      <Legend status="ok">Supported</Legend>
+      <Legend status="warn">Supported with caveat</Legend>
+      <Legend status="no">Not supported</Legend>
     </p>
   </section>
 );

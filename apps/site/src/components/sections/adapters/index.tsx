@@ -11,7 +11,7 @@ import { Vercel } from "./vercel";
 
 export const Adapters = () => (
   <section>
-    <Heading as="h2">Adapters</Heading>
+    <Heading as="h2" number={4}>Adapters</Heading>
     <p>
       Each adapter ships as its own package. Bring only what you use; the others
       stay out of your node_modules. Pass credentials and provider settings

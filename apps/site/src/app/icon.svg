@@ -1,7 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
   <title>Sandbox SDK</title>
+  <rect width="48" height="48" rx="10" fill="#fcfaf6" />
   <path
-    d="M24 4 L26 22 L44 24 L26 26 L24 44 L22 26 L4 24 L22 22 Z"
-    fill="currentColor"
+    d="M24 8 L26 22 L40 24 L26 26 L24 40 L22 26 L8 24 L22 22 Z"
+    fill="#1a1612"
   />
 </svg>

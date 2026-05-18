@@ -13,7 +13,7 @@ sandbox.raw.files.watchDir("src", (event) => {
 
 export const EscapeHatch = () => (
   <section>
-    <Heading as="h2">Escape hatch</Heading>
+    <Heading as="h2" number={8}>Escape hatch</Heading>
     <p>
       When you need a feature outside the unified surface, like
       provider-specific networking, GPU attach, custom snapshots, or container

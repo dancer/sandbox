@@ -81,7 +81,7 @@ for await (const message of query({
 
 export const AiTools = () => (
   <section>
-    <Heading as="h2" id="ai-tools">
+    <Heading as="h2" id="ai-tools" number={9}>
       AI tools
     </Heading>
     <p>

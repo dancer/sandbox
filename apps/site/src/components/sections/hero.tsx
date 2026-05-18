@@ -2,6 +2,8 @@
 
 import { motion } from "motion/react";
 
+import { InstallPill } from "@/components/install-pill";
+import { Star } from "@/components/star";
 import {
   Tooltip,
   TooltipContent,
@@ -15,10 +17,7 @@ const EASE = [0.16, 1, 0.3, 1] as const;
 
 const iconMeta: Record<keyof typeof icons, { label: string; href?: string }> = {
   Blaxel: { href: "https://blaxel.ai", label: "Blaxel" },
-  Cloudflare: {
-    href: "https://sandbox.cloudflare.com",
-    label: "Cloudflare",
-  },
+  Cloudflare: { href: "https://sandbox.cloudflare.com", label: "Cloudflare" },
   CodeSandbox: { href: "https://codesandbox.io/sdk", label: "CodeSandbox" },
   Daytona: { href: "https://www.daytona.io", label: "Daytona" },
   E2B: { href: "https://e2b.dev", label: "E2B" },
@@ -40,6 +39,13 @@ const iconOrder = [
 
 const iconList = iconOrder.map((name) => [name, icons[name]] as const);
 
+const stats = [
+  { label: "providers", value: "8" },
+  { label: "capabilities", value: "18" },
+  { label: "core", value: "~5 KB" },
+  { label: "license", value: "MIT" },
+] as const;
+
 export const Hero = () => (
   <section className="hero mt-16">
     <motion.div
@@ -58,11 +64,42 @@ export const Hero = () => (
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.12, duration: 0.6, ease: EASE }}
     >
-      A unified TypeScript SDK for agent execution environments. One small,
-      honest API for files, commands, ports, and snapshots, with a typed escape
-      hatch for the native client.
+      One TypeScript API for agent sandboxes. Files, commands, ports, snapshots,
+      and a typed escape hatch, across every major provider.
     </motion.p>
-    <div className="flex items-center -space-x-2 sm:-space-x-1">
+
+    <motion.dl
+      className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-2 font-mono text-xs"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.18, duration: 0.6, ease: EASE }}
+    >
+      {stats.map((stat, index) => (
+        <div className="flex items-center gap-2" key={stat.label}>
+          {index > 0 && (
+            <Star
+              aria-hidden="true"
+              className="size-2 text-foreground/25"
+            />
+          )}
+          <div className="flex items-baseline gap-1.5">
+            <dt className="text-foreground tabular-nums">{stat.value}</dt>
+            <dd className="text-muted-foreground">{stat.label}</dd>
+          </div>
+        </div>
+      ))}
+    </motion.dl>
+
+    <motion.div
+      className="mt-2"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.24, duration: 0.55, ease: EASE }}
+    >
+      <InstallPill command="bun add @sandbox-sdk/core @sandbox-sdk/local" />
+    </motion.div>
+
+    <div className="mt-2 flex items-center -space-x-2 sm:-space-x-1">
       {iconList.map(([name, Icon], index) => {
         const restRotate = index % 2 === 0 ? 3 : -3;
         const { label, href } = iconMeta[name];

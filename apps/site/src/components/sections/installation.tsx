@@ -30,7 +30,7 @@ const TABS = [
 
 export const Installation = () => (
   <section>
-    <Heading as="h2">Installation</Heading>
+    <Heading as="h2" number={2}>Installation</Heading>
     <p>
       Install <code>@sandbox-sdk/core</code> together with the adapter you want
       to run against. Each provider ships as its own package, so apps only
