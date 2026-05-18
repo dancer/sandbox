@@ -39,11 +39,7 @@ export const InstallPill = ({ command, className }: InstallPillProps) => {
         aria-hidden="true"
         className="ml-1 flex size-6 shrink-0 items-center justify-center rounded-full bg-foreground/[0.04] text-foreground/50 transition-all group-hover/install:bg-foreground/[0.08] group-hover/install:text-foreground"
       >
-        {copied ? (
-          <Check className="size-3" />
-        ) : (
-          <Copy className="size-3" />
-        )}
+        {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
       </span>
     </button>
   );

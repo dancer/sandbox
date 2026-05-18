@@ -20,7 +20,9 @@ await withSandbox(
 
 export const QuickStart = () => (
   <section>
-    <Heading as="h2" number={3}>Quick start</Heading>
+    <Heading as="h2" number={3}>
+      Quick start
+    </Heading>
     <p>
       Call <code>withSandbox</code> with an adapter to get a typed{" "}
       <code>Sandbox</code> that is stopped automatically after success or

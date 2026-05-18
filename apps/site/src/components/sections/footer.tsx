@@ -36,9 +36,7 @@ const Column = ({
   links: { href: string; label: string }[];
 }) => (
   <div className="flex flex-col gap-2.5">
-    <h4
-      className="font-mono! text-[0.6875rem] uppercase tracking-wider text-muted-foreground"
-    >
+    <h4 className="font-mono! text-[0.6875rem] uppercase tracking-wider text-muted-foreground">
       {heading}
     </h4>
     <ul className="flex list-none flex-col gap-1.5 pl-0">

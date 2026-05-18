@@ -2,7 +2,9 @@ import { Heading } from "@/components/heading";
 
 export const Why = () => (
   <section>
-    <Heading as="h2" number={1}>Why</Heading>
+    <Heading as="h2" number={1}>
+      Why
+    </Heading>
     <p>
       Every sandbox provider exposes a slightly different API for the same
       handful of primitives. <code>@sandbox-sdk/core</code> exposes the slice

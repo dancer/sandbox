@@ -14,7 +14,9 @@ try {
 
 export const Errors = () => (
   <section>
-    <Heading as="h2" number={7}>Errors</Heading>
+    <Heading as="h2" number={7}>
+      Errors
+    </Heading>
     <p>
       Every method throws a single <code>SandboxError</code> with a normalized{" "}
       <code>code</code> and the provider name on <code>provider</code>. The

@@ -65,7 +65,9 @@ if (supports(sandbox, "snapshotCreate")) {
 
 export const ApiReference = () => (
   <section>
-    <Heading as="h2" number={5}>API reference</Heading>
+    <Heading as="h2" number={5}>
+      API reference
+    </Heading>
     <p>
       Every method lives on the <code>Sandbox</code> instance returned by{" "}
       <code>create()</code>. The unified surface only covers what every adapter

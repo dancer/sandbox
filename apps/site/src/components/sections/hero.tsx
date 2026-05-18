@@ -76,10 +76,7 @@ export const Hero = () => (
       {stats.map((stat, index) => (
         <div className="flex items-center gap-2" key={stat.label}>
           {index > 0 && (
-            <Star
-              aria-hidden="true"
-              className="size-2 text-foreground/25"
-            />
+            <Star aria-hidden="true" className="size-2 text-foreground/25" />
           )}
           <div className="flex items-baseline gap-1.5">
             <dt className="text-foreground tabular-nums">{stat.value}</dt>

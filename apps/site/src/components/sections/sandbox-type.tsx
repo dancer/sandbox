@@ -44,7 +44,9 @@ type Capabilities = Readonly<Partial<Record<Capability, Mode>>>;`;
 
 export const SandboxType = () => (
   <section>
-    <Heading as="h2" number={6}>The Sandbox type</Heading>
+    <Heading as="h2" number={6}>
+      The Sandbox type
+    </Heading>
     <p>
       <code>Sandbox</code> is a frozen record of the five capability namespaces
       (<code>files</code>, <code>process</code>, <code>ports</code>,{" "}

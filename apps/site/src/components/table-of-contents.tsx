@@ -139,7 +139,7 @@ export const TableOfContents = () => {
                   />
                 </span>
                 <span className="font-mono tabular-nums text-[0.7rem] text-foreground/40">
-                  {number !== undefined ? String(number).padStart(2, "0") : ""}
+                  {number === undefined ? "" : String(number).padStart(2, "0")}
                 </span>
                 <span className="truncate">{label}</span>
               </a>

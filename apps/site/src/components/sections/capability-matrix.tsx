@@ -300,7 +300,9 @@ const Legend = ({
 
 export const CapabilityMatrix = () => (
   <section>
-    <Heading as="h2" number={10}>Capability matrix</Heading>
+    <Heading as="h2" number={10}>
+      Capability matrix
+    </Heading>
     <p>
       Every adapter implements the same core capability surface, but providers
       differ on what they natively support. Branch on{" "}
