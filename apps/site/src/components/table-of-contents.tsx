@@ -112,12 +112,6 @@ export const TableOfContents = () => {
 
   return (
     <nav aria-label="On this page">
-      <div className="mb-3 flex items-center gap-2">
-        <Star className="size-2.5 text-foreground/40" />
-        <p className="font-mono text-[0.6875rem] uppercase tracking-wider text-muted-foreground">
-          On this page
-        </p>
-      </div>
       <ul className="flex list-none flex-col gap-0 pl-0">
         {sections.map(({ id, label, number, children }) => {
           const expanded = activeParentId === id;
