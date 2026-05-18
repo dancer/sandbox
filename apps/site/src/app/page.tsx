@@ -22,7 +22,7 @@ export default function Home() {
     <div className="relative isolate flex min-h-dvh flex-col bg-background">
       <div className="mx-auto w-full max-w-7xl flex-1 lg:grid lg:grid-cols-[1fr_52rem_1fr]">
         <div aria-hidden className="hidden lg:block" />
-        <main className="mx-auto w-full max-w-3xl px-4 sm:px-10 pt-8 pb-8">
+        <main className="mx-auto w-full max-w-3xl border-x border-dotted px-4 sm:px-10 pt-8 pb-8">
           <Header />
           <Hero />
           <FadeIn className="lg:hidden">
