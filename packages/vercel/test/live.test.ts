@@ -2,8 +2,13 @@ import { expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
 
 import { create } from "@sandbox-sdk/core";
+import type { Sandbox as CoreSandbox } from "@sandbox-sdk/core";
+import type { Sandbox as RawSandbox } from "@vercel/sandbox";
 
 import { vercel } from "../src/index";
+
+type LiveSandbox = CoreSandbox<RawSandbox>;
+type DeletableSandbox = RawSandbox & { delete: () => Promise<void> };
 
 const explicit = Boolean(
   process.env.VERCEL_TOKEN &&
@@ -14,6 +19,24 @@ const enabled = explicit || Boolean(process.env.VERCEL_OIDC_TOKEN);
 const live = enabled ? test : test.skip;
 const text = (stream: ReadableStream<Uint8Array>): Promise<string> =>
   new Response(stream).text();
+
+const deletable = (sandbox: RawSandbox): sandbox is DeletableSandbox => {
+  const candidate = sandbox as RawSandbox & { delete?: unknown };
+  return typeof candidate.delete === "function";
+};
+
+const cleanup = async (sandbox: LiveSandbox | undefined): Promise<void> => {
+  if (sandbox === undefined) {
+    return;
+  }
+  if (deletable(sandbox.raw)) {
+    await sandbox.raw.delete();
+    return;
+  }
+  if (sandbox.raw.status !== "stopped") {
+    await sandbox.stop();
+  }
+};
 
 const adapter = () =>
   explicit
@@ -84,28 +107,35 @@ live("vercel runs a live sandbox workflow", async () => {
     expect(preview).toMatchObject({ port: 3000 });
     expect(preview.url).toMatch(/^https:\/\//u);
   } finally {
-    await sandbox.stop();
+    await cleanup(sandbox);
   }
 });
 
-live("vercel creates a live snapshot", async () => {
+live("vercel creates and starts from a live snapshot", async () => {
   const cwd = "/vercel/sandbox";
   const file = `${cwd}/sandbox-sdk-snapshot-${randomUUID()}.txt`;
   const sandbox = await create({
     adapter: adapter(),
     cwd,
   });
-  let snapshotted = false;
+  let derived: LiveSandbox | undefined;
 
   try {
     await sandbox.files.write(file, "ready");
 
     const snapshot = await sandbox.snapshots.create("sandbox-sdk-live");
-    snapshotted = true;
     expect(snapshot.id).toBeTruthy();
+
+    derived = await create({
+      adapter: adapter(),
+      cwd,
+      snapshot: snapshot.id,
+    });
+
+    expect(derived.raw.sourceSnapshotId).toBe(snapshot.id);
+    expect(await derived.files.exists(file)).toBe(true);
+    expect(await derived.files.text(file)).toBe("ready");
   } finally {
-    if (!snapshotted) {
-      await sandbox.stop();
-    }
+    await Promise.all([cleanup(derived), cleanup(sandbox)]);
   }
 });
