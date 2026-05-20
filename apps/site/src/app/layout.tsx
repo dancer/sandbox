@@ -21,7 +21,7 @@ const geistMono = Geist_Mono({
 const baseUrl = "https://sandbox-sdk.sh";
 
 const title =
-  "Sandbox SDK: one API for E2B, Daytona, Vercel & Cloudflare sandboxes";
+  "Sandbox SDK: one API for Cloudflare, Daytona, E2B & Vercel sandboxes";
 const description =
   "A unified TypeScript SDK for agent execution environments. One small, honest API for files, commands, ports, and snapshots, with a typed escape hatch for the native client.";
 
