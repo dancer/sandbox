@@ -99,12 +99,13 @@ See `examples/` for minimal local, provider, and AI tool starting points.
 `@sandbox-sdk/ai` wraps a configured sandbox as ready-made tools plus prompt context for agents that need to read files, write files, list directories, run commands, and open previews when ports are supported.
 
 ```ts
-import { tools } from "@sandbox-sdk/ai";
+import { aiSdk, tools } from "@sandbox-sdk/ai";
 
 const kit = tools(sandbox, {
   cwd: "/workspace",
   allow: ["read", "write", "list", "exec"],
 });
+const ai = aiSdk(kit);
 
 kit.description;
 kit.sandbox;
@@ -112,34 +113,66 @@ kit.sandbox.provider;
 kit.sandbox.workingDirectory;
 kit.sandbox.capabilities;
 kit.tools;
+ai.tools;
 ```
 
-AI SDK v7 can use the returned sandbox object directly:
+Vercel AI SDK v6 and v7 can use the returned tools and prompt context directly:
 
 ```ts
 await generateText({
   model,
-  experimental_sandbox: kit.sandbox,
-  tools: kit.tools,
-  system: kit.description,
+  ...ai,
   prompt: "run the tests",
 });
 ```
 
-AI SDK v6 can use the same tools and prompt context without depending on the v7
-sandbox setting:
+OpenAI Agents SDK can use the dedicated subpath. It imports the real
+`@openai/agents` `tool()` helper and keeps side-effect tools approval-gated by
+default:
 
 ```ts
-await generateText({
-  model,
-  tools: kit.tools,
-  system: kit.description,
-  prompt: "run the tests",
+import { Agent, run } from "@openai/agents";
+import { openai } from "@sandbox-sdk/ai/openai";
+
+const agentKit = openai(kit, { requireApproval: false });
+const agent = new Agent({
+  name: "sandbox agent",
+  instructions: agentKit.instructions,
+  tools: Object.values(agentKit.tools),
 });
+
+await run(agent, "run the tests");
 ```
 
-`@sandbox-sdk/ai` does not depend on `ai`, so it stays structurally compatible
-with the AI SDK tool contract instead of forcing a peer version.
+Claude Agent SDK can use the Claude subpath. It wraps the sandbox tools in an
+in-process MCP server and returns the fields needed by `query()`:
+
+```ts
+import { query } from "@anthropic-ai/claude-agent-sdk";
+import { claude } from "@sandbox-sdk/ai/claude";
+
+const agentKit = claude(kit, { requireApproval: false });
+
+for await (const message of query({
+  prompt: "run the tests",
+  options: {
+    systemPrompt: {
+      type: "preset",
+      preset: "claude_code",
+      append: agentKit.instructions,
+    },
+    mcpServers: agentKit.mcpServers,
+    allowedTools: agentKit.allowedTools,
+    canUseTool: agentKit.canUseTool,
+    tools: [],
+  },
+})) {
+  console.log(message);
+}
+```
+
+`@sandbox-sdk/ai` does not depend on `ai`. OpenAI and Claude support live behind
+optional subpaths so apps only install the agent framework they use.
 
 The Cloudflare adapter is designed for Workers. Importing the package is safe in
 Node-based tooling, but creating a Cloudflare sandbox loads

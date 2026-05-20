@@ -33,10 +33,11 @@ const INSTALL_TABS = [
 
 const QUICK_START = `import { create } from "@sandbox-sdk/core";
 import { local } from "@sandbox-sdk/local";
-import { tools } from "@sandbox-sdk/ai";
+import { aiSdk, tools } from "@sandbox-sdk/ai";
 
 const sandbox = await create({ adapter: local() });
 const kit = tools(sandbox);
+const ai = aiSdk(kit);
 
 await kit.tools.write?.execute({
   path: "/workspace/main.ts",
@@ -48,32 +49,55 @@ await kit.tools.exec?.execute({ command: "bun /workspace/main.ts" });`;
 const AI_SDK_EXAMPLE = `import { generateText } from "ai";
 import { create } from "@sandbox-sdk/core";
 import { local } from "@sandbox-sdk/local";
-import { tools } from "@sandbox-sdk/ai";
+import { aiSdk, tools } from "@sandbox-sdk/ai";
 
 const sandbox = await create({ adapter: local() });
-const kit = tools(sandbox);
+const kit = aiSdk(tools(sandbox));
 
 const result = await generateText({
   model: yourModel,
-  experimental_sandbox: kit.sandbox,
-  system: kit.description,
-  tools: kit.tools,
+  ...kit,
   prompt: "Write a TypeScript program that prints fib(10), then run it.",
 });`;
+
+const OPENAI_EXAMPLE = `import { Agent, run } from "@openai/agents";
+import { create } from "@sandbox-sdk/core";
+import { local } from "@sandbox-sdk/local";
+import { tools } from "@sandbox-sdk/ai";
+import { openai } from "@sandbox-sdk/ai/openai";
+
+const sandbox = await create({ adapter: local() });
+const kit = openai(tools(sandbox), { requireApproval: false });
+
+const agent = new Agent({
+  name: "sandbox agent",
+  instructions: kit.instructions,
+  tools: Object.values(kit.tools),
+});
+
+const result = await run(agent, "Create a package.json and run bun test.");`;
 
 const CLAUDE_EXAMPLE = `import { query } from "@anthropic-ai/claude-agent-sdk";
 import { create } from "@sandbox-sdk/core";
 import { local } from "@sandbox-sdk/local";
 import { tools } from "@sandbox-sdk/ai";
+import { claude } from "@sandbox-sdk/ai/claude";
 
 const sandbox = await create({ adapter: local() });
-const kit = tools(sandbox);
+const kit = claude(tools(sandbox), { requireApproval: false });
 
 for await (const message of query({
   prompt: "Set up a Bun project, install zod, and write a parser.",
   options: {
-    customSystemPrompt: kit.description,
-    tools: [kit.tools.read, kit.tools.write, kit.tools.exec],
+    systemPrompt: {
+      type: "preset",
+      preset: "claude_code",
+      append: kit.instructions,
+    },
+    mcpServers: kit.mcpServers,
+    allowedTools: kit.allowedTools,
+    canUseTool: kit.canUseTool,
+    tools: [],
   },
 })) {
   handle(message);
@@ -108,8 +132,9 @@ export const AiTools = () => (
         Pass a configured sandbox into <code>tools()</code>. The return value is
         prompt context and a record of tool definitions, each with a{" "}
         <code>description</code>, <code>inputSchema</code>, and{" "}
-        <code>execute</code> function. The <code>sandbox</code> property matches
-        AI SDK's <code>{`{ description, executeCommand }`}</code> shape.
+        <code>execute</code> function. Use <code>aiSdk()</code>,{" "}
+        <code>openai()</code>, or <code>claude()</code> when you want the exact
+        adapter shape for a framework.
       </p>
       <CodeBlock code={QUICK_START} lang="tsx" />
       <Accordion className="rounded-md border-dotted" type="multiple">
@@ -144,7 +169,8 @@ export const AiTools = () => (
         Vercel AI SDK
       </Heading>
       <p>
-        The shape returned by <code>tools()</code> plugs straight into the{" "}
+        The root package has no hard dependency on <code>ai</code>.{" "}
+        <code>aiSdk()</code> returns the shape used by{" "}
         <a
           className="underline decoration-dotted underline-offset-4 hover:text-foreground"
           href="https://ai-sdk.dev"
@@ -153,11 +179,27 @@ export const AiTools = () => (
         >
           Vercel AI SDK
         </a>
-        's <code>tools</code> and <code>experimental_sandbox</code> fields. The
-        model can read files, write files, and run commands inside the sandbox
-        without you wiring up shell access in your app.
+        : <code>system</code>, <code>tools</code>, and{" "}
+        <code>experimental_sandbox</code>. The same tool definitions work with
+        v6 and v7 style calls, including <code>generateText</code>,{" "}
+        <code>streamText</code>, and agent loops that forward the sandbox to
+        tool execution.
       </p>
       <CodeBlock code={AI_SDK_EXAMPLE} lang="tsx" />
+    </section>
+
+    <section>
+      <Heading as="h3" id="openai-tools">
+        OpenAI Agents SDK
+      </Heading>
+      <p>
+        Install <code>@openai/agents</code> and import{" "}
+        <code>@sandbox-sdk/ai/openai</code>. The adapter uses the real OpenAI{" "}
+        <code>tool()</code> helper, emits JSON-schema parameters, names tools
+        with a <code>sandbox_</code> prefix by default, and requires approval
+        for side-effect tools unless you opt into autonomous execution.
+      </p>
+      <CodeBlock code={OPENAI_EXAMPLE} lang="tsx" />
     </section>
 
     <section>
@@ -165,33 +207,31 @@ export const AiTools = () => (
         Claude Agent SDK
       </Heading>
       <p>
-        Hand the same tool definitions to the{" "}
-        <a
-          className="underline decoration-dotted underline-offset-4 hover:text-foreground"
-          href="https://docs.claude.com/en/api/agent-sdk/overview"
-          rel="noreferrer"
-          target="_blank"
-        >
-          Claude Agent SDK
-        </a>{" "}
-        and the model can drive a real isolated runtime, handy for codegen
-        agents that need to install packages, run tests, and inspect output
-        without touching the host.
+        Install <code>@anthropic-ai/claude-agent-sdk</code> and import{" "}
+        <code>@sandbox-sdk/ai/claude</code>. Claude custom tools run through an
+        in-process MCP server, so the adapter returns <code>mcpServers</code>,{" "}
+        <code>allowedTools</code>, <code>canUseTool</code>, and prompt context
+        for <code>systemPrompt</code>. Read-only tools are annotated as safe,
+        while <code>write</code>, <code>exec</code>, and <code>preview</code>{" "}
+        require approval by default.
+      </p>
+      <p>
+        Use <code>{`{ requireApproval: false }`}</code> only for disposable
+        sandboxes where the agent should run without a human approval loop.
       </p>
       <CodeBlock code={CLAUDE_EXAMPLE} lang="tsx" />
     </section>
 
     <section>
-      <Heading as="h3" id="openai-tools">
-        OpenAI
+      <Heading as="h3" id="ai-tool-safety">
+        Safety model
       </Heading>
       <p>
-        OpenAI's Responses and Agents SDKs accept tool definitions keyed by{" "}
-        <code>name</code> with a JSON-schema <code>parameters</code> block. The
-        current kit exposes the same underlying JSON Schema on{" "}
-        <code>inputSchema.jsonSchema</code>, so map it deliberately before
-        sending tools to OpenAI. A dedicated OpenAI subpath is on the roadmap
-        once the Responses approval flow stabilizes.
+        <code>read</code> and <code>list</code> are safe by default.{" "}
+        <code>write</code>, <code>exec</code>, and <code>preview</code> are
+        side-effect tools. OpenAI and Claude adapters expose approval controls
+        at the framework layer, and every tool still runs through the policy
+        hooks configured in <code>tools()</code>.
       </p>
     </section>
   </section>
