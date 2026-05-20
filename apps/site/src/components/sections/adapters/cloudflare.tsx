@@ -44,8 +44,9 @@ export const Cloudflare = () => (
       The Worker must export <code>Sandbox</code> from{" "}
       <code>@cloudflare/sandbox</code> and bind that Durable Object in{" "}
       <code>wrangler.jsonc</code>. Port previews require a custom domain with
-      wildcard routing in production; <code>.workers.dev</code> is fine for file
-      and command validation but not production preview URLs.
+      wildcard routing in production and use ports 1024-65535 except 3000;{" "}
+      <code>.workers.dev</code> is fine for file and command validation but not
+      production preview URLs.
     </p>
     <CodeBlock code={CLOUDFLARE_EXAMPLE} lang="ts" />
     <div className="flex flex-col gap-2">

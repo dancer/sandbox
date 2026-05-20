@@ -26,7 +26,4 @@
       "tag": "v1",
     },
   ],
-  "vars": {
-    "SANDBOX_SDK_TOKEN": "",
-  },
 }

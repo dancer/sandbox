@@ -17,9 +17,13 @@ const json = (body: unknown, status = 200): Response =>
     status,
   });
 
+const token = (env: Env): string | undefined => {
+  const value = env.SANDBOX_SDK_TOKEN?.trim();
+  return value || undefined;
+};
+
 const authorized = (request: Request, env: Env): boolean =>
-  !env.SANDBOX_SDK_TOKEN ||
-  request.headers.get("authorization") === `Bearer ${env.SANDBOX_SDK_TOKEN}`;
+  request.headers.get("authorization") === `Bearer ${token(env)}`;
 
 const text = (stream: ReadableStream<Uint8Array>): Promise<string> =>
   new Response(stream).text();
@@ -32,6 +36,9 @@ export default {
     }
     if (request.method !== "POST") {
       return json({ error: "method_not_allowed", ok: false }, 405);
+    }
+    if (token(env) === undefined) {
+      return json({ error: "missing_token", ok: false }, 503);
     }
     if (!authorized(request, env)) {
       return json({ error: "unauthorized", ok: false }, 401);

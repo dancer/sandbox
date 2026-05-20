@@ -25,9 +25,9 @@ type Payload = Readonly<{
 
 const worker = process.env.CLOUDFLARE_SANDBOX_WORKER_URL;
 const token = process.env.CLOUDFLARE_SANDBOX_TOKEN;
-const live = worker ? test : test.skip;
+const live = worker && token ? test : test.skip;
 const endpoint = new URL("/sandbox-sdk/live", worker ?? "http://localhost");
-const headers = token === undefined ? {} : { authorization: `Bearer ${token}` };
+const headers = { authorization: `Bearer ${token}` };
 
 live("cloudflare runs a live sandbox workflow", async () => {
   const response = await fetch(endpoint, {

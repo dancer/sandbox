@@ -16,12 +16,16 @@ export CLOUDFLARE_SANDBOX_WORKER_URL="https://sandbox-sdk-cloudflare-live.your-a
 bun run test:live
 ```
 
-To require a bearer token:
+Set the bearer token:
 
 ```bash
 bunx wrangler secret put SANDBOX_SDK_TOKEN --cwd apps/cloudflare
 export CLOUDFLARE_SANDBOX_TOKEN="same-value"
 ```
+
+The live route requires `SANDBOX_SDK_TOKEN`. Without it, the Worker returns
+`missing_token` so a deployed validation endpoint cannot run sandboxes
+unauthenticated.
 
 ## binding
 
@@ -56,4 +60,4 @@ export { Sandbox } from "@cloudflare/sandbox";
 
 The live validation endpoint does not expose ports by default. Cloudflare preview URLs require wildcard custom-domain routing in production, and `.workers.dev` does not support the wildcard subdomains required by `exposePort()`.
 
-If you test ports locally with `wrangler dev`, add `EXPOSE` directives for every port you plan to expose in `Dockerfile`. Port `3000` is reserved by the Cloudflare Sandbox runtime.
+If you test ports locally with `wrangler dev`, add `EXPOSE` directives for every port you plan to expose in `Dockerfile`. Cloudflare accepts ports 1024-65535 and reserves port `3000` for the Sandbox runtime.
