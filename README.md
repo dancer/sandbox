@@ -162,8 +162,8 @@ Preview ports must follow Cloudflare's provider rules: integers from 1 to
 
 ```bash
 bun run test
-bun run test:live
-bun run test:live:e2b
+bun run verify:providers
+bun run verify:e2b
 ```
 
 The default test suite runs without provider credentials and covers core behavior, the local adapter, AI tool execution, and package exports. Live provider scripts load `.env.local` automatically and skip unless credentials are present.

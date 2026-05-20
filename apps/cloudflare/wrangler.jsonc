@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "sandbox-sdk-cloudflare-live",
+  "name": "verify",
   "main": "src/index.ts",
   "compatibility_date": "2026-05-13",
   "compatibility_flags": ["nodejs_compat"],

@@ -12,8 +12,8 @@ bun run --cwd apps/cloudflare deploy
 Set the live test URL after deploy:
 
 ```bash
-export CLOUDFLARE_SANDBOX_WORKER_URL="https://sandbox-sdk-cloudflare-live.your-account.workers.dev"
-bun run test:live
+export CLOUDFLARE_SANDBOX_WORKER_URL="https://verify.sandbox-sdk.workers.dev"
+bun run verify:cloudflare
 ```
 
 Set the bearer token:

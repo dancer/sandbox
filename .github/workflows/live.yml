@@ -15,7 +15,7 @@ jobs:
         with:
           bun-version: 1.3.9
       - run: bun install --frozen-lockfile
-      - run: bun run test:live
+      - run: bun run verify:providers
         env:
           BL_API_KEY: ${{ secrets.BL_API_KEY }}
           BL_CLIENT_CREDENTIALS: ${{ secrets.BL_CLIENT_CREDENTIALS }}
