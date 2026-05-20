@@ -10,12 +10,23 @@ import { vercel } from "../src/index";
 type LiveSandbox = CoreSandbox<RawSandbox>;
 type DeletableSandbox = RawSandbox & { delete: () => Promise<void> };
 
-const explicit = Boolean(
-  process.env.VERCEL_TOKEN &&
-  process.env.VERCEL_TEAM_ID &&
-  process.env.VERCEL_PROJECT_ID
-);
-const enabled = explicit || Boolean(process.env.VERCEL_OIDC_TOKEN);
+const explicit = ():
+  | {
+      projectId: string;
+      teamId: string;
+      token: string;
+    }
+  | undefined => {
+  const projectId = process.env.VERCEL_PROJECT_ID;
+  const teamId = process.env.VERCEL_TEAM_ID;
+  const token = process.env.VERCEL_TOKEN;
+  if (projectId === undefined || teamId === undefined || token === undefined) {
+    return;
+  }
+  return { projectId, teamId, token };
+};
+const enabled =
+  explicit() !== undefined || Boolean(process.env.VERCEL_OIDC_TOKEN);
 const live = enabled ? test : test.skip;
 const text = (stream: ReadableStream<Uint8Array>): Promise<string> =>
   new Response(stream).text();
@@ -38,19 +49,19 @@ const cleanup = async (sandbox: LiveSandbox | undefined): Promise<void> => {
   }
 };
 
-const adapter = () =>
-  explicit
+const adapter = () => {
+  const credentials = explicit();
+  return credentials === undefined
     ? vercel({
         ports: [3000],
-        projectId: process.env.VERCEL_PROJECT_ID,
-        teamId: process.env.VERCEL_TEAM_ID,
         timeout: 300_000,
-        token: process.env.VERCEL_TOKEN,
       })
     : vercel({
+        ...credentials,
         ports: [3000],
         timeout: 300_000,
       });
+};
 
 live("vercel runs a live sandbox workflow", async () => {
   const cwd = "/vercel/sandbox";

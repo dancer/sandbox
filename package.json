@@ -40,6 +40,7 @@
     "@sandbox-sdk/local": "workspace:*",
     "@sandbox-sdk/modal": "workspace:*",
     "@sandbox-sdk/vercel": "workspace:*",
+    "bun-types": "^1.3.14",
     "husky": "^9.1.7",
     "oxfmt": "^0.49.0",
     "oxlint": "^1.64.0",
