@@ -12,6 +12,7 @@
     "noUncheckedIndexedAccess": true,
     "outDir": "dist",
     "rootDir": "src",
+    "skipLibCheck": true,
     "strict": true,
     "target": "ES2022",
     "verbatimModuleSyntax": true

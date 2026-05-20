@@ -102,6 +102,16 @@ export type Kit = Readonly<{
   tools: Tools;
 }>;
 
+/** options ready to spread into AI SDK v6/v7 generateText, streamText, or ToolLoopAgent */
+export type AiSdk = Readonly<{
+  /** AI SDK sandbox object forwarded to tool execution */
+  experimental_sandbox: AgentSandbox;
+  /** prompt context describing the sandbox, available tools, and safety limits */
+  system: string;
+  /** AI SDK compatible tool set */
+  tools: Tools;
+}>;
+
 /** small sandbox description object for agents that support executeCommand */
 export type AgentSandbox = Readonly<{
   /** advertised sandbox capabilities */
@@ -215,6 +225,13 @@ export type PreviewResult = Readonly<{
   /** exposed preview URL */
   url: string;
 }>;
+
+/** create AI SDK v6/v7 call options from a sandbox tool kit */
+export const aiSdk = (kit: Kit): AiSdk => ({
+  experimental_sandbox: kit.sandbox,
+  system: kit.description,
+  tools: kit.tools,
+});
 
 const names = ["read", "write", "list", "exec"] as const;
 

@@ -30,6 +30,14 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./claude": {
+      "types": "./dist/claude.d.ts",
+      "default": "./dist/claude.js"
+    },
+    "./openai": {
+      "types": "./dist/openai.d.ts",
+      "default": "./dist/openai.js"
     }
   },
   "publishConfig": {
@@ -44,7 +52,26 @@
     "@sandbox-sdk/core": "workspace:*"
   },
   "devDependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.3.145",
+    "@openai/agents": "^0.11.4",
     "@sandbox-sdk/local": "workspace:*",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "zod": "^4.3.6"
+  },
+  "peerDependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.3.0",
+    "@openai/agents": "^0.11.0",
+    "zod": "^4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@anthropic-ai/claude-agent-sdk": {
+      "optional": true
+    },
+    "@openai/agents": {
+      "optional": true
+    },
+    "zod": {
+      "optional": true
+    }
   }
 }

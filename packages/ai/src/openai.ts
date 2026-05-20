@@ -1,0 +1,69 @@
+import { tool } from "@openai/agents";
+import type { FunctionTool } from "@openai/agents";
+
+import type { JsonSchema, Kit, Name } from "./index.js";
+import { approval, entries, instructions, message } from "./shared.js";
+import type { Approval } from "./shared.js";
+
+export type OpenAiTools = Readonly<Partial<Record<Name, FunctionTool>>>;
+
+export type OpenAi = Readonly<{
+  /** instructions ready for new Agent({ instructions }) */
+  instructions: string;
+  /** tools ready for new Agent({ tools: Object.values(openai.tools) }) */
+  tools: OpenAiTools;
+}>;
+
+export type OpenAiOptions = Readonly<{
+  /**
+   * prefix for tool names sent to the model
+   *
+   * @default "sandbox"
+   */
+  prefix?: string;
+  /**
+   * approval policy for side-effect tools
+   *
+   * @default true for exec, preview, and write
+   */
+  requireApproval?: Approval;
+}>;
+
+type OpenAiParameters = Readonly<{
+  additionalProperties: false;
+  properties: Record<string, Record<string, unknown>>;
+  required: string[];
+  type: "object";
+}>;
+
+const name = (prefix: string, value: Name): string =>
+  prefix.length === 0 ? value : `${prefix}_${value}`;
+
+const parameters = (schema: JsonSchema): OpenAiParameters => ({
+  additionalProperties: false,
+  properties: schema.properties as Record<string, Record<string, unknown>>,
+  required: Array.isArray(schema.required) ? schema.required.map(String) : [],
+  type: "object",
+});
+
+/** create OpenAI Agents SDK tools from a sandbox tool kit */
+export const openai = (
+  kit: Kit,
+  { prefix = "sandbox", requireApproval }: OpenAiOptions = {}
+): OpenAi => ({
+  instructions: instructions(kit),
+  tools: Object.fromEntries(
+    entries(kit.tools).map((entry) => [
+      entry.name,
+      tool({
+        description: entry.tool.description,
+        errorFunction: (_, error) => message(error),
+        execute: (input) => entry.tool.execute(input),
+        name: name(prefix, entry.name),
+        needsApproval: approval(entry.name, requireApproval),
+        parameters: parameters(entry.tool.inputSchema.jsonSchema),
+        strict: true,
+      }),
+    ])
+  ) as OpenAiTools,
+});
