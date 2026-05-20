@@ -157,6 +157,18 @@ Deploying to `.workers.dev` is enough for the live validation endpoint, but not
 for production `ports.expose()` preview URLs.
 Preview ports must follow Cloudflare's provider rules: integers from 1 to
 65535, excluding system ports below 1024 and reserved port 3000.
+Set `CLOUDFLARE_SANDBOX_PREVIEW_HOST` to run the optional Cloudflare port
+verification test against a custom preview host.
+
+## API Reference
+
+The generated API reference lives in [`docs/api.md`](docs/api.md). It is built
+from package declaration output so exported types, functions, and JSDoc stay in
+sync with the published packages.
+
+```bash
+bun run docs:api
+```
 
 ## Testing
 
@@ -166,13 +178,21 @@ bun run verify:providers
 bun run verify:e2b
 ```
 
-The default test suite runs without provider credentials and covers core behavior, the local adapter, AI tool execution, and package exports. Live provider scripts load `.env.local` automatically and skip unless credentials are present.
-Use the provider-specific live commands while adding credentials so one failing provider does not block the rest of the validation pass.
+The default test suite runs without provider credentials and covers core
+behavior, the local adapter, AI tool execution, package exports, config tests,
+and sanitized replay fixtures. Replay fixtures lock down the normalized SDK
+contract without hitting providers.
+
+Live provider scripts load `.env.local` automatically and skip unless
+credentials are present. They are the source of truth for real provider
+behavior and may create billable sandboxes. Use the provider-specific live
+commands while adding credentials so one failing provider does not block the
+rest of the validation pass.
 
 - E2B: `E2B_API_KEY` or `E2B_ACCESS_TOKEN`
 - Daytona: `DAYTONA_API_KEY`, or `DAYTONA_JWT_TOKEN` and `DAYTONA_ORGANIZATION_ID`; set `DAYTONA_TARGET` when you need a specific region
 - Vercel: `VERCEL_OIDC_TOKEN`, or `VERCEL_TOKEN`, `VERCEL_TEAM_ID`, and `VERCEL_PROJECT_ID`
-- Cloudflare: deploy `apps/cloudflare` and set `CLOUDFLARE_SANDBOX_WORKER_URL`; set `CLOUDFLARE_SANDBOX_TOKEN` when the Worker uses `SANDBOX_SDK_TOKEN`
+- Cloudflare: deploy `apps/cloudflare` and set `CLOUDFLARE_SANDBOX_WORKER_URL`; set `CLOUDFLARE_SANDBOX_TOKEN` when the Worker uses `SANDBOX_SDK_TOKEN`; set `CLOUDFLARE_SANDBOX_PREVIEW_HOST` to verify `ports.expose()`
 - Modal: `MODAL_TOKEN_ID` and `MODAL_TOKEN_SECRET`
 - Blaxel: `BL_WORKSPACE` with `BL_API_KEY` or `BL_CLIENT_CREDENTIALS`; set `BL_REGION` when you need a specific region
 - CodeSandbox: `CSB_API_KEY`

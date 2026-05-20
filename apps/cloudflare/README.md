@@ -58,6 +58,21 @@ export { Sandbox } from "@cloudflare/sandbox";
 
 ## ports
 
-The live validation endpoint does not expose ports by default. Cloudflare preview URLs require wildcard custom-domain routing in production, and `.workers.dev` does not support the wildcard subdomains required by `exposePort()`.
+The live workflow endpoint runs on `.workers.dev`, but the optional port
+verification test requires a custom domain with wildcard routing. `.workers.dev`
+does not support the wildcard subdomains required by `exposePort()`.
 
-If you test ports locally with `wrangler dev`, add `EXPOSE` directives for every port you plan to expose in `Dockerfile`. Cloudflare accepts ports 1024-65535 and reserves port `3000` for the Sandbox runtime.
+Set the custom preview host locally before running the port verification:
+
+```bash
+export CLOUDFLARE_SANDBOX_PREVIEW_HOST="preview.example.com"
+bun run verify:cloudflare
+```
+
+The Worker also accepts `SANDBOX_SDK_PREVIEW_HOST` as an environment value. The
+test sends `CLOUDFLARE_SANDBOX_PREVIEW_HOST` in the authenticated request so the
+same deployed Worker can validate multiple preview host setups.
+
+If you test ports locally with `wrangler dev`, add `EXPOSE` directives for
+every port you plan to expose in `Dockerfile`. Cloudflare accepts ports
+1024-65535 and reserves port `3000` for the Sandbox runtime.
