@@ -245,6 +245,10 @@ provider behavior and may create billable sandboxes. Use the provider-specific
 live commands while adding credentials so one failing provider does not block
 the rest of the validation pass.
 
+The CodeSandbox live verifier runs with Node because the upstream
+`@codesandbox/sdk` websocket session works there. Bun still runs the
+CodeSandbox config and replay tests.
+
 - Blaxel: `BL_WORKSPACE` with `BL_API_KEY` or `BL_CLIENT_CREDENTIALS`, or Blaxel CLI config; set `BL_REGION` when you need a specific region
 - Cloudflare: deploy `apps/cloudflare` and set `CLOUDFLARE_SANDBOX_WORKER_URL` and `CLOUDFLARE_SANDBOX_TOKEN`; set `CLOUDFLARE_SANDBOX_PREVIEW_HOST` to verify `ports.expose()`
 - CodeSandbox: `CSB_API_KEY`

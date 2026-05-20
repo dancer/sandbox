@@ -185,6 +185,14 @@ const rejectUnsupported = (feature: string): Promise<never> => {
   }
 };
 
+const inactive = (error: unknown): boolean =>
+  error instanceof Error && error.message.includes("is not active");
+
+const url = (host: string): string =>
+  host.startsWith("http://") || host.startsWith("https://")
+    ? host
+    : `https://${host}`;
+
 const spawn = async (
   client: SandboxClient,
   cwd: string,
@@ -218,6 +226,10 @@ const spawn = async (
             await process.waitUntilComplete();
             controller.close();
           } catch (error) {
+            if (inactive(error)) {
+              controller.close();
+              return;
+            }
             if (failure(error) !== undefined) {
               controller.close();
               return;
@@ -385,7 +397,7 @@ const createSandbox = (
         unsupported(provider, "custom preview hosts or tcp previews");
       }
       const preview = await raw.client.ports.waitForPort(target);
-      return { port: target, url: preview.host };
+      return { port: target, url: url(preview.host) };
     },
   },
   process: {
