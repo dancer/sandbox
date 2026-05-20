@@ -166,7 +166,7 @@ bun run test:live
 bun run test:live:e2b
 ```
 
-The default test suite runs without provider credentials and covers core behavior, the local adapter, AI tool execution, and package exports. Live provider tests are skipped unless credentials are present.
+The default test suite runs without provider credentials and covers core behavior, the local adapter, AI tool execution, and package exports. Live provider scripts load `.env.local` automatically and skip unless credentials are present.
 Use the provider-specific live commands while adding credentials so one failing provider does not block the rest of the validation pass.
 
 - E2B: `E2B_API_KEY` or `E2B_ACCESS_TOKEN`
