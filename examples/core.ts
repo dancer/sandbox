@@ -67,3 +67,6 @@ export const validated = {
   port: port(3000),
   timeout: duration(30_000),
 };
+
+export const readStream = async (files: Files): Promise<string> =>
+  new Response(await files.stream("/workspace/readme.md")).text();

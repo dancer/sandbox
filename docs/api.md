@@ -158,6 +158,8 @@ normalized filesystem namespace scoped to a sandbox root
 
 ```ts
 export type Files = Readonly<{
+  /** read a file as a byte stream */
+  stream(path: string): Promise<ReadableStream<Uint8Array>>;
   /** read a file as bytes */
   read(path: string): Promise<Uint8Array>;
   /** read a file as utf-8 text */

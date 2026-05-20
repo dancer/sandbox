@@ -10,6 +10,12 @@ const bytes = await sandbox.files.read("data/in.bin");
 // utf-8 text
 const source = await sandbox.files.text("main.ts");`;
 
+const STREAM_EXAMPLE = `const stream = await sandbox.files.stream("data/large.bin");
+
+for await (const chunk of stream) {
+  await destination.write(chunk);
+}`;
+
 const WRITE_EXAMPLE = `await sandbox.files.write("main.ts", "console.log('hi')");
 await sandbox.files.write("data/in.bin", new Uint8Array([0x68, 0x69]));
 await sandbox.files.write("upload.bin", file.stream()); // ReadableStream`;
@@ -85,6 +91,18 @@ export const ApiReference = () => (
         <code>SandboxError</code> when the path escapes the sandbox root.
       </p>
       <CodeBlock code={READ_EXAMPLE} lang="ts" />
+    </section>
+
+    <section>
+      <Heading as="h3" id="files-stream">
+        files.stream(path)
+      </Heading>
+      <p>
+        Reads a file as <code>ReadableStream&lt;Uint8Array&gt;</code>. Use it
+        when files can be large, when forwarding bytes to another stream, or
+        when agents should avoid buffering the whole file in memory.
+      </p>
+      <CodeBlock code={STREAM_EXAMPLE} lang="ts" />
     </section>
 
     <section>
