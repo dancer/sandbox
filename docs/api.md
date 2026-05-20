@@ -844,6 +844,21 @@ export type Kit = Readonly<{
 }>;
 ```
 
+#### `AiSdk`
+
+options ready to spread into AI SDK v6/v7 generateText, streamText, or ToolLoopAgent
+
+```ts
+export type AiSdk = Readonly<{
+  /** AI SDK sandbox object forwarded to tool execution */
+  experimental_sandbox: AgentSandbox;
+  /** prompt context describing the sandbox, available tools, and safety limits */
+  system: string;
+  /** AI SDK compatible tool set */
+  tools: Tools;
+}>;
+```
+
 #### `AgentSandbox`
 
 small sandbox description object for agents that support executeCommand
@@ -1016,12 +1031,181 @@ export type PreviewResult = Readonly<{
 
 ### functions
 
+#### `aiSdk`
+
+create AI SDK v6/v7 call options from a sandbox tool kit
+
+```ts
+export declare const aiSdk: (kit: Kit) => AiSdk;
+```
+
 #### `tools`
 
 create AI SDK compatible tools and prompt context for a sandbox
 
 ```ts
 export declare const tools: (sandbox: Sandbox, options?: Options) => Kit;
+```
+
+## @sandbox-sdk/ai/claude
+
+Agent tool helpers for Sandbox SDK
+
+### types
+
+#### `ToolAnnotations`
+
+```ts
+export type ToolAnnotations = NonNullable<SdkMcpToolDefinition["annotations"]>;
+```
+
+#### `ClaudeResult`
+
+```ts
+export type ClaudeResult = Readonly<{
+  content: readonly Readonly<{
+    text: string;
+    type: "text";
+  }>[];
+  isError?: true;
+  structuredContent?: Record<string, unknown>;
+}>;
+```
+
+#### `ClaudeTool`
+
+```ts
+export type ClaudeTool = Readonly<{
+  annotations?: ToolAnnotations;
+  description: string;
+  handler(input: unknown, extra: unknown): Promise<ClaudeResult>;
+  inputSchema: unknown;
+  name: string;
+}>;
+```
+
+#### `ClaudeTools`
+
+```ts
+export type ClaudeTools = Readonly<{
+  /** all MCP tool names exposed by the sandbox server */
+  availableTools: readonly string[];
+  /** tool names that run without an approval prompt */
+  allowedTools: readonly string[];
+  /** permission callback ready for query({ options: { canUseTool } }) */
+  canUseTool: CanUseTool;
+  /** prompt context for query({ options: { systemPrompt } }) */
+  instructions: string;
+  /** MCP server map ready for query({ options: { mcpServers } }) */
+  mcpServers: Readonly<Record<string, McpSdkServerConfigWithInstance>>;
+  /** true when the named tool should require approval */
+  needsApproval(toolName: string): boolean;
+  /** raw in-process MCP server config */
+  server: McpSdkServerConfigWithInstance;
+  /** MCP server name used in mcp__<server>__<tool> names */
+  serverName: string;
+  /** raw MCP tool definitions for advanced composition and tests */
+  tools: readonly ClaudeTool[];
+}>;
+```
+
+#### `ClaudeOptions`
+
+```ts
+export type ClaudeOptions = Readonly<{
+  /**
+   * per-tool annotations merged onto the generated MCP tools
+   *
+   * use this when your app wants to tune read-only, destructive, or idempotent hints
+   */
+  annotations?: Readonly<Partial<Record<Name, ToolAnnotations>>>;
+  /**
+   * approval policy for side-effect tools
+   *
+   * @default true for exec, preview, and write
+   */
+  requireApproval?: Approval;
+  /**
+   * in-process MCP server name
+   *
+   * @default "sandbox"
+   */
+  serverName?: string;
+  /**
+   * MCP server version metadata
+   *
+   * @default "1.0.0"
+   */
+  serverVersion?: string;
+}>;
+```
+
+### functions
+
+#### `claude`
+
+create Claude Agent SDK in-process MCP tools from a sandbox tool kit
+
+```ts
+export declare const claude: (
+  kit: Kit,
+  { annotations, requireApproval, serverName, serverVersion }?: ClaudeOptions
+) => ClaudeTools;
+```
+
+## @sandbox-sdk/ai/openai
+
+Agent tool helpers for Sandbox SDK
+
+### types
+
+#### `OpenAiTools`
+
+```ts
+export type OpenAiTools = Readonly<Partial<Record<Name, FunctionTool>>>;
+```
+
+#### `OpenAi`
+
+```ts
+export type OpenAi = Readonly<{
+  /** instructions ready for new Agent({ instructions }) */
+  instructions: string;
+  /** tools ready for new Agent({ tools: Object.values(openai.tools) }) */
+  tools: OpenAiTools;
+}>;
+```
+
+#### `OpenAiOptions`
+
+```ts
+export type OpenAiOptions = Readonly<{
+  /**
+   * prefix for tool names sent to the model
+   *
+   * @default "sandbox"
+   */
+  prefix?: string;
+  /**
+   * approval policy for side-effect tools
+   *
+   * @default true for exec, preview, and write
+   */
+  requireApproval?: Approval;
+}>;
+```
+
+### functions
+
+#### `openai`
+
+create OpenAI Agents SDK tools from a sandbox tool kit
+
+```ts
+export declare const openai: (
+  kit: Kit,
+  { prefix, requireApproval }?: OpenAiOptions
+) => OpenAi;
 ```
 
 ## @sandbox-sdk/blaxel

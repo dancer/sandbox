@@ -12,6 +12,11 @@ type Entry = Readonly<{
 
 type Package = Readonly<{
   description: string;
+  files: readonly PackageFile[];
+  name: string;
+}>;
+
+type PackageFile = Readonly<{
   file: string;
   name: string;
 }>;
@@ -38,10 +43,28 @@ const folders = [
 const read = async (folder: string): Promise<Package> => {
   const directory = join(root, "packages", folder);
   const text = await readFile(join(directory, "package.json"), "utf-8");
-  const json = JSON.parse(text) as { description?: string; name: string };
+  const json = JSON.parse(text) as {
+    description?: string;
+    exports?: Record<string, { types?: string }>;
+    name: string;
+  };
+  const files = Object.entries(json.exports ?? {}).flatMap(([key, value]) => {
+    if (value.types === undefined) {
+      return [];
+    }
+    return [
+      {
+        file: join(directory, value.types),
+        name: key === "." ? json.name : `${json.name}${key.slice(1)}`,
+      },
+    ];
+  });
   return {
     description: json.description ?? "",
-    file: join(directory, "dist/index.d.ts"),
+    files:
+      files.length === 0
+        ? [{ file: join(directory, "dist/index.d.ts"), name: json.name }]
+        : files,
     name: json.name,
   };
 };
@@ -230,7 +253,8 @@ const entry = async (
   return [];
 };
 
-const parse = (item: Package): Promise<Entry[]> => parseFile(item.file, entry);
+const parse = (item: PackageFile): Promise<Entry[]> =>
+  parseFile(item.file, entry);
 
 const title = (value: Entry["kind"]): string => {
   if (value === "types") {
@@ -271,12 +295,14 @@ const render = (entries: readonly Entry[]): string =>
 const main = async (): Promise<void> => {
   const packages = await Promise.all(folders.map(read));
   const sections = await Promise.all(
-    packages.map(async (item) => {
-      const entries = await parse(item);
-      return [`## ${item.name}`, item.description, render(entries)].join(
-        "\n\n"
-      );
-    })
+    packages.flatMap((item) =>
+      item.files.map(async (file) => {
+        const entries = await parse(file);
+        return [`## ${file.name}`, item.description, render(entries)].join(
+          "\n\n"
+        );
+      })
+    )
   );
   const text = [
     "# API Reference",
