@@ -1,0 +1,48 @@
+{
+  "coverage": {
+    "features": [
+      "capabilities",
+      "snapshots.create",
+      "snapshotSource",
+      "files.exists",
+      "files.text",
+      "sandbox.stop"
+    ],
+    "fixture": "source",
+    "provider": "modal",
+    "uncovered": [
+      "ports.expose",
+      "process.exec",
+      "process.shell",
+      "process.spawnShell"
+    ]
+  },
+  "payload": {
+    "capabilities": {
+      "environment": true,
+      "files": true,
+      "network": "create-time",
+      "ports": "create-time",
+      "process": true,
+      "processExec": true,
+      "processSpawn": false,
+      "snapshotCreate": "filesystem",
+      "snapshotRestore": false,
+      "snapshotSource": "create-time",
+      "snapshots": false,
+      "streaming": "separate",
+      "volumes": true
+    },
+    "file": {
+      "exists": true,
+      "text": "ready"
+    },
+    "ok": true,
+    "provider": "modal",
+    "snapshot": {
+      "id": "snapshot",
+      "name": "sandbox-sdk-live"
+    },
+    "source": "snapshot"
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "coverage": {
+    "features": [
+      "capabilities",
+      "snapshots.create",
+      "snapshotSource",
+      "files.exists",
+      "files.text",
+      "sandbox.stop"
+    ],
+    "fixture": "source",
+    "provider": "e2b",
+    "uncovered": [
+      "ports.expose",
+      "process.exec",
+      "process.shell",
+      "process.spawnShell"
+    ]
+  },
+  "payload": {
+    "capabilities": {
+      "environment": true,
+      "files": true,
+      "git": true,
+      "network": true,
+      "ports": "derived",
+      "process": true,
+      "processExec": true,
+      "processSpawn": "combined",
+      "pty": true,
+      "snapshotCreate": "disk",
+      "snapshotRestore": false,
+      "snapshotSource": "create-time",
+      "snapshots": false,
+      "streaming": "combined"
+    },
+    "file": {
+      "exists": true,
+      "text": "ready"
+    },
+    "ok": true,
+    "provider": "e2b",
+    "snapshot": {
+      "id": "snapshot",
+      "name": "sandbox-sdk-live"
+    },
+    "source": "snapshot"
+  }
+}

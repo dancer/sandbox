@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 
 import { create } from "@sandbox-sdk/core";
 
+import { record, workflowFixture } from "../../../test/fixture";
 import { workflow } from "../../../test/workflow";
 import { daytona } from "../src/index";
 
@@ -24,11 +25,18 @@ live("daytona runs a live sandbox workflow", async () => {
   });
 
   try {
-    await workflow(sandbox, {
+    const payload = await workflow(sandbox, {
       content: "hello from daytona",
       cwd,
       port: 3000,
     });
+    await record(
+      new URL("__fixtures__/workflow.json", import.meta.url),
+      workflowFixture("daytona", payload, [
+        "snapshots.create",
+        "snapshotSource",
+      ])
+    );
   } finally {
     await sandbox.stop();
   }

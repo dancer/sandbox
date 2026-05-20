@@ -2,7 +2,13 @@ import { expect } from "bun:test";
 import { randomUUID } from "node:crypto";
 
 import { supports } from "@sandbox-sdk/core";
-import type { Result, Running, Sandbox } from "@sandbox-sdk/core";
+import type {
+  Capabilities,
+  Result,
+  Running,
+  Sandbox,
+  Url,
+} from "@sandbox-sdk/core";
 
 export type Workflow = Readonly<{
   content: string;
@@ -10,6 +16,38 @@ export type Workflow = Readonly<{
   port?: number;
   protocol?: "http" | "https";
   serve?: string;
+}>;
+
+type File = Readonly<{
+  exists: boolean;
+  listed: boolean;
+  read: string;
+  stream: string;
+  text: string;
+}>;
+
+type Inputs = Readonly<{
+  blob: string;
+  buffer: string;
+  bytes: string;
+  stream: string;
+}>;
+
+export type Payload = Readonly<{
+  capabilities: Capabilities;
+  exec?: Result;
+  failure?: Result;
+  file: File;
+  inputs: Inputs;
+  ok: boolean;
+  port?: Url;
+  provider: string;
+  shell?: Result;
+  spawn?: Result & Readonly<{ output: string }>;
+  unsupported: Readonly<{
+    spawn: boolean;
+    spawnShell: boolean;
+  }>;
 }>;
 
 const encoder = new TextEncoder();
@@ -34,23 +72,28 @@ const clean = (path: string): string =>
 
 const path = (base: string, name: string): string => `${base}/${name}`;
 
-const match = (result: Result, expected: string): void => {
+const match = (result: Result, expected: string): Result => {
   expect(result).toMatchObject({
     code: 0,
     ok: true,
     stdout: expected,
   });
+  return result;
 };
 
-const failed = (result: Result): void => {
+const failed = (result: Result): Result => {
   expect(result).toMatchObject({
     code: 7,
     ok: false,
   });
   expect(`${result.stdout}\n${result.stderr}`).toContain("failed");
+  return result;
 };
 
-const output = async (running: Running, expected: string): Promise<void> => {
+const spawned = async (
+  running: Running,
+  expected: string
+): Promise<Result & Readonly<{ output: string }>> => {
   const stream = await text(running.output);
   const result = await running.result;
   expect(result).toMatchObject({
@@ -58,6 +101,7 @@ const output = async (running: Running, expected: string): Promise<void> => {
     ok: true,
   });
   expect(`${result.stdout}\n${stream}`).toContain(expected);
+  return { ...result, output: stream };
 };
 
 const ignore = (): undefined => undefined;
@@ -71,7 +115,7 @@ const stop = async (running: Running | undefined): Promise<void> => {
 export const workflow = async (
   sandbox: Sandbox,
   input: Workflow
-): Promise<void> => {
+): Promise<Payload> => {
   const root = `${clean(input.cwd)}/sandbox-sdk-${randomUUID()}`;
   const file = path(root, "message.txt");
   const bytesFile = path(root, "bytes.txt");
@@ -89,35 +133,57 @@ export const workflow = async (
   await sandbox.files.write(streamFile, new Blob(["stream"]).stream());
   await sandbox.files.write(removeFile, "remove");
 
-  expect(await sandbox.files.exists(file)).toBe(true);
-  expect(await sandbox.files.text(file)).toBe(input.content);
-  expect(content(await sandbox.files.read(file))).toBe(input.content);
-  expect(await text(await sandbox.files.stream(file))).toBe(input.content);
-  expect(content(await sandbox.files.read(bytesFile))).toBe("bytes");
-  expect(content(await sandbox.files.read(bufferFile))).toBe("buffer");
-  expect(await sandbox.files.text(blobFile)).toBe("blob");
-  expect(await text(await sandbox.files.stream(streamFile))).toBe("stream");
-
   const entries = await sandbox.files.list(root);
-  expect(entries.some((entry) => entry.path === file)).toBe(true);
+  const listed = entries.some((entry) => entry.path === file);
   expect(entries.some((entry) => entry.path === bytesFile)).toBe(true);
   expect(entries.some((entry) => entry.path === bufferFile)).toBe(true);
   expect(entries.some((entry) => entry.path === blobFile)).toBe(true);
   expect(entries.some((entry) => entry.path === streamFile)).toBe(true);
 
   await sandbox.files.remove(removeFile);
-  expect(await sandbox.files.exists(removeFile)).toBe(false);
+  const filePayload = {
+    exists: await sandbox.files.exists(file),
+    listed,
+    read: content(await sandbox.files.read(file)),
+    stream: await text(await sandbox.files.stream(file)),
+    text: await sandbox.files.text(file),
+  };
+  const inputs = {
+    blob: await sandbox.files.text(blobFile),
+    buffer: content(await sandbox.files.read(bufferFile)),
+    bytes: content(await sandbox.files.read(bytesFile)),
+    stream: await text(await sandbox.files.stream(streamFile)),
+  };
+  const removed = !(await sandbox.files.exists(removeFile));
+
+  expect(filePayload.exists).toBe(true);
+  expect(filePayload.listed).toBe(true);
+  expect(filePayload.text).toBe(input.content);
+  expect(filePayload.read).toBe(input.content);
+  expect(filePayload.stream).toBe(input.content);
+  expect(inputs.bytes).toBe("bytes");
+  expect(inputs.buffer).toBe("buffer");
+  expect(inputs.blob).toBe("blob");
+  expect(inputs.stream).toBe("stream");
+  expect(removed).toBe(true);
+
+  let exec: Result | undefined;
+  let shell: Result | undefined;
+  let failure: Result | undefined;
+  let spawn: (Result & Readonly<{ output: string }>) | undefined;
+  let unsupported = { spawn: false, spawnShell: false };
+  let preview: Url | undefined;
 
   if (supports(sandbox, "processExec")) {
-    match(await sandbox.process.exec("cat", [file]), input.content);
-    match(await sandbox.process.shell(`cat ${file}`), input.content);
-    failed(
+    exec = match(await sandbox.process.exec("cat", [file]), input.content);
+    shell = match(await sandbox.process.shell(`cat ${file}`), input.content);
+    failure = failed(
       await sandbox.process.exec("sh", ["-lc", "echo failed >&2; exit 7"])
     );
   }
 
   if (supports(sandbox, "processSpawn")) {
-    await output(
+    spawn = await spawned(
       await sandbox.process.spawnShell(`cat ${file}`),
       input.content
     );
@@ -134,6 +200,7 @@ export const workflow = async (
       code: "unsupported",
       provider: sandbox.provider,
     });
+    unsupported = { spawn: true, spawnShell: true };
   }
 
   try {
@@ -142,7 +209,7 @@ export const workflow = async (
         server = await sandbox.process.spawnShell(input.serve, { cwd: root });
       }
 
-      const preview = await sandbox.ports.expose(input.port);
+      preview = await sandbox.ports.expose(input.port);
       expect(preview.port).toBe(input.port);
       expect(preview.url).toMatch(
         input.protocol === "https" ? /^https:\/\//u : /^https?:\/\//u
@@ -151,4 +218,18 @@ export const workflow = async (
   } finally {
     await stop(server);
   }
+
+  return {
+    capabilities: sandbox.capabilities,
+    exec,
+    failure,
+    file: filePayload,
+    inputs,
+    ok: true,
+    ...(preview === undefined ? {} : { port: preview }),
+    provider: sandbox.provider,
+    shell,
+    spawn,
+    unsupported,
+  };
 };

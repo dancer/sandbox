@@ -6,6 +6,7 @@ import { join } from "node:path";
 
 import { create } from "@sandbox-sdk/core";
 
+import { record, workflowFixture } from "../../../test/fixture";
 import { workflow } from "../../../test/workflow";
 import { blaxel } from "../src/index";
 
@@ -38,12 +39,20 @@ live("blaxel runs a live sandbox workflow", async () => {
   });
 
   try {
-    await workflow(sandbox, {
+    const payload = await workflow(sandbox, {
       content: "hello from blaxel",
       cwd,
       port: 15_500,
       protocol: "https",
     });
+    await record(
+      new URL("__fixtures__/workflow.json", import.meta.url),
+      workflowFixture("blaxel", payload, [
+        "snapshots.create",
+        "snapshots.restore",
+        "snapshotSource",
+      ])
+    );
   } finally {
     await sandbox.stop();
   }

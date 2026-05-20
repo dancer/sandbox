@@ -6,6 +6,8 @@ import { join } from "node:path";
 
 import { create } from "@sandbox-sdk/core";
 
+import { record, sourceFixture, workflowFixture } from "../../../test/fixture";
+import type { Source } from "../../../test/fixture";
 import { workflow } from "../../../test/workflow";
 import { modal } from "../src/index";
 
@@ -38,12 +40,16 @@ live("modal runs a live sandbox workflow", async () => {
   });
 
   try {
-    await workflow(sandbox, {
+    const payload = await workflow(sandbox, {
       content: "hello from modal",
       cwd,
       port: 3000,
       protocol: "https",
     });
+    await record(
+      new URL("__fixtures__/workflow.json", import.meta.url),
+      workflowFixture("modal", payload, ["snapshots.create", "snapshotSource"])
+    );
   } finally {
     await sandbox.stop();
   }
@@ -72,6 +78,26 @@ live("modal creates and starts from a live snapshot", async () => {
 
     expect(await derived.files.exists(file)).toBe(true);
     expect(await derived.files.text(file)).toBe("ready");
+    const payload: Source = {
+      capabilities: derived.capabilities,
+      file: {
+        exists: await derived.files.exists(file),
+        text: await derived.files.text(file),
+      },
+      ok: true,
+      provider: derived.provider,
+      snapshot,
+      source: snapshot.id,
+    };
+    await record(
+      new URL("__fixtures__/source.json", import.meta.url),
+      sourceFixture("modal", payload, [
+        "ports.expose",
+        "process.exec",
+        "process.shell",
+        "process.spawnShell",
+      ])
+    );
   } finally {
     await Promise.all([derived?.stop(), sandbox.stop()]);
   }

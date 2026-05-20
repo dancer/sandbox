@@ -1,0 +1,94 @@
+{
+  "coverage": {
+    "features": [
+      "capabilities",
+      "files.mkdir",
+      "files.write",
+      "files.write.bytes",
+      "files.write.arrayBuffer",
+      "files.write.blob",
+      "files.write.readableStream",
+      "files.exists",
+      "files.read",
+      "files.stream",
+      "files.text",
+      "files.list",
+      "files.remove",
+      "process.exec",
+      "process.shell",
+      "process.spawnShell",
+      "process.failure",
+      "ports.expose",
+      "sandbox.stop"
+    ],
+    "fixture": "workflow",
+    "provider": "e2b",
+    "uncovered": ["snapshots.create", "snapshotSource"]
+  },
+  "payload": {
+    "capabilities": {
+      "environment": true,
+      "files": true,
+      "git": true,
+      "network": true,
+      "ports": "derived",
+      "process": true,
+      "processExec": true,
+      "processSpawn": "combined",
+      "pty": true,
+      "snapshotCreate": "disk",
+      "snapshotRestore": false,
+      "snapshotSource": "create-time",
+      "snapshots": false,
+      "streaming": "combined"
+    },
+    "exec": {
+      "code": 0,
+      "ok": true,
+      "stderr": "",
+      "stdout": "hello from e2b"
+    },
+    "failure": {
+      "code": 7,
+      "ok": false,
+      "stderr": "sh: 36: source: not found\nsh: 36: source: not found\nfailed\n",
+      "stdout": ""
+    },
+    "file": {
+      "exists": true,
+      "listed": true,
+      "read": "hello from e2b",
+      "stream": "hello from e2b",
+      "text": "hello from e2b"
+    },
+    "inputs": {
+      "blob": "blob",
+      "buffer": "buffer",
+      "bytes": "bytes",
+      "stream": "stream"
+    },
+    "ok": true,
+    "port": {
+      "port": 3000,
+      "url": "https://preview.example.com"
+    },
+    "provider": "e2b",
+    "shell": {
+      "code": 0,
+      "ok": true,
+      "stderr": "",
+      "stdout": "hello from e2b"
+    },
+    "spawn": {
+      "code": 0,
+      "ok": true,
+      "stderr": "",
+      "stdout": "hello from e2b",
+      "output": "hello from e2b"
+    },
+    "unsupported": {
+      "spawn": false,
+      "spawnShell": false
+    }
+  }
+}
