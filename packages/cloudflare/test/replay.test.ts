@@ -1,24 +1,34 @@
 import { test } from "bun:test";
 
-import { coverage, workflow } from "./behavior";
-import type { Coverage, Payload } from "./fixture";
+import { coverage, portCoverage, ports, workflow } from "./behavior";
+import type { Coverage, Payload, PortPayload } from "./fixture";
 
-type Fixture = Readonly<{
-  body: Payload;
+type Fixture<Body> = Readonly<{
+  body: Body;
   coverage: Coverage;
   status: number;
 }>;
 
-const load = async (): Promise<Fixture> =>
+const load = async <Body>(name: string): Promise<Fixture<Body>> =>
   (await Bun.file(
-    new URL("__fixtures__/workflow.json", import.meta.url)
-  ).json()) as Fixture;
+    new URL(`__fixtures__/${name}.json`, import.meta.url)
+  ).json()) as Fixture<Body>;
 
 test("cloudflare replays the sanitized workflow fixture", async () => {
-  const fixture = await load();
+  const fixture = await load<Payload>("workflow");
 
   coverage(fixture.coverage);
   workflow({
+    body: fixture.body,
+    response: new Response(null, { status: fixture.status }),
+  });
+});
+
+test("cloudflare replays the sanitized ports fixture", async () => {
+  const fixture = await load<PortPayload>("ports");
+
+  portCoverage(fixture.coverage);
+  ports({
     body: fixture.body,
     response: new Response(null, { status: fixture.status }),
   });

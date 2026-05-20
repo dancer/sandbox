@@ -1,6 +1,6 @@
 import { expect } from "bun:test";
 
-import type { Coverage, Result } from "./fixture";
+import type { Coverage, PortResult, Result } from "./fixture";
 
 export const coverage = (payload: Coverage): void => {
   expect(payload.provider).toBe("cloudflare");
@@ -19,6 +19,25 @@ export const coverage = (payload: Coverage): void => {
   ]);
   expect(payload.uncovered).toEqual([
     "ports.expose",
+    "snapshots.create",
+    "snapshots.restore",
+  ]);
+};
+
+export const portCoverage = (payload: Coverage): void => {
+  expect(payload.provider).toBe("cloudflare");
+  expect(payload.fixture).toBe("ports");
+  expect(payload.features).toEqual([
+    "capabilities",
+    "process.spawnShell",
+    "ports.expose",
+    "preview.fetch",
+    "process.kill",
+    "sandbox.stop",
+  ]);
+  expect(payload.uncovered).toEqual([
+    "files.list",
+    "process.exec",
     "snapshots.create",
     "snapshots.restore",
   ]);
@@ -58,4 +77,19 @@ export const workflow = ({ body, response }: Result): void => {
     ok: true,
   });
   expect(body.spawn.output).toContain("hello from cloudflare");
+};
+
+export const ports = ({ body, response }: PortResult): void => {
+  expect(response.ok).toBe(true);
+  expect(body.error).toBeUndefined();
+  expect(body.ok).toBe(true);
+  expect(body.provider).toBe("cloudflare");
+  expect(body.capabilities.ports).toBe("dynamic");
+  expect(body.port.port).toBe(8080);
+  expect(body.port.url).toMatch(/^https:\/\//u);
+  expect(body.response).toMatchObject({
+    ok: true,
+    status: 200,
+  });
+  expect(body.response.text).toContain("hello from cloudflare port");
 };
