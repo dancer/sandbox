@@ -16,10 +16,10 @@ const explicit = ():
       token: string;
     }
   | undefined => {
-  const projectId = process.env.VERCEL_PROJECT_ID;
-  const teamId = process.env.VERCEL_TEAM_ID;
-  const token = process.env.VERCEL_TOKEN;
-  if (projectId === undefined || teamId === undefined || token === undefined) {
+  const projectId = process.env.VERCEL_PROJECT_ID?.trim();
+  const teamId = process.env.VERCEL_TEAM_ID?.trim();
+  const token = process.env.VERCEL_TOKEN?.trim();
+  if (!projectId || !teamId || !token) {
     return;
   }
   return { projectId, teamId, token };
@@ -33,7 +33,7 @@ const deletable = (sandbox: RawSandbox): sandbox is DeletableSandbox => {
 export const cwd = "/vercel/sandbox";
 
 export const enabled = (): boolean =>
-  explicit() !== undefined || Boolean(process.env.VERCEL_OIDC_TOKEN);
+  explicit() !== undefined || Boolean(process.env.VERCEL_OIDC_TOKEN?.trim());
 
 export const path = (name: string): string =>
   `${cwd}/sandbox-sdk-${name}-${randomUUID()}.txt`;

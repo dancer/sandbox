@@ -3,87 +3,56 @@ import { randomUUID } from "node:crypto";
 
 import { create } from "@sandbox-sdk/core";
 
+import { workflow } from "../../../test/workflow";
 import { e2b } from "../src/index";
 
 const enabled = Boolean(
   process.env.E2B_API_KEY || process.env.E2B_ACCESS_TOKEN
 );
 const live = enabled ? test : test.skip;
-const text = (stream: ReadableStream<Uint8Array>): Promise<string> =>
-  new Response(stream).text();
 
 live("e2b runs a live sandbox workflow", async () => {
   const cwd = `/tmp/sandbox-sdk-${randomUUID()}`;
-  const file = `${cwd}/message.txt`;
   const sandbox = await create({
     adapter: e2b({ timeout: 300_000 }),
     cwd,
   });
 
   try {
-    await sandbox.files.write(file, "hello from e2b");
-
-    expect(await sandbox.files.exists(file)).toBe(true);
-    expect(await sandbox.files.text(file)).toBe("hello from e2b");
-
-    const entries = await sandbox.files.list(cwd);
-    expect(entries.some((entry) => entry.path === file)).toBe(true);
-
-    const success = await sandbox.process.exec("cat", [file]);
-    expect(success).toMatchObject({
-      code: 0,
-      ok: true,
-      stdout: "hello from e2b",
+    await workflow(sandbox, {
+      content: "hello from e2b",
+      cwd,
+      port: 3000,
     });
-
-    const shell = await sandbox.process.shell(`cat ${file}`);
-    expect(shell).toMatchObject({
-      code: 0,
-      ok: true,
-      stdout: "hello from e2b",
-    });
-
-    const running = await sandbox.process.spawnShell(`cat ${file}`);
-    const spawnOutput = await text(running.output);
-    const spawned = await running.result;
-    expect(spawned).toMatchObject({
-      code: 0,
-      ok: true,
-    });
-    expect(spawnOutput).toContain("hello from e2b");
-
-    const failure = await sandbox.process.exec("sh", [
-      "-lc",
-      "echo failed >&2; exit 7",
-    ]);
-    expect(failure).toMatchObject({
-      code: 7,
-      ok: false,
-    });
-    expect(failure.stderr).toContain("failed");
-
-    const preview = await sandbox.ports.expose(3000);
-    expect(preview.port).toBe(3000);
-    expect(preview.url).toMatch(/^https?:\/\//u);
   } finally {
     await sandbox.stop();
   }
 });
 
-live("e2b creates a live snapshot", async () => {
+live("e2b creates and starts from a live snapshot", async () => {
   const cwd = `/tmp/sandbox-sdk-${randomUUID()}`;
   const file = `${cwd}/snapshot.txt`;
   const sandbox = await create({
     adapter: e2b({ timeout: 300_000 }),
     cwd,
   });
+  let derived: typeof sandbox | undefined;
 
   try {
     await sandbox.files.write(file, "ready");
 
     const snapshot = await sandbox.snapshots.create("sandbox-sdk-live");
     expect(snapshot.id).toBeTruthy();
+
+    derived = await create({
+      adapter: e2b({ timeout: 300_000 }),
+      cwd,
+      snapshot: snapshot.id,
+    });
+
+    expect(await derived.files.exists(file)).toBe(true);
+    expect(await derived.files.text(file)).toBe("ready");
   } finally {
-    await sandbox.stop();
+    await Promise.all([derived?.stop(), sandbox.stop()]);
   }
 });

@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 
 import { create } from "@sandbox-sdk/core";
 
+import { workflow } from "../../../test/workflow";
 import { modal } from "../src/index";
 
 const enabled = Boolean(
@@ -22,7 +23,6 @@ const adapter = () =>
 
 live("modal runs a live sandbox workflow", async () => {
   const cwd = "/app";
-  const file = `${cwd}/sandbox-sdk-${randomUUID()}.txt`;
   const sandbox = await create({
     adapter: adapter(),
     cwd,
@@ -30,49 +30,41 @@ live("modal runs a live sandbox workflow", async () => {
   });
 
   try {
-    await sandbox.files.write(file, "hello from modal");
-
-    expect(await sandbox.files.exists(file)).toBe(true);
-    expect(await sandbox.files.text(file)).toBe("hello from modal");
-
-    const entries = await sandbox.files.list(cwd);
-    expect(entries.some((entry) => entry.path === file)).toBe(true);
-
-    const success = await sandbox.process.exec("cat", [file]);
-    expect(success).toMatchObject({
-      code: 0,
-      ok: true,
-      stdout: "hello from modal",
+    await workflow(sandbox, {
+      content: "hello from modal",
+      cwd,
+      port: 3000,
+      protocol: "https",
     });
-
-    const shell = await sandbox.process.shell(`cat ${file}`);
-    expect(shell).toMatchObject({
-      code: 0,
-      ok: true,
-      stdout: "hello from modal",
-    });
-
-    const failure = await sandbox.process.exec("sh", [
-      "-lc",
-      "echo failed >&2; exit 7",
-    ]);
-    expect(failure).toMatchObject({
-      code: 7,
-      ok: false,
-    });
-    expect(failure.stderr).toContain("failed");
-
-    await expect(
-      sandbox.process.spawn("echo", ["hello"])
-    ).rejects.toMatchObject({
-      code: "unsupported",
-      provider: "modal",
-    });
-
-    const preview = await sandbox.ports.expose(3000);
-    expect(preview.port).toBe(3000);
-    expect(preview.url).toMatch(/^https:\/\//u);
   } finally {
     await sandbox.stop();
+  }
+});
+
+live("modal creates and starts from a live snapshot", async () => {
+  const cwd = "/app";
+  const file = `${cwd}/sandbox-sdk-${randomUUID()}.txt`;
+  const sandbox = await create({
+    adapter: adapter(),
+    cwd,
+  });
+  let derived: typeof sandbox | undefined;
+
+  try {
+    await sandbox.files.write(file, "ready");
+
+    const snapshot = await sandbox.snapshots.create("sandbox-sdk-live");
+    expect(snapshot.id).toBeTruthy();
+
+    derived = await create({
+      adapter: adapter(),
+      cwd,
+      snapshot: snapshot.id,
+    });
+
+    expect(await derived.files.exists(file)).toBe(true);
+    expect(await derived.files.text(file)).toBe("ready");
+  } finally {
+    await Promise.all([derived?.stop(), sandbox.stop()]);
   }
 });
