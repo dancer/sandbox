@@ -8,8 +8,8 @@ import {
   bytes,
   command,
   duration,
-  sandboxError,
   port,
+  sandboxError,
   result,
   unsupported,
 } from "@sandbox-sdk/core";
@@ -94,6 +94,14 @@ const validate = (options: Cloudflare): void => {
 const binary = (content: string): Uint8Array =>
   Uint8Array.from(atob(content), (char) => char.codePointAt(0) ?? 0);
 
+const base64 = (input: Uint8Array): string => {
+  const chunks: string[] = [];
+  for (let index = 0; index < input.length; index += 32_768) {
+    chunks.push(String.fromCodePoint(...input.subarray(index, index + 32_768)));
+  }
+  return btoa(chunks.join(""));
+};
+
 const stream = (content: Uint8Array): ReadableStream<Uint8Array> =>
   new ReadableStream({
     start(controller) {
@@ -102,28 +110,17 @@ const stream = (content: Uint8Array): ReadableStream<Uint8Array> =>
     },
   });
 
-const readable = (input: Input): input is ReadableStream<Uint8Array> =>
-  typeof input === "object" &&
-  input !== null &&
-  "getReader" in input &&
-  typeof input.getReader === "function";
-
 const write = async (
   raw: Native,
   path: string,
   input: Input
 ): Promise<void> => {
-  if (readable(input)) {
-    await raw.writeFile(path, input);
-    return;
-  }
-
   const value = await bytes(input);
   if (typeof value === "string") {
     await raw.writeFile(path, value, { encoding: "utf-8" });
     return;
   }
-  await raw.writeFile(path, stream(value));
+  await raw.writeFile(path, base64(value), { encoding: "base64" });
 };
 
 const check = (signal?: AbortSignal): void => {

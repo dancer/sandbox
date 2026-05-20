@@ -247,7 +247,7 @@ test("cloudflare allows preview ports over the system range", async () => {
   }
 });
 
-test("cloudflare preserves readable streams when writing files", async () => {
+test("cloudflare writes readable streams through base64 content", async () => {
   writeSeen = undefined;
   const sandbox = await create({
     adapter: cloudflare({
@@ -264,8 +264,8 @@ test("cloudflare preserves readable streams when writing files", async () => {
   try {
     await sandbox.files.write("/workspace/data.bin", input);
     expect(writeSeen).toEqual({
-      content: input,
-      options: undefined,
+      content: "AQID",
+      options: { encoding: "base64" },
       path: "/workspace/data.bin",
     });
   } finally {
