@@ -20,13 +20,20 @@ import {
   resolve as pathResolve,
 } from "node:path";
 
-import { SandboxError, abort, bytes, duration, port } from "@sandbox-sdk/core";
+import {
+  SandboxError,
+  abort,
+  bytes,
+  duration,
+  fromSimpleInsecureSandbox,
+  port,
+} from "@sandbox-sdk/core";
 import type {
   Adapter,
   Entry,
   Exec,
   Result,
-  Sandbox,
+  SimpleInsecureSandbox,
   Snapshot,
 } from "@sandbox-sdk/core";
 
@@ -260,24 +267,6 @@ const settle = async (
   }
 };
 
-const execute = async (
-  root: string,
-  cwd: string,
-  env: Readonly<Record<string, string>>,
-  command: string,
-  args: readonly string[],
-  options: Exec
-): Promise<Result> => {
-  const run = execution(options);
-  check(options.signal);
-  const child = spawn(command, args, {
-    cwd: safe(root, run.cwd ?? cwd),
-    env: { ...env, ...run.env },
-  });
-  const output = await settle(child, run);
-  return output;
-};
-
 const start = (
   root: string,
   cwd: string,
@@ -324,7 +313,7 @@ export const local = (options: Local = {}): Adapter<Raw> => ({
     const env = { ...hostEnv(options.inheritEnv), ...input.env };
     await mkdir(safe(root, cwd), { recursive: true });
 
-    const sandbox: Sandbox<Raw> = {
+    const sandbox: SimpleInsecureSandbox<Raw> = {
       capabilities: this.capabilities,
       cwd,
       files: {
@@ -361,12 +350,10 @@ export const local = (options: Local = {}): Adapter<Raw> => ({
         mkdir: async (path) => {
           await mkdir(safe(root, path), { recursive: true });
         },
-        read: (path) => wrap(() => readFile(safe(root, path))),
+        read: async (path) =>
+          readable(await wrap(() => readFile(safe(root, path)))),
         remove: (path) =>
           rm(safe(root, path), { force: true, recursive: true }),
-        stream: async (path) =>
-          readable(await wrap(() => readFile(safe(root, path)))),
-        text: (path) => wrap(() => readFile(safe(root, path), "utf-8")),
         write: async (path, value) => {
           const target = safe(root, path);
           await mkdir(dirname(target), { recursive: true });
@@ -384,10 +371,6 @@ export const local = (options: Local = {}): Adapter<Raw> => ({
         },
       },
       process: {
-        exec: (command, args = [], run = {}) =>
-          execute(root, cwd, env, command, args, run),
-        shell: (command, run = {}) =>
-          execute(root, cwd, env, "sh", ["-lc", command], run),
         spawn: async (command, args = [], run = {}) => {
           const ready = await Promise.resolve(
             start(root, cwd, env, command, args, run)
@@ -455,7 +438,7 @@ export const local = (options: Local = {}): Adapter<Raw> => ({
       },
     };
 
-    return sandbox;
+    return fromSimpleInsecureSandbox(sandbox);
   },
   provider: "local",
 });

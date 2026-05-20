@@ -137,6 +137,18 @@ test("local returns command status and output", async () => {
   await sandbox.stop();
 });
 
+test("local preserves stderr through derived exec", async () => {
+  const sandbox = await create({ adapter: local(), cwd: "/workspace" });
+  const result = await sandbox.process.shell("printf error >&2; exit 2");
+
+  expect(result.ok).toBe(false);
+  expect(result.code).toBe(2);
+  expect(result.stdout).toBe("");
+  expect(result.stderr).toBe("error");
+
+  await sandbox.stop();
+});
+
 test("local passes sandbox environment to commands", async () => {
   const sandbox = await create({
     adapter: local(),
