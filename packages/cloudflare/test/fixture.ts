@@ -64,6 +64,8 @@ export type Coverage = Readonly<{
 
 const liveRoute = "/sandbox-sdk/live";
 const portsRoute = "/sandbox-sdk/ports";
+const attempts = 2;
+const timeout = 90_000;
 
 const env = (name: string): string | undefined => {
   const value = process.env[name]?.trim();
@@ -86,6 +88,28 @@ const headers = (): HeadersInit => ({
   "content-type": "application/json",
 });
 
+const request = async (
+  route: string,
+  init: RequestInit = {}
+): Promise<Response> => {
+  let failure: unknown;
+
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      return await fetch(endpoint(route), {
+        ...init,
+        signal: AbortSignal.timeout(timeout),
+      });
+    } catch (error) {
+      failure = error;
+    }
+  }
+
+  throw new Error("cloudflare live verification request failed", {
+    cause: failure,
+  });
+};
+
 export const enabled = (): boolean =>
   env("CLOUDFLARE_SANDBOX_WORKER_URL") !== undefined &&
   env("CLOUDFLARE_SANDBOX_TOKEN") !== undefined;
@@ -94,7 +118,7 @@ export const portsEnabled = (): boolean =>
   enabled() && env("CLOUDFLARE_SANDBOX_PREVIEW_HOST") !== undefined;
 
 export const execute = async (): Promise<Result> => {
-  const response = await fetch(endpoint(liveRoute), {
+  const response = await request(liveRoute, {
     headers: headers(),
     method: "POST",
   });
@@ -113,7 +137,7 @@ export const execute = async (): Promise<Result> => {
 };
 
 export const executePorts = async (): Promise<PortResult> => {
-  const response = await fetch(endpoint(portsRoute), {
+  const response = await request(portsRoute, {
     body: JSON.stringify({
       hostname: required("CLOUDFLARE_SANDBOX_PREVIEW_HOST"),
     }),
