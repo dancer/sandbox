@@ -292,6 +292,37 @@ test("fromSimpleInsecureSandbox derives exec from spawn output", async () => {
   ]);
 });
 
+test("fromSimpleInsecureSandbox preserves explicit stderr", async () => {
+  const current = fromSimpleInsecureSandbox({
+    ...sandbox({ processExec: true, processSpawn: true }),
+    files: {
+      exists: () => Promise.reject(new Error("not used")),
+      list: () => Promise.reject(new Error("not used")),
+      mkdir: () => Promise.reject(new Error("not used")),
+      read: () => Promise.reject(new Error("not used")),
+      remove: () => Promise.reject(new Error("not used")),
+      write: () => Promise.reject(new Error("not used")),
+    },
+    process: {
+      spawn: () =>
+        Promise.resolve({
+          id: "exec",
+          kill: () => Promise.resolve(),
+          output: readable("failure"),
+          result: Promise.resolve(result(7, "", "failure")),
+        }),
+      spawnShell: () => Promise.reject(new Error("not used")),
+    },
+  } satisfies SimpleInsecureSandbox);
+
+  expect(await current.process.exec("false")).toMatchObject({
+    code: 7,
+    ok: false,
+    stderr: "failure",
+    stdout: "",
+  });
+});
+
 test("fromSimpleInsecureSandbox gates unsupported capabilities", async () => {
   const current = fromSimpleInsecureSandbox({
     ...sandbox({}),

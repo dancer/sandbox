@@ -258,7 +258,9 @@ const settle = async (running: Running): Promise<Result> => {
     text(running.output),
     running.result,
   ]);
-  return value.stdout.length > 0 ? value : { ...value, stdout: output };
+  return value.stdout.length > 0 || value.stderr.length > 0
+    ? value
+    : { ...value, stdout: output };
 };
 
 const guarded = <Value>(

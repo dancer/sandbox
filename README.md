@@ -54,6 +54,20 @@ files, long-running commands, and provider-specific behavior.
 Adapter authors can use `fromSimpleInsecureSandbox()` to lift that contract
 into the public `Sandbox` API.
 
+For adapter authors, the best path is to implement the smallest truthful
+low-level shape first:
+
+- expose stream-first file reads through `SimpleInsecureFiles.read()`
+- expose process handles through `spawn()` and `spawnShell()`
+- advertise only capabilities that are actually implemented
+- keep provider-specific methods and escape hatches on `raw`
+- let `fromSimpleInsecureSandbox()` derive `files.text()`, `files.read()`,
+  `process.exec()`, and `process.shell()` for the public API
+
+If a low-level process result already includes `stdout` or `stderr`, the core
+helper preserves those fields. It only falls back to buffered process output
+when the low-level result does not include captured output.
+
 ## Snapshots
 
 Snapshot support is capability-gated because providers expose different
@@ -186,6 +200,11 @@ Node-based tooling, but creating a Cloudflare sandbox loads
 It exports the Sandbox Durable Object class, binds it in `wrangler.jsonc`, and
 validates file operations, command execution, shell execution, and background
 process spawning through the shared adapter.
+
+Cloudflare's native stream write path currently requires the provider SDK's RPC
+transport. `@sandbox-sdk/cloudflare` normalizes non-string writes through base64
+content so `files.write()` works on the default transport without app-specific
+Cloudflare transport knowledge.
 
 Cloudflare port previews need custom-domain wildcard routing in production.
 Deploying to `.workers.dev` is enough for the live validation endpoint, but not
