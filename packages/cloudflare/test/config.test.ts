@@ -11,6 +11,7 @@ let executeSeen: unknown;
 let getSeen: unknown;
 let mkdirSeen: unknown;
 let setEnvSeen: unknown;
+let writeSeen: unknown;
 
 const raw = {
   destroy: () => Promise.resolve(),
@@ -35,6 +36,10 @@ const raw = {
     setEnvSeen = input;
     return Promise.resolve();
   },
+  writeFile: (path: string, content: unknown, options?: unknown) => {
+    writeSeen = { content, options, path };
+    return Promise.resolve();
+  },
 } as unknown as CloudflareSandbox;
 
 void mock.module("@cloudflare/sandbox", () => ({
@@ -44,7 +49,7 @@ void mock.module("@cloudflare/sandbox", () => ({
   },
 }));
 
-const binding = {} as DurableObjectNamespace<CloudflareSandbox>;
+const binding = {} as Parameters<typeof cloudflare>[0]["binding"];
 
 test("cloudflare reports missing durable object binding", async () => {
   await expect(
@@ -193,7 +198,27 @@ test("cloudflare rejects invalid preview ports before provider calls", async () 
   }
 });
 
-test("cloudflare allows low preview ports except reserved control plane", async () => {
+test("cloudflare rejects low preview ports before provider calls", async () => {
+  exposeCalls = 0;
+  const sandbox = await create({
+    adapter: cloudflare({
+      binding,
+      hostname: "example.com",
+    }),
+  });
+
+  try {
+    await expect(sandbox.ports.expose(80)).rejects.toMatchObject({
+      code: "configuration",
+      provider: "cloudflare",
+    });
+    expect(exposeCalls).toBe(0);
+  } finally {
+    await sandbox.stop();
+  }
+});
+
+test("cloudflare allows preview ports over the system range", async () => {
   exposeCalls = 0;
   exposeSeen = undefined;
   const sandbox = await create({
@@ -205,8 +230,8 @@ test("cloudflare allows low preview ports except reserved control plane", async 
   });
 
   try {
-    await expect(sandbox.ports.expose(80)).resolves.toEqual({
-      port: 80,
+    await expect(sandbox.ports.expose(8080)).resolves.toEqual({
+      port: 8080,
       url: "https://preview.example.com",
     });
     expect(exposeCalls).toBe(1);
@@ -215,7 +240,33 @@ test("cloudflare allows low preview ports except reserved control plane", async 
         hostname: "example.com",
         name: "api",
       },
-      port: 80,
+      port: 8080,
+    });
+  } finally {
+    await sandbox.stop();
+  }
+});
+
+test("cloudflare preserves readable streams when writing files", async () => {
+  writeSeen = undefined;
+  const sandbox = await create({
+    adapter: cloudflare({
+      binding,
+    }),
+  });
+  const input = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(new Uint8Array([1, 2, 3]));
+      controller.close();
+    },
+  });
+
+  try {
+    await sandbox.files.write("/workspace/data.bin", input);
+    expect(writeSeen).toEqual({
+      content: input,
+      options: undefined,
+      path: "/workspace/data.bin",
     });
   } finally {
     await sandbox.stop();

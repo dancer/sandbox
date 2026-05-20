@@ -26,10 +26,20 @@ import type {
 
 export type { Sandbox as CloudflareSandbox } from "@cloudflare/sandbox";
 
+type Native = CloudflareSandbox<unknown>;
+
+/** structural Durable Object namespace binding accepted by the adapter */
+export type CloudflareBinding = Readonly<{
+  /** return a Durable Object stub for a resolved id */
+  get(id: unknown): unknown;
+  /** resolve a Durable Object id from a stable sandbox name */
+  idFromName(name: string): unknown;
+}>;
+
 /** Cloudflare Sandbox adapter configuration */
 export type Cloudflare = Readonly<{
   /** Durable Object binding for the Cloudflare Sandbox class, usually `env.Sandbox` */
-  binding: DurableObjectNamespace<CloudflareSandbox>;
+  binding: CloudflareBinding;
   /**
    * default working directory for normalized file and process operations
    *
@@ -49,8 +59,6 @@ export type Cloudflare = Readonly<{
   /** low-level Cloudflare Sandbox options forwarded to `getSandbox` */
   options?: SandboxOptions;
 }>;
-
-type Raw = CloudflareSandbox;
 
 const provider = "cloudflare";
 
@@ -94,7 +102,22 @@ const stream = (content: Uint8Array): ReadableStream<Uint8Array> =>
     },
   });
 
-const write = async (raw: Raw, path: string, input: Input): Promise<void> => {
+const readable = (input: Input): input is ReadableStream<Uint8Array> =>
+  typeof input === "object" &&
+  input !== null &&
+  "getReader" in input &&
+  typeof input.getReader === "function";
+
+const write = async (
+  raw: Native,
+  path: string,
+  input: Input
+): Promise<void> => {
+  if (readable(input)) {
+    await raw.writeFile(path, input);
+    return;
+  }
+
   const value = await bytes(input);
   if (typeof value === "string") {
     await raw.writeFile(path, value, { encoding: "utf-8" });
@@ -119,14 +142,14 @@ const rejectUnsupported = (feature: string): Promise<never> => {
 
 const validatePort = (value: number): number => {
   const target = port(value, provider);
-  if (target !== 3000) {
+  if (target >= 1024 && target !== 3000) {
     return target;
   }
 
   throw sandboxError(
     provider,
-    "Cloudflare preview ports must be integers from 1 to 65535, excluding 3000",
-    "unsupported"
+    "Cloudflare preview ports must be integers from 1024 to 65535, excluding 3000",
+    target === 3000 ? "unsupported" : "configuration"
   );
 };
 
@@ -143,7 +166,7 @@ const validateHostname = (value: string): void => {
 };
 
 const executeLine = async (
-  raw: Raw,
+  raw: Native,
   cwd: string,
   line: string,
   options: Exec
@@ -163,7 +186,7 @@ const executeLine = async (
 };
 
 const execute = (
-  raw: Raw,
+  raw: Native,
   cwd: string,
   executable: string,
   args: readonly string[],
@@ -171,8 +194,8 @@ const execute = (
 ): Promise<Result> => executeLine(raw, cwd, command(executable, args), options);
 
 const wait = async (
-  raw: Raw,
-  process: Awaited<ReturnType<Raw["startProcess"]>>
+  raw: Native,
+  process: Awaited<ReturnType<Native["startProcess"]>>
 ): Promise<Result> => {
   const output = await process.waitForExit();
   const logs = await raw.getProcessLogs(process.id);
@@ -180,7 +203,7 @@ const wait = async (
 };
 
 const spawnLine = async (
-  raw: Raw,
+  raw: Native,
   cwd: string,
   line: string,
   options: Exec
@@ -208,18 +231,18 @@ const spawnLine = async (
 };
 
 const spawn = (
-  raw: Raw,
+  raw: Native,
   cwd: string,
   executable: string,
   args: readonly string[],
   options: Exec
 ): Promise<Running> => spawnLine(raw, cwd, command(executable, args), options);
 
-const createSandbox = (
-  raw: Raw,
+const createSandbox = <ProviderRaw>(
+  raw: Native,
   cwd: string,
   options: Cloudflare
-): Sandbox<Raw> => ({
+): Sandbox<ProviderRaw> => ({
   capabilities,
   cwd,
   files: {
@@ -288,7 +311,7 @@ const createSandbox = (
     spawnShell: (script, run = {}) => spawnLine(raw, cwd, script, run),
   },
   provider,
-  raw,
+  raw: raw as ProviderRaw,
   snapshots: {
     create: () => rejectUnsupported("snapshots"),
     restore: () => rejectUnsupported("snapshots"),
@@ -299,17 +322,23 @@ const createSandbox = (
 });
 
 /** create a Cloudflare Sandbox adapter from a Worker binding */
-export const cloudflare = (options: Cloudflare): Adapter<Raw> => ({
+export const cloudflare = <ProviderRaw = unknown>(
+  options: Cloudflare
+): Adapter<ProviderRaw> => ({
   capabilities,
   async create(input = {}) {
     validate(options);
     const id = input.id ?? options.id ?? crypto.randomUUID();
     const cwd = input.cwd ?? options.cwd ?? "/workspace";
     const { getSandbox } = await import("@cloudflare/sandbox");
-    const raw = getSandbox(options.binding, id, {
-      normalizeId: true,
-      ...options.options,
-    });
+    const raw = getSandbox(
+      options.binding as DurableObjectNamespace<Native>,
+      id,
+      {
+        normalizeId: true,
+        ...options.options,
+      }
+    );
     const env = { ...options.env, ...input.env };
 
     if (Object.keys(env).length > 0) {
@@ -317,7 +346,7 @@ export const cloudflare = (options: Cloudflare): Adapter<Raw> => ({
     }
     await raw.mkdir(cwd, { recursive: true });
 
-    return createSandbox(raw, cwd, { ...options, id });
+    return createSandbox<ProviderRaw>(raw, cwd, { ...options, id });
   },
   provider,
 });

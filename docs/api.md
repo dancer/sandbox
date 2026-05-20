@@ -1108,6 +1108,19 @@ Cloudflare Sandbox adapter for Sandbox SDK
 
 ### types
 
+#### `CloudflareBinding`
+
+structural Durable Object namespace binding accepted by the adapter
+
+```ts
+export type CloudflareBinding = Readonly<{
+  /** return a Durable Object stub for a resolved id */
+  get(id: unknown): unknown;
+  /** resolve a Durable Object id from a stable sandbox name */
+  idFromName(name: string): unknown;
+}>;
+```
+
 #### `Cloudflare`
 
 Cloudflare Sandbox adapter configuration
@@ -1115,7 +1128,7 @@ Cloudflare Sandbox adapter configuration
 ```ts
 export type Cloudflare = Readonly<{
   /** Durable Object binding for the Cloudflare Sandbox class, usually `env.Sandbox` */
-  binding: DurableObjectNamespace<CloudflareSandbox>;
+  binding: CloudflareBinding;
   /**
    * default working directory for normalized file and process operations
    *
@@ -1144,7 +1157,9 @@ export type Cloudflare = Readonly<{
 create a Cloudflare Sandbox adapter from a Worker binding
 
 ```ts
-export declare const cloudflare: (options: Cloudflare) => Adapter<Raw>;
+export declare const cloudflare: <ProviderRaw = unknown>(
+  options: Cloudflare
+) => Adapter<ProviderRaw>;
 ```
 
 ### re-exports
