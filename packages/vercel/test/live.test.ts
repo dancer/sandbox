@@ -2,12 +2,7 @@ import { expect, test } from "bun:test";
 
 import { create } from "@sandbox-sdk/core";
 
-import {
-  expectFiles,
-  expectPort,
-  expectProcess,
-  expectSnapshotSource,
-} from "./behavior";
+import { expectSource, expectWorkflow, source, workflow } from "./behavior";
 import { adapter, cleanup, cwd, enabled, path } from "./fixture";
 import type { LiveSandbox } from "./fixture";
 
@@ -22,9 +17,7 @@ live("vercel runs a live sandbox workflow", async () => {
   });
 
   try {
-    await expectFiles(sandbox, cwd, file, "hello from vercel");
-    await expectProcess(sandbox, file, "hello from vercel");
-    await expectPort(sandbox);
+    expectWorkflow(await workflow(sandbox, cwd, file, "hello from vercel"));
   } finally {
     await cleanup(sandbox);
   }
@@ -50,7 +43,7 @@ live("vercel creates and starts from a live snapshot", async () => {
       snapshot: snapshot.id,
     });
 
-    await expectSnapshotSource(derived, snapshot, file, "ready");
+    expectSource(await source(derived, snapshot, file, "ready"));
   } finally {
     await Promise.all([cleanup(derived), cleanup(sandbox)]);
   }
