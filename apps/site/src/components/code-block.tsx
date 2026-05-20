@@ -12,6 +12,7 @@ import { createHighlighterCore } from "shiki/core";
 import { createOnigurumaEngine } from "shiki/engine/oniguruma";
 import shikiWasm from "shiki/wasm";
 
+import { Copy } from "@/components/copy";
 import { cn } from "@/lib/utils";
 
 interface CodeBlockProps {
@@ -46,33 +47,38 @@ export const CodeBlock = async ({ code, lang, className }: CodeBlockProps) => {
   });
 
   return (
-    <pre
+    <div
       className={cn(
-        className,
-        "overflow-x-auto p-6 text-sm bg-sidebar rounded-lg"
+        "group/code relative overflow-hidden rounded-lg bg-sidebar",
+        className
       )}
-      data-language={lang}
-      style={{ color: result.fg }}
     >
-      <code>
-        {result.tokens.map((row, index) => (
-          <span className="block min-h-[1lh]" key={`line-${String(index)}`}>
-            {row.map((token, tokenIndex) => (
-              <span
-                key={`token-${String(index)}-${String(tokenIndex)}`}
-                style={{
-                  backgroundColor: token.bgColor,
-                  color: token.color,
-                  ...token.htmlStyle,
-                }}
-                {...token.htmlAttrs}
-              >
-                {token.content}
-              </span>
-            ))}
-          </span>
-        ))}
-      </code>
-    </pre>
+      <Copy value={code} />
+      <pre
+        className="overflow-x-auto p-6 pr-16 text-sm"
+        data-language={lang}
+        style={{ color: result.fg }}
+      >
+        <code>
+          {result.tokens.map((row, index) => (
+            <span className="block min-h-[1lh]" key={`line-${String(index)}`}>
+              {row.map((token, tokenIndex) => (
+                <span
+                  key={`token-${String(index)}-${String(tokenIndex)}`}
+                  style={{
+                    backgroundColor: token.bgColor,
+                    color: token.color,
+                    ...token.htmlStyle,
+                  }}
+                  {...token.htmlAttrs}
+                >
+                  {token.content}
+                </span>
+              ))}
+            </span>
+          ))}
+        </code>
+      </pre>
+    </div>
   );
 };
