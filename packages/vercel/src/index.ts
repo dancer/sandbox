@@ -3,7 +3,7 @@ import {
   abort,
   bytes,
   duration,
-  error as sandboxError,
+  sandboxError,
   port,
   result,
   timeout,

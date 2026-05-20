@@ -1,4 +1,4 @@
-import { error as sandboxError, supports } from "@sandbox-sdk/core";
+import { sandboxError, supports } from "@sandbox-sdk/core";
 import type { Result, Sandbox } from "@sandbox-sdk/core";
 
 const schemaKey = Symbol.for("vercel.ai.schema");

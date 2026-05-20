@@ -6,7 +6,7 @@ import {
   bytes,
   command,
   duration,
-  error as sandboxError,
+  sandboxError,
   port,
   result,
   timeout,

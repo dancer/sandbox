@@ -9,16 +9,33 @@ import {
   command,
   create,
   duration,
+  fromSimpleInsecureSandbox,
   isSandboxError,
   port,
   requireCapability,
   result,
+  sandboxError,
   supports,
   timeout,
   unsupported,
   withSandbox,
 } from "../src/index";
-import type { Adapter, Options, Sandbox } from "../src/index";
+import type {
+  Adapter,
+  Options,
+  Sandbox,
+  SimpleInsecureSandbox,
+} from "../src/index";
+
+const encode = (value: string): Uint8Array => new TextEncoder().encode(value);
+
+const readable = (value: string): ReadableStream<Uint8Array> =>
+  new ReadableStream({
+    start: (controller) => {
+      controller.enqueue(encode(value));
+      controller.close();
+    },
+  });
 
 const sandbox = (capabilities: Sandbox["capabilities"]): Sandbox => ({
   capabilities,
@@ -187,6 +204,205 @@ test("withSandbox preserves work and cleanup errors", async () => {
   throw new Error("expected aggregate error");
 });
 
+test("fromSimpleInsecureSandbox lifts stream-first files", async () => {
+  let written: { path: string; value: unknown } | undefined;
+  const current = fromSimpleInsecureSandbox({
+    ...sandbox({ files: true }),
+    files: {
+      exists: (path) => Promise.resolve(path === "/workspace/file.txt"),
+      list: () =>
+        Promise.resolve([{ kind: "file", path: "/workspace/file.txt" }]),
+      mkdir: () => Promise.resolve(),
+      read: () => Promise.resolve(readable("hello")),
+      remove: () => Promise.resolve(),
+      write: (path, value) => {
+        written = { path, value };
+        return Promise.resolve();
+      },
+    },
+    process: {
+      spawn: () => Promise.reject(new Error("not used")),
+      spawnShell: () => Promise.reject(new Error("not used")),
+    },
+  } satisfies SimpleInsecureSandbox);
+
+  expect(
+    await new Response(await current.files.stream("/file.txt")).text()
+  ).toBe("hello");
+  expect(await current.files.read("/file.txt")).toEqual(encode("hello"));
+  expect(await current.files.text("/file.txt")).toBe("hello");
+  expect(await current.files.exists("/workspace/file.txt")).toBe(true);
+  expect(await current.files.list()).toEqual([
+    { kind: "file", path: "/workspace/file.txt" },
+  ]);
+
+  await current.files.write("/workspace/file.txt", "value");
+
+  expect(written).toEqual({
+    path: "/workspace/file.txt",
+    value: "value",
+  });
+});
+
+test("fromSimpleInsecureSandbox derives exec from spawn output", async () => {
+  const seen: unknown[] = [];
+  const running = (id: string, output: string) => ({
+    id,
+    kill: () => Promise.resolve(),
+    output: readable(output),
+    result: Promise.resolve(result(0)),
+  });
+  const current = fromSimpleInsecureSandbox({
+    ...sandbox({ processExec: true, processSpawn: true }),
+    files: {
+      exists: () => Promise.reject(new Error("not used")),
+      list: () => Promise.reject(new Error("not used")),
+      mkdir: () => Promise.reject(new Error("not used")),
+      read: () => Promise.reject(new Error("not used")),
+      remove: () => Promise.reject(new Error("not used")),
+      write: () => Promise.reject(new Error("not used")),
+    },
+    process: {
+      spawn: (executable, args, options) => {
+        seen.push({ args, command: executable, options });
+        return Promise.resolve(running("exec", "exec output"));
+      },
+      spawnShell: (line, options) => {
+        seen.push({ command: line, options });
+        return Promise.resolve(running("shell", "shell output"));
+      },
+    },
+  } satisfies SimpleInsecureSandbox);
+
+  expect(
+    await current.process.exec("bun", ["test"], { cwd: "/workspace" })
+  ).toMatchObject({
+    code: 0,
+    ok: true,
+    stdout: "exec output",
+  });
+  expect(await current.process.shell("echo ok")).toMatchObject({
+    code: 0,
+    ok: true,
+    stdout: "shell output",
+  });
+  expect(seen).toEqual([
+    { args: ["test"], command: "bun", options: { cwd: "/workspace" } },
+    { command: "echo ok", options: undefined },
+  ]);
+});
+
+test("fromSimpleInsecureSandbox gates unsupported capabilities", async () => {
+  const current = fromSimpleInsecureSandbox({
+    ...sandbox({}),
+    files: {
+      exists: () => Promise.reject(new Error("not used")),
+      list: () => Promise.reject(new Error("not used")),
+      mkdir: () => Promise.reject(new Error("not used")),
+      read: () => Promise.reject(new Error("not used")),
+      remove: () => Promise.reject(new Error("not used")),
+      write: () => Promise.reject(new Error("not used")),
+    },
+    process: {
+      spawn: () => Promise.reject(new Error("not used")),
+      spawnShell: () => Promise.reject(new Error("not used")),
+    },
+  } satisfies SimpleInsecureSandbox);
+
+  await expect(current.files.text("/file.txt")).rejects.toMatchObject({
+    code: "unsupported",
+    provider: "test",
+  });
+  await expect(current.process.exec("echo")).rejects.toMatchObject({
+    code: "unsupported",
+    provider: "test",
+  });
+  await expect(current.ports.expose(3000)).rejects.toMatchObject({
+    code: "unsupported",
+    provider: "test",
+  });
+  await expect(current.snapshots.create()).rejects.toMatchObject({
+    code: "unsupported",
+    provider: "test",
+  });
+});
+
+test("fromSimpleInsecureSandbox normalizes provider failures", async () => {
+  const current = fromSimpleInsecureSandbox({
+    ...sandbox({ files: true }),
+    files: {
+      exists: () => Promise.reject(new Error("missing")),
+      list: () => Promise.reject(new Error("missing")),
+      mkdir: () => Promise.reject(new Error("missing")),
+      read: () => Promise.reject(new Error("missing")),
+      remove: () => Promise.reject(new Error("missing")),
+      write: () => Promise.reject(new Error("missing")),
+    },
+    process: {
+      spawn: () => Promise.reject(new Error("not used")),
+      spawnShell: () => Promise.reject(new Error("not used")),
+    },
+  } satisfies SimpleInsecureSandbox);
+
+  await expect(current.files.text("/file.txt")).rejects.toMatchObject({
+    code: "provider",
+    message: "files.text failed",
+    provider: "test",
+  });
+});
+
+test("fromSimpleInsecureSandbox preserves ports snapshots raw and stop", async () => {
+  let stopped = 0;
+  const raw = { native: true };
+  const current = fromSimpleInsecureSandbox({
+    ...sandbox({
+      ports: "dynamic",
+      snapshotCreate: "filesystem",
+      snapshotRestore: "filesystem",
+    }),
+    files: {
+      exists: () => Promise.reject(new Error("not used")),
+      list: () => Promise.reject(new Error("not used")),
+      mkdir: () => Promise.reject(new Error("not used")),
+      read: () => Promise.reject(new Error("not used")),
+      remove: () => Promise.reject(new Error("not used")),
+      write: () => Promise.reject(new Error("not used")),
+    },
+    ports: {
+      expose: (value) =>
+        Promise.resolve({ port: value, url: `https://port-${value}.test` }),
+    },
+    process: {
+      spawn: () => Promise.reject(new Error("not used")),
+      spawnShell: () => Promise.reject(new Error("not used")),
+    },
+    raw,
+    snapshots: {
+      create: (name) => Promise.resolve({ id: "snapshot", name }),
+      restore: () => Promise.resolve(),
+    },
+    stop: () => {
+      stopped += 1;
+      return Promise.resolve();
+    },
+  } satisfies SimpleInsecureSandbox<typeof raw>);
+
+  expect(current.raw).toBe(raw);
+  expect(await current.ports.expose(3000)).toEqual({
+    port: 3000,
+    url: "https://port-3000.test",
+  });
+  expect(await current.snapshots.create("checkpoint")).toEqual({
+    id: "snapshot",
+    name: "checkpoint",
+  });
+
+  await current.snapshots.restore("snapshot");
+  await current.stop();
+
+  expect(stopped).toBe(1);
+});
+
 test("capability helpers handle boolean and mode capabilities", () => {
   const current = sandbox({
     files: true,
@@ -238,6 +454,15 @@ test("abort throws a typed sandbox error", () => {
     expect((error as SandboxError).provider).toBe("test");
     expect((error as Error).cause).toBe("stopped");
   }
+});
+
+test("sandboxError creates typed sandbox errors", () => {
+  const current = sandboxError("test", "Failed", "provider", "cause");
+
+  expect(current).toBeInstanceOf(SandboxError);
+  expect(current.code).toBe("provider");
+  expect(current.provider).toBe("test");
+  expect(current.cause).toBe("cause");
 });
 
 test("isSandboxError narrows sandbox errors", () => {

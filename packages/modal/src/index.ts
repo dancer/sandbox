@@ -6,7 +6,7 @@ import { dirname } from "node:path/posix";
 import {
   abort,
   bytes,
-  error as sandboxError,
+  sandboxError,
   port,
   quote,
   result,

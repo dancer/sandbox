@@ -25,7 +25,7 @@ import type {
   Timer,
   Url,
 } from "@sandbox-sdk/core";
-import { duration, port } from "@sandbox-sdk/core";
+import { duration, fromSimpleInsecureSandbox, port } from "@sandbox-sdk/core";
 
 export type CoreTypes = Readonly<{
   adapter: Adapter;
@@ -70,3 +70,7 @@ export const validated = {
 
 export const readStream = async (files: Files): Promise<string> =>
   new Response(await files.stream("/workspace/readme.md")).text();
+
+export const liftSimple = <Raw>(
+  sandbox: SimpleInsecureSandbox<Raw>
+): Sandbox<Raw> => fromSimpleInsecureSandbox(sandbox);

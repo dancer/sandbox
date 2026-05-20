@@ -1,4 +1,4 @@
-import { error as sandboxError } from "@sandbox-sdk/core";
+import { sandboxError } from "@sandbox-sdk/core";
 
 export const rejectUnsupported = (
   provider: string,

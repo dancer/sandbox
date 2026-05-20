@@ -8,7 +8,9 @@ import type {
   Mode,
   Options,
   Result,
+  Running,
   Sandbox,
+  SimpleInsecureSandbox,
   Timer,
 } from "./types.js";
 
@@ -168,7 +170,7 @@ export const duration = (
 };
 
 /** create a normalized provider error */
-export const error = (
+export const sandboxError = (
   provider: string,
   message: string,
   code: Code = "provider",
@@ -181,7 +183,7 @@ export const error = (
   });
 
 export const abort = (provider: string, cause?: unknown): never => {
-  throw error(provider, "Operation aborted", "aborted", cause);
+  throw sandboxError(provider, "Operation aborted", "aborted", cause);
 };
 
 /** normalize supported file inputs into bytes or text */
@@ -220,6 +222,128 @@ export const text = async (input: Input): Promise<string> => {
   const value = await bytes(input);
   return typeof value === "string" ? value : new TextDecoder().decode(value);
 };
+
+const read = async (value: ReadableStream<Uint8Array>): Promise<Uint8Array> => {
+  const output = await bytes(value);
+  return typeof output === "string" ? new TextEncoder().encode(output) : output;
+};
+
+const normalize = async <Value>(
+  provider: string,
+  feature: string,
+  operation: () => Value | Promise<Value>
+): Promise<Value> => {
+  try {
+    return await operation();
+  } catch (error) {
+    if (isSandboxError(error)) {
+      throw error;
+    }
+    throw sandboxError(provider, `${feature} failed`, "provider", error);
+  }
+};
+
+const ensure = (
+  sandbox: { capabilities: Capabilities; provider: string },
+  capability: Capability,
+  feature: string
+): void => {
+  if (!supports(sandbox, capability)) {
+    unsupported(sandbox.provider, feature);
+  }
+};
+
+const settle = async (running: Running): Promise<Result> => {
+  const [output, value] = await Promise.all([
+    text(running.output),
+    running.result,
+  ]);
+  return value.stdout.length > 0 ? value : { ...value, stdout: output };
+};
+
+const guarded = <Value>(
+  input: { capabilities: Capabilities; provider: string },
+  capability: Capability,
+  feature: string,
+  operation: () => Value | Promise<Value>
+): Promise<Value> => {
+  try {
+    ensure(input, capability, feature);
+    return normalize(input.provider, feature, operation);
+  } catch (error) {
+    return Promise.reject(error);
+  }
+};
+
+/** lift a stream-first low-level sandbox into the public sandbox api */
+export const fromSimpleInsecureSandbox = <Raw = unknown>(
+  input: SimpleInsecureSandbox<Raw>
+): Sandbox<Raw> => ({
+  capabilities: input.capabilities,
+  cwd: input.cwd,
+  files: {
+    exists: (path) =>
+      guarded(input, "files", "files.exists", () => input.files.exists(path)),
+    list: (path) =>
+      guarded(input, "files", "files.list", () => input.files.list(path)),
+    mkdir: (path) =>
+      guarded(input, "files", "files.mkdir", () => input.files.mkdir(path)),
+    read: (path) =>
+      guarded(input, "files", "files.read", async () =>
+        read(await input.files.read(path))
+      ),
+    remove: (path) =>
+      guarded(input, "files", "files.remove", () => input.files.remove(path)),
+    stream: (path) =>
+      guarded(input, "files", "files.stream", () => input.files.read(path)),
+    text: (path) =>
+      guarded(input, "files", "files.text", async () =>
+        text(await read(await input.files.read(path)))
+      ),
+    write: (path, value) =>
+      guarded(input, "files", "files.write", () =>
+        input.files.write(path, value)
+      ),
+  },
+  id: input.id,
+  ports: {
+    expose: (value, options) =>
+      guarded(input, "ports", "ports.expose", () =>
+        input.ports.expose(port(value, input.provider), options)
+      ),
+  },
+  process: {
+    exec: (executable, args, options) =>
+      guarded(input, "processExec", "process.exec", async () =>
+        settle(await input.process.spawn(executable, args, options))
+      ),
+    shell: (command, options) =>
+      guarded(input, "processExec", "process.shell", async () =>
+        settle(await input.process.spawnShell(command, options))
+      ),
+    spawn: (executable, args, options) =>
+      guarded(input, "processSpawn", "process.spawn", () =>
+        input.process.spawn(executable, args, options)
+      ),
+    spawnShell: (command, options) =>
+      guarded(input, "processSpawn", "process.spawnShell", () =>
+        input.process.spawnShell(command, options)
+      ),
+  },
+  provider: input.provider,
+  raw: input.raw,
+  snapshots: {
+    create: (name) =>
+      guarded(input, "snapshotCreate", "snapshots.create", () =>
+        input.snapshots.create(name)
+      ),
+    restore: (id) =>
+      guarded(input, "snapshotRestore", "snapshots.restore", () =>
+        input.snapshots.restore(id)
+      ),
+  },
+  stop: input.stop,
+});
 
 /** build a normalized command result */
 export const result = (
