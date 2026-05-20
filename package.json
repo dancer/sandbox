@@ -17,6 +17,7 @@
     "fix": "ultracite fix",
     "pack:packages": "for p in packages/core packages/local packages/ai packages/vercel packages/e2b packages/daytona packages/cloudflare packages/modal packages/blaxel packages/codesandbox; do (cd $p && bun pm pack --dry-run); done",
     "test": "bun run build:packages && bun test packages test",
+    "verify:env": "bun --env-file=.env.local scripts/credentials.ts",
     "verify:providers": "bun run build:packages && bun --env-file=.env.local test --timeout=300000 packages/blaxel/test/live.test.ts packages/cloudflare/test/live.test.ts packages/codesandbox/test/live.test.ts packages/daytona/test/live.test.ts packages/e2b/test/live.test.ts packages/modal/test/live.test.ts packages/vercel/test/live.test.ts",
     "verify:blaxel": "bun run --cwd packages/blaxel build && bun --env-file=.env.local test --timeout=300000 packages/blaxel/test/live.test.ts",
     "verify:cloudflare": "bun run --cwd packages/cloudflare build && bun --env-file=.env.local test --timeout=300000 packages/cloudflare/test/live.test.ts",

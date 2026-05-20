@@ -1,13 +1,21 @@
 import { expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
+import { existsSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 
 import { create } from "@sandbox-sdk/core";
 
 import { workflow } from "../../../test/workflow";
 import { modal } from "../src/index";
 
+const modalConfig = (): boolean =>
+  Boolean(process.env.MODAL_CONFIG_PATH) ||
+  existsSync(join(homedir(), ".modal.toml"));
+
 const enabled = Boolean(
-  process.env.MODAL_TOKEN_ID && process.env.MODAL_TOKEN_SECRET
+  (process.env.MODAL_TOKEN_ID && process.env.MODAL_TOKEN_SECRET) ||
+  modalConfig()
 );
 const live = enabled ? test : test.skip;
 

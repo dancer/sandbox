@@ -227,6 +227,7 @@ bun run docs:api
 ## Testing
 
 ```bash
+bun run verify:env
 bun run test
 bun run verify:providers
 bun run verify:e2b
@@ -238,18 +239,19 @@ and sanitized replay fixtures. Replay fixtures lock down the normalized SDK
 contract without hitting providers.
 
 Live provider scripts load `.env.local` automatically and skip unless
-credentials are present. They are the source of truth for real provider
-behavior and may create billable sandboxes. Use the provider-specific live
-commands while adding credentials so one failing provider does not block the
-rest of the validation pass.
+credentials are present. `bun run verify:env` prints provider readiness without
+printing secret values. The live scripts are the source of truth for real
+provider behavior and may create billable sandboxes. Use the provider-specific
+live commands while adding credentials so one failing provider does not block
+the rest of the validation pass.
 
-- E2B: `E2B_API_KEY` or `E2B_ACCESS_TOKEN`
-- Daytona: `DAYTONA_API_KEY`, or `DAYTONA_JWT_TOKEN` and `DAYTONA_ORGANIZATION_ID`; set `DAYTONA_TARGET` when you need a specific region
-- Vercel: `VERCEL_OIDC_TOKEN`, or `VERCEL_TOKEN`, `VERCEL_TEAM_ID`, and `VERCEL_PROJECT_ID`
-- Cloudflare: deploy `apps/cloudflare` and set `CLOUDFLARE_SANDBOX_WORKER_URL`; set `CLOUDFLARE_SANDBOX_TOKEN` when the Worker uses `SANDBOX_SDK_TOKEN`; set `CLOUDFLARE_SANDBOX_PREVIEW_HOST` to verify `ports.expose()`
-- Modal: `MODAL_TOKEN_ID` and `MODAL_TOKEN_SECRET`
-- Blaxel: `BL_WORKSPACE` with `BL_API_KEY` or `BL_CLIENT_CREDENTIALS`; set `BL_REGION` when you need a specific region
+- Blaxel: `BL_WORKSPACE` with `BL_API_KEY` or `BL_CLIENT_CREDENTIALS`, or Blaxel CLI config; set `BL_REGION` when you need a specific region
+- Cloudflare: deploy `apps/cloudflare` and set `CLOUDFLARE_SANDBOX_WORKER_URL` and `CLOUDFLARE_SANDBOX_TOKEN`; set `CLOUDFLARE_SANDBOX_PREVIEW_HOST` to verify `ports.expose()`
 - CodeSandbox: `CSB_API_KEY`
+- Daytona: `DAYTONA_API_KEY`, or `DAYTONA_JWT_TOKEN` and `DAYTONA_ORGANIZATION_ID`; set `DAYTONA_TARGET` when you need a specific region
+- E2B: `E2B_API_KEY` or `E2B_ACCESS_TOKEN`
+- Modal: `MODAL_TOKEN_ID` and `MODAL_TOKEN_SECRET`, or Modal CLI config
+- Vercel: `VERCEL_OIDC_TOKEN`, or `VERCEL_TOKEN`, `VERCEL_TEAM_ID`, and `VERCEL_PROJECT_ID`
 
 ## License
 
