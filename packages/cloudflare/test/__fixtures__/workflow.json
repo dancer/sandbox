@@ -1,0 +1,70 @@
+{
+  "coverage": {
+    "features": [
+      "capabilities",
+      "files.write",
+      "files.exists",
+      "files.text",
+      "files.list",
+      "process.exec",
+      "process.shell",
+      "process.spawnShell",
+      "process.failure",
+      "sandbox.stop"
+    ],
+    "fixture": "workflow",
+    "provider": "cloudflare",
+    "uncovered": ["ports.expose", "snapshots.create", "snapshots.restore"]
+  },
+  "body": {
+    "capabilities": {
+      "desktop": true,
+      "environment": true,
+      "files": true,
+      "git": true,
+      "network": true,
+      "ports": "dynamic",
+      "process": true,
+      "processExec": true,
+      "processSpawn": "separate",
+      "snapshotCreate": false,
+      "snapshotRestore": false,
+      "snapshots": false,
+      "streaming": "separate",
+      "volumes": "volume"
+    },
+    "exec": {
+      "code": 0,
+      "ok": true,
+      "stderr": "",
+      "stdout": "hello from cloudflare"
+    },
+    "failure": {
+      "code": 7,
+      "ok": false,
+      "stderr": "failed\n",
+      "stdout": ""
+    },
+    "file": {
+      "exists": true,
+      "listed": true,
+      "text": "hello from cloudflare"
+    },
+    "ok": true,
+    "provider": "cloudflare",
+    "shell": {
+      "code": 0,
+      "ok": true,
+      "stderr": "",
+      "stdout": "hello from cloudflare"
+    },
+    "spawn": {
+      "code": 0,
+      "ok": true,
+      "output": "hello from cloudflare",
+      "stderr": "",
+      "stdout": "hello from cloudflare"
+    }
+  },
+  "status": 200
+}
