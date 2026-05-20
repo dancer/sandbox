@@ -100,10 +100,7 @@ const cloudflareRow = (): Row => {
 };
 
 const daytonaRow = (): Row => {
-  const apiKey = has("DAYTONA_API_KEY");
-  const jwt = all(["DAYTONA_JWT_TOKEN", "DAYTONA_ORGANIZATION_ID"]);
-  const partial = any(["DAYTONA_JWT_TOKEN", "DAYTONA_ORGANIZATION_ID"]);
-  if (apiKey || jwt) {
+  if (has("DAYTONA_API_KEY")) {
     return {
       command: "bun run verify:daytona",
       details: "ready",
@@ -113,10 +110,9 @@ const daytonaRow = (): Row => {
   }
   return {
     command: "bun run verify:daytona",
-    details:
-      "DAYTONA_API_KEY or DAYTONA_JWT_TOKEN with DAYTONA_ORGANIZATION_ID",
+    details: "DAYTONA_API_KEY",
     provider: "daytona",
-    status: partial ? "partial" : "missing",
+    status: "missing",
   };
 };
 
