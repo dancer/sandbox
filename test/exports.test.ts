@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 
-import { aiSdk, tools } from "@sandbox-sdk/ai";
+import { aisdk, tools } from "@sandbox-sdk/ai";
 import { claude } from "@sandbox-sdk/ai/claude";
 import { openai } from "@sandbox-sdk/ai/openai";
 import { blaxel } from "@sandbox-sdk/blaxel";
@@ -16,7 +16,7 @@ import { vercel, vercelSandbox } from "@sandbox-sdk/vercel";
 test("packages expose stable entrypoints", () => {
   expect(typeof create).toBe("function");
   expect(typeof withSandbox).toBe("function");
-  expect(typeof aiSdk).toBe("function");
+  expect(typeof aisdk).toBe("function");
   expect(typeof tools).toBe("function");
   expect(typeof claude).toBe("function");
   expect(typeof openai).toBe("function");

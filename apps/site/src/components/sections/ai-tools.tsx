@@ -33,11 +33,11 @@ const INSTALL_TABS = [
 
 const QUICK_START = `import { create } from "@sandbox-sdk/core";
 import { local } from "@sandbox-sdk/local";
-import { aiSdk, tools } from "@sandbox-sdk/ai";
+import { aisdk, tools } from "@sandbox-sdk/ai";
 
 const sandbox = await create({ adapter: local() });
 const kit = tools(sandbox);
-const ai = aiSdk(kit);
+const ai = aisdk(kit);
 
 await kit.tools.write?.execute({
   path: "/workspace/main.ts",
@@ -49,10 +49,10 @@ await kit.tools.exec?.execute({ command: "bun /workspace/main.ts" });`;
 const AI_SDK_EXAMPLE = `import { generateText } from "ai";
 import { create } from "@sandbox-sdk/core";
 import { local } from "@sandbox-sdk/local";
-import { aiSdk, tools } from "@sandbox-sdk/ai";
+import { aisdk, tools } from "@sandbox-sdk/ai";
 
 const sandbox = await create({ adapter: local() });
-const kit = aiSdk(tools(sandbox));
+const kit = aisdk(tools(sandbox));
 
 const result = await generateText({
   model: yourModel,
@@ -132,7 +132,7 @@ export const AiTools = () => (
         Pass a configured sandbox into <code>tools()</code>. The return value is
         prompt context and a record of tool definitions, each with a{" "}
         <code>description</code>, <code>inputSchema</code>, and{" "}
-        <code>execute</code> function. Use <code>aiSdk()</code>,{" "}
+        <code>execute</code> function. Use <code>aisdk()</code>,{" "}
         <code>openai()</code>, or <code>claude()</code> when you want the exact
         adapter shape for a framework.
       </p>
@@ -170,7 +170,7 @@ export const AiTools = () => (
       </Heading>
       <p>
         The root package has no hard dependency on <code>ai</code>.{" "}
-        <code>aiSdk()</code> returns the shape used by{" "}
+        <code>aisdk()</code> returns the shape used by{" "}
         <a
           className="underline decoration-dotted underline-offset-4 hover:text-foreground"
           href="https://ai-sdk.dev"

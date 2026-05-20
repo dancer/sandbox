@@ -99,13 +99,13 @@ See `examples/` for minimal local, provider, and AI tool starting points.
 `@sandbox-sdk/ai` wraps a configured sandbox as ready-made tools plus prompt context for agents that need to read files, write files, list directories, run commands, and open previews when ports are supported.
 
 ```ts
-import { aiSdk, tools } from "@sandbox-sdk/ai";
+import { aisdk, tools } from "@sandbox-sdk/ai";
 
 const kit = tools(sandbox, {
   cwd: "/workspace",
   allow: ["read", "write", "list", "exec"],
 });
-const ai = aiSdk(kit);
+const ai = aisdk(kit);
 
 kit.description;
 kit.sandbox;

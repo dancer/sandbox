@@ -5,7 +5,7 @@ import { create, isSandboxError } from "@sandbox-sdk/core";
 import { local } from "@sandbox-sdk/local";
 
 import { claude } from "../src/claude";
-import { aiSdk, tools } from "../src/index";
+import { aisdk, tools } from "../src/index";
 import { openai } from "../src/openai";
 
 interface OpenAiTool {
@@ -123,7 +123,7 @@ test("tools can read, write, list, and execute", async () => {
 test("tools expose an ai sdk sandbox shape", async () => {
   const sandbox = await create({ adapter: local(), cwd: "/workspace" });
   const kit = tools(sandbox, { timeout: 10_000 });
-  const ai = aiSdk(kit);
+  const ai = aisdk(kit);
 
   const output = await kit.sandbox.executeCommand({
     command: "printf ai",

@@ -844,12 +844,12 @@ export type Kit = Readonly<{
 }>;
 ```
 
-#### `AiSdk`
+#### `Aisdk`
 
 options ready to spread into AI SDK v6/v7 generateText, streamText, or ToolLoopAgent
 
 ```ts
-export type AiSdk = Readonly<{
+export type Aisdk = Readonly<{
   /** AI SDK sandbox object forwarded to tool execution */
   experimental_sandbox: AgentSandbox;
   /** prompt context describing the sandbox, available tools, and safety limits */
@@ -1031,12 +1031,12 @@ export type PreviewResult = Readonly<{
 
 ### functions
 
-#### `aiSdk`
+#### `aisdk`
 
 create AI SDK v6/v7 call options from a sandbox tool kit
 
 ```ts
-export declare const aiSdk: (kit: Kit) => AiSdk;
+export declare const aisdk: (kit: Kit) => Aisdk;
 ```
 
 #### `tools`
