@@ -558,12 +558,12 @@ export declare const duration: (
 ) => number | undefined;
 ```
 
-#### `error`
+#### `sandboxError`
 
 create a normalized provider error
 
 ```ts
-export declare const error: (
+export declare const sandboxError: (
   provider: string,
   message: string,
   code?: Code,
@@ -589,6 +589,16 @@ export declare const bytes: (input: Input) => Promise<Uint8Array | string>;
 
 ```ts
 export declare const text: (input: Input) => Promise<string>;
+```
+
+#### `fromSimpleInsecureSandbox`
+
+lift a stream-first low-level sandbox into the public sandbox api
+
+```ts
+export declare const fromSimpleInsecureSandbox: <Raw = unknown>(
+  input: SimpleInsecureSandbox<Raw>
+) => Sandbox<Raw>;
 ```
 
 #### `result`

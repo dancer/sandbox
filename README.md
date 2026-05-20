@@ -51,6 +51,8 @@ It keeps file reads stream-first, process execution handle-based, and provider
 power available through `raw`. Higher-level helpers can still expose convenient
 methods like `files.text()`, but the foundation stays flexible enough for large
 files, long-running commands, and provider-specific behavior.
+Adapter authors can use `fromSimpleInsecureSandbox()` to lift that contract
+into the public `Sandbox` API.
 
 ## Snapshots
 
