@@ -1,0 +1,72 @@
+{
+  "coverage": {
+    "features": [
+      "capabilities",
+      "files.write",
+      "files.exists",
+      "files.text",
+      "files.list",
+      "process.exec",
+      "process.shell",
+      "process.spawnShell",
+      "process.failure",
+      "ports.expose",
+      "sandbox.raw.delete"
+    ],
+    "fixture": "workflow",
+    "provider": "vercel",
+    "uncovered": ["snapshots.create", "snapshotSource"]
+  },
+  "payload": {
+    "capabilities": {
+      "environment": true,
+      "files": true,
+      "network": "dynamic",
+      "ports": "create-time",
+      "process": true,
+      "processExec": true,
+      "processSpawn": "separate",
+      "snapshotCreate": "disk",
+      "snapshotRestore": false,
+      "snapshotSource": "create-time",
+      "snapshots": false,
+      "streaming": "separate"
+    },
+    "exec": {
+      "code": 0,
+      "ok": true,
+      "stderr": "",
+      "stdout": "hello from vercel"
+    },
+    "failure": {
+      "code": 7,
+      "ok": false,
+      "stderr": "failed\n",
+      "stdout": ""
+    },
+    "file": {
+      "exists": true,
+      "listed": true,
+      "text": "hello from vercel"
+    },
+    "ok": true,
+    "port": {
+      "port": 3000,
+      "url": "https://preview.example.com"
+    },
+    "provider": "vercel",
+    "shell": {
+      "code": 0,
+      "ok": true,
+      "stderr": "",
+      "stdout": "hello from vercel"
+    },
+    "spawn": {
+      "code": 0,
+      "ok": true,
+      "output": "hello from vercel",
+      "stderr": "",
+      "stdout": "hello from vercel"
+    }
+  }
+}

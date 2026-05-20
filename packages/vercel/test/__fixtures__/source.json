@@ -1,0 +1,46 @@
+{
+  "coverage": {
+    "features": [
+      "capabilities",
+      "snapshots.create",
+      "snapshotSource",
+      "files.exists",
+      "files.text",
+      "sandbox.raw.delete"
+    ],
+    "fixture": "source",
+    "provider": "vercel",
+    "uncovered": [
+      "ports.expose",
+      "process.exec",
+      "process.shell",
+      "process.spawnShell"
+    ]
+  },
+  "payload": {
+    "capabilities": {
+      "environment": true,
+      "files": true,
+      "network": "dynamic",
+      "ports": "create-time",
+      "process": true,
+      "processExec": true,
+      "processSpawn": "separate",
+      "snapshotCreate": "disk",
+      "snapshotRestore": false,
+      "snapshotSource": "create-time",
+      "snapshots": false,
+      "streaming": "separate"
+    },
+    "file": {
+      "exists": true,
+      "text": "ready"
+    },
+    "ok": true,
+    "provider": "vercel",
+    "snapshot": {
+      "id": "snapshot"
+    },
+    "source": "snapshot"
+  }
+}
