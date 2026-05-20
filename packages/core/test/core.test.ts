@@ -29,6 +29,7 @@ const sandbox = (capabilities: Sandbox["capabilities"]): Sandbox => ({
     mkdir: () => Promise.resolve(),
     read: () => Promise.resolve(new Uint8Array()),
     remove: () => Promise.resolve(),
+    stream: () => Promise.resolve(new ReadableStream()),
     text: () => Promise.resolve(""),
     write: () => Promise.resolve(),
   },

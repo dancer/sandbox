@@ -217,6 +217,14 @@ const stream = (
   });
 };
 
+const readable = (value: Uint8Array): ReadableStream<Uint8Array> =>
+  new ReadableStream({
+    start: (controller) => {
+      controller.enqueue(value);
+      controller.close();
+    },
+  });
+
 const wrap = async <Value>(
   action: () => Promise<Value> | Value,
   feature: string
@@ -385,6 +393,8 @@ const createSandbox = (
     remove: async (path) => {
       await raw.fs.rm(path, { force: true, recursive: true });
     },
+    stream: async (path) =>
+      readable(await wrap(() => read(raw, path, cwd), "read")),
     text: async (path) =>
       new TextDecoder().decode(await wrap(() => read(raw, path, cwd), "read")),
     write: async (path: string, input: Input) => {

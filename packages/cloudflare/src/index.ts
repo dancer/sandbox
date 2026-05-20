@@ -273,6 +273,10 @@ const createSandbox = <ProviderRaw>(
     remove: async (path) => {
       await raw.deleteFile(path);
     },
+    stream: async (path) => {
+      const output = await raw.readFile(path, { encoding: "base64" });
+      return stream(binary(output.content));
+    },
     text: async (path) => {
       const output = await raw.readFile(path, { encoding: "utf-8" });
       return output.content;

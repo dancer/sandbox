@@ -100,6 +100,14 @@ const present = (value: string | undefined): value is string =>
 
 const env = (name: string): string | undefined => globalThis.process?.env[name];
 
+const readable = (value: Uint8Array): ReadableStream<Uint8Array> =>
+  new ReadableStream({
+    start: (controller) => {
+      controller.enqueue(value);
+      controller.close();
+    },
+  });
+
 const validate = (options: Daytona): void => {
   const apiKey = options.apiKey ?? env("DAYTONA_API_KEY");
   const jwtToken = options.jwtToken ?? env("DAYTONA_JWT_TOKEN");
@@ -313,6 +321,8 @@ const createSandbox = (
     remove: async (path) => {
       await raw.fs.deleteFile(path, true);
     },
+    stream: async (path) =>
+      readable(new Uint8Array(await raw.fs.downloadFile(path))),
     text: async (path) => {
       const output = await raw.fs.downloadFile(path);
       return output.toString("utf-8");

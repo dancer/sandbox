@@ -169,6 +169,14 @@ const check = (signal?: AbortSignal): void => {
   }
 };
 
+const readable = (value: Uint8Array): ReadableStream<Uint8Array> =>
+  new ReadableStream({
+    start: (controller) => {
+      controller.enqueue(value);
+      controller.close();
+    },
+  });
+
 const rejectUnsupported = (feature: string): Promise<never> => {
   try {
     unsupported(provider, feature);
@@ -365,6 +373,7 @@ const createSandbox = (
     mkdir: (path) => mkdir(raw.client, path),
     read: (path) => raw.client.fs.readFile(path),
     remove: (path) => raw.client.fs.remove(path, true),
+    stream: async (path) => readable(await raw.client.fs.readFile(path)),
     text: (path) => raw.client.fs.readTextFile(path),
     write: (path, input) => write(raw.client, path, input),
   },

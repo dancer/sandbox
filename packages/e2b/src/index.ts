@@ -220,6 +220,14 @@ const stream = (): {
   };
 };
 
+const readable = (value: Uint8Array): ReadableStream<Uint8Array> =>
+  new ReadableStream({
+    start: (controller) => {
+      controller.enqueue(value);
+      controller.close();
+    },
+  });
+
 const wait = async (handle: CommandHandle): Promise<Result> => {
   try {
     return output(await handle.wait());
@@ -325,6 +333,13 @@ const createSandbox = (
     remove: async (path) => {
       await raw.files.remove(path, user === undefined ? {} : { user });
     },
+    stream: async (path) =>
+      readable(
+        await raw.files.read(path, {
+          format: "bytes",
+          ...(user === undefined ? {} : { user }),
+        })
+      ),
     text: (path) =>
       raw.files.read(path, {
         format: "text",

@@ -81,6 +81,7 @@ test("e2b maps create and command options without running a real provider", asyn
         mkdirSeen = { options, path };
         return Promise.resolve();
       },
+      stream: () => Promise.resolve(new ReadableStream()),
     },
     kill: () => Promise.resolve(),
     sandboxId: "sandbox",

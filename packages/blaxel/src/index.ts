@@ -76,6 +76,14 @@ const env = (name: string): string | undefined => globalThis.process?.env[name];
 const configExists = (): boolean =>
   existsSync(joinPath(homedir(), ".blaxel", "config.yaml"));
 
+const readable = (value: Uint8Array): ReadableStream<Uint8Array> =>
+  new ReadableStream({
+    start: (controller) => {
+      controller.enqueue(value);
+      controller.close();
+    },
+  });
+
 const validate = (options: Blaxel): void => {
   const apiKey = options.apiKey ?? options.apikey ?? env("BL_API_KEY");
   const clientCredentials =
@@ -383,6 +391,7 @@ const createSandbox = (raw: Raw, cwd: string): Sandbox<Raw> => ({
     remove: async (path) => {
       await raw.fs.rm(path, true);
     },
+    stream: async (path) => readable(await read(raw, path)),
     text: (path) => raw.fs.read(path),
     write: (path, input) => write(raw, path, input),
   },

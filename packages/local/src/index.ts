@@ -130,6 +130,14 @@ const missing = (error: unknown): boolean =>
   "code" in error &&
   error.code === "ENOENT";
 
+const readable = (value: Uint8Array): ReadableStream<Uint8Array> =>
+  new ReadableStream({
+    start: (controller) => {
+      controller.enqueue(value);
+      controller.close();
+    },
+  });
+
 const wrap = async <Value>(operation: () => Promise<Value>): Promise<Value> => {
   try {
     return await operation();
@@ -356,6 +364,8 @@ export const local = (options: Local = {}): Adapter<Raw> => ({
         read: (path) => wrap(() => readFile(safe(root, path))),
         remove: (path) =>
           rm(safe(root, path), { force: true, recursive: true }),
+        stream: async (path) =>
+          readable(await wrap(() => readFile(safe(root, path)))),
         text: (path) => wrap(() => readFile(safe(root, path), "utf-8")),
         write: async (path, value) => {
           const target = safe(root, path);

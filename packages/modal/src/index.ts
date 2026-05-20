@@ -82,6 +82,14 @@ const modalConfigExists = (): boolean => {
   return existsSync(path);
 };
 
+const readable = (value: Uint8Array): ReadableStream<Uint8Array> =>
+  new ReadableStream({
+    start: (controller) => {
+      controller.enqueue(value);
+      controller.close();
+    },
+  });
+
 const validate = (options: Modal): void => {
   if (options.client) {
     return;
@@ -307,6 +315,7 @@ const createSandbox = (
     remove: async (path) => {
       await shell(raw, cwd, `rm -rf ${quote(path)}`, {});
     },
+    stream: async (path) => readable(await read(raw, path)),
     text: async (path) => new TextDecoder().decode(await read(raw, path)),
     write: (path, input) => write(raw, cwd, path, input),
   },
