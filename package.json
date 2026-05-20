@@ -13,6 +13,7 @@
     "build:packages": "bun run --cwd packages/core build && bun run --cwd packages/local build && bun run --cwd packages/ai build && bun run --cwd packages/vercel build && bun run --cwd packages/e2b build && bun run --cwd packages/daytona build && bun run --cwd packages/cloudflare build && bun run --cwd packages/modal build && bun run --cwd packages/blaxel build && bun run --cwd packages/codesandbox build",
     "check": "ultracite check",
     "docs:api": "bun run build:packages && bun scripts/api.ts && bun x oxfmt docs/api.md",
+    "docs:api:check": "bun run docs:api && git diff --exit-code docs/api.md",
     "fix": "ultracite fix",
     "pack:packages": "for p in packages/core packages/local packages/ai packages/vercel packages/e2b packages/daytona packages/cloudflare packages/modal packages/blaxel packages/codesandbox; do (cd $p && bun pm pack --dry-run); done",
     "test": "bun run build:packages && bun test packages test",
