@@ -13,7 +13,15 @@ export type Payload = Readonly<{
   file: Readonly<{
     exists: boolean;
     listed: boolean;
+    read: string;
+    stream: string;
     text: string;
+  }>;
+  inputs: Readonly<{
+    blob: string;
+    buffer: string;
+    bytes: string;
+    stream: string;
   }>;
   ok: boolean;
   provider: string;

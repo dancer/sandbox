@@ -46,6 +46,17 @@ const authorized = (request: Request, env: Env): boolean =>
 const text = (stream: ReadableStream<Uint8Array>): Promise<string> =>
   new Response(stream).text();
 
+const bytes = (value: string): Uint8Array => new TextEncoder().encode(value);
+
+const buffer = (value: string): ArrayBuffer => {
+  const output = bytes(value);
+  const copy = new Uint8Array(output.byteLength);
+  copy.set(output);
+  return copy.buffer;
+};
+
+const decode = (value: Uint8Array): string => new TextDecoder().decode(value);
+
 const ignore = (): undefined => undefined;
 
 const body = async (request: Request): Promise<{ hostname?: string }> => {
@@ -164,6 +175,11 @@ const handleLive = async (env: Env, url: URL): Promise<Response> => {
   const id = crypto.randomUUID();
   const cwd = `/workspace/${id}`;
   const file = `${cwd}/message.txt`;
+  const bytesFile = `${cwd}/bytes.txt`;
+  const bufferFile = `${cwd}/buffer.txt`;
+  const blobFile = `${cwd}/blob.txt`;
+  const streamFile = `${cwd}/stream.txt`;
+  const removeFile = `${cwd}/remove.txt`;
   const sandbox = await create({
     adapter: cloudflare({
       binding: env.Sandbox,
@@ -174,12 +190,28 @@ const handleLive = async (env: Env, url: URL): Promise<Response> => {
   });
 
   try {
+    await sandbox.files.mkdir(cwd);
     await sandbox.files.write(file, message);
+    await sandbox.files.write(bytesFile, bytes("bytes"));
+    await sandbox.files.write(bufferFile, buffer("buffer"));
+    await sandbox.files.write(blobFile, new Blob(["blob"]));
+    await sandbox.files.write(streamFile, new Blob(["stream"]).stream());
+    await sandbox.files.write(removeFile, "remove");
 
     const exists = await sandbox.files.exists(file);
     const content = await sandbox.files.text(file);
+    const read = decode(await sandbox.files.read(file));
+    const stream = await text(await sandbox.files.stream(file));
+    const inputs = {
+      blob: await sandbox.files.text(blobFile),
+      buffer: decode(await sandbox.files.read(bufferFile)),
+      bytes: decode(await sandbox.files.read(bytesFile)),
+      stream: await text(await sandbox.files.stream(streamFile)),
+    };
     const entries = await sandbox.files.list(cwd);
     const listed = entries.some((entry) => entry.path === file);
+    await sandbox.files.remove(removeFile);
+    const removed = !(await sandbox.files.exists(removeFile));
     const exec = await sandbox.process.exec("cat", [file]);
     const shell = await sandbox.process.shell(`cat ${file}`);
     const failed = await sandbox.process.exec("sh", [
@@ -193,6 +225,13 @@ const handleLive = async (env: Env, url: URL): Promise<Response> => {
       exists &&
       listed &&
       content === message &&
+      read === message &&
+      stream === message &&
+      inputs.blob === "blob" &&
+      inputs.buffer === "buffer" &&
+      inputs.bytes === "bytes" &&
+      inputs.stream === "stream" &&
+      removed &&
       exec.ok &&
       exec.stdout === message &&
       shell.ok &&
@@ -207,7 +246,8 @@ const handleLive = async (env: Env, url: URL): Promise<Response> => {
       capabilities: sandbox.capabilities,
       exec,
       failure: failed,
-      file: { exists, listed, text: content },
+      file: { exists, listed, read, stream, text: content },
+      inputs,
       ok,
       provider: sandbox.provider,
       shell,

@@ -7,10 +7,18 @@ export const coverage = (payload: Coverage): void => {
   expect(payload.fixture).toBe("workflow");
   expect(payload.features).toEqual([
     "capabilities",
+    "files.mkdir",
     "files.write",
+    "files.write.bytes",
+    "files.write.arrayBuffer",
+    "files.write.blob",
+    "files.write.readableStream",
     "files.exists",
+    "files.read",
+    "files.stream",
     "files.text",
     "files.list",
+    "files.remove",
     "process.exec",
     "process.shell",
     "process.spawnShell",
@@ -55,7 +63,15 @@ export const workflow = ({ body, response }: Result): void => {
   expect(body.file).toEqual({
     exists: true,
     listed: true,
+    read: "hello from cloudflare",
+    stream: "hello from cloudflare",
     text: "hello from cloudflare",
+  });
+  expect(body.inputs).toEqual({
+    blob: "blob",
+    buffer: "buffer",
+    bytes: "bytes",
+    stream: "stream",
   });
   expect(body.exec).toMatchObject({
     code: 0,

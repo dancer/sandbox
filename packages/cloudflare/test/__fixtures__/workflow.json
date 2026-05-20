@@ -2,10 +2,18 @@
   "coverage": {
     "features": [
       "capabilities",
+      "files.mkdir",
       "files.write",
+      "files.write.bytes",
+      "files.write.arrayBuffer",
+      "files.write.blob",
+      "files.write.readableStream",
       "files.exists",
+      "files.read",
+      "files.stream",
       "files.text",
       "files.list",
+      "files.remove",
       "process.exec",
       "process.shell",
       "process.spawnShell",
@@ -48,7 +56,15 @@
     "file": {
       "exists": true,
       "listed": true,
+      "read": "hello from cloudflare",
+      "stream": "hello from cloudflare",
       "text": "hello from cloudflare"
+    },
+    "inputs": {
+      "blob": "blob",
+      "buffer": "buffer",
+      "bytes": "bytes",
+      "stream": "stream"
     },
     "ok": true,
     "provider": "cloudflare",

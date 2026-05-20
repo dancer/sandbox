@@ -11,6 +11,21 @@ type Command = Readonly<{
   stdout: string;
 }>;
 
+type Files = Readonly<{
+  file: Workflow["file"];
+  inputs: Workflow["inputs"];
+  removed: boolean;
+}>;
+
+type Paths = Readonly<{
+  blob: string;
+  buffer: string;
+  bytes: string;
+  file: string;
+  remove: string;
+  stream: string;
+}>;
+
 export type Workflow = Readonly<{
   capabilities: Capabilities;
   exec: Command;
@@ -18,7 +33,15 @@ export type Workflow = Readonly<{
   file: Readonly<{
     exists: boolean;
     listed: boolean;
+    read: string;
+    stream: string;
     text: string;
+  }>;
+  inputs: Readonly<{
+    blob: string;
+    buffer: string;
+    bytes: string;
+    stream: string;
   }>;
   ok: boolean;
   port: Readonly<{
@@ -52,18 +75,106 @@ export type Source = Readonly<{
 export const text = (stream: ReadableStream<Uint8Array>): Promise<string> =>
   new Response(stream).text();
 
+const bytes = (value: string): Uint8Array => new TextEncoder().encode(value);
+
+const buffer = (value: string): ArrayBuffer => {
+  const output = bytes(value);
+  const copy = new Uint8Array(output.byteLength);
+  copy.set(output);
+  return copy.buffer;
+};
+
+const decode = (value: Uint8Array): string => new TextDecoder().decode(value);
+
+const paths = (directory: string, file: string): Paths => ({
+  blob: `${directory}/blob.txt`,
+  buffer: `${directory}/buffer.txt`,
+  bytes: `${directory}/bytes.txt`,
+  file,
+  remove: `${directory}/remove.txt`,
+  stream: `${directory}/stream.txt`,
+});
+
+const writeFiles = async (
+  sandbox: LiveSandbox,
+  input: Paths,
+  directory: string,
+  content: string
+): Promise<void> => {
+  await sandbox.files.mkdir(directory);
+  await sandbox.files.write(input.file, content);
+  await sandbox.files.write(input.bytes, bytes("bytes"));
+  await sandbox.files.write(input.buffer, buffer("buffer"));
+  await sandbox.files.write(input.blob, new Blob(["blob"]));
+  await sandbox.files.write(input.stream, new Blob(["stream"]).stream());
+  await sandbox.files.write(input.remove, "remove");
+};
+
+const readFiles = async (
+  sandbox: LiveSandbox,
+  input: Paths,
+  directory: string
+): Promise<Files> => {
+  const entries = await sandbox.files.list(directory);
+  await sandbox.files.remove(input.remove);
+
+  return {
+    file: {
+      exists: await sandbox.files.exists(input.file),
+      listed: entries.some((entry) => entry.path === input.file),
+      read: decode(await sandbox.files.read(input.file)),
+      stream: await text(await sandbox.files.stream(input.file)),
+      text: await sandbox.files.text(input.file),
+    },
+    inputs: {
+      blob: await sandbox.files.text(input.blob),
+      buffer: decode(await sandbox.files.read(input.buffer)),
+      bytes: decode(await sandbox.files.read(input.bytes)),
+      stream: await text(await sandbox.files.stream(input.stream)),
+    },
+    removed: !(await sandbox.files.exists(input.remove)),
+  };
+};
+
+const filesOk = (value: Files, content: string): boolean =>
+  value.file.exists &&
+  value.file.listed &&
+  value.file.text === content &&
+  value.file.read === content &&
+  value.file.stream === content &&
+  value.inputs.blob === "blob" &&
+  value.inputs.buffer === "buffer" &&
+  value.inputs.bytes === "bytes" &&
+  value.inputs.stream === "stream" &&
+  value.removed;
+
+const commandsOk = (
+  input: Pick<Workflow, "exec" | "failure" | "port" | "shell" | "spawn">,
+  content: string
+): boolean =>
+  input.exec.ok &&
+  input.exec.stdout === content &&
+  input.shell.ok &&
+  input.shell.stdout === content &&
+  !input.failure.ok &&
+  input.failure.code === 7 &&
+  input.failure.stderr.includes("failed") &&
+  input.spawn.ok &&
+  input.spawn.output.includes(content) &&
+  input.port.port === 3000 &&
+  input.port.url.startsWith("https://");
+
 export const workflow = async (
   sandbox: LiveSandbox,
   directory: string,
   file: string,
   content: string
 ): Promise<Workflow> => {
-  await sandbox.files.write(file, content);
+  const locations = paths(directory, file);
 
-  const exists = await sandbox.files.exists(file);
-  const fileText = await sandbox.files.text(file);
-  const entries = await sandbox.files.list(directory);
-  const listed = entries.some((entry) => entry.path === file);
+  await writeFiles(sandbox, locations, directory, content);
+
+  const files = await readFiles(sandbox, locations, directory);
   const exec = await sandbox.process.exec("cat", [file]);
   const shell = await sandbox.process.shell(`cat ${file}`);
   const running = await sandbox.process.spawnShell(`cat ${file}`);
@@ -74,32 +185,21 @@ export const workflow = async (
     "echo failed >&2; exit 7",
   ]);
   const preview = await sandbox.ports.expose(3000);
-  const ok =
-    exists &&
-    listed &&
-    fileText === content &&
-    exec.ok &&
-    exec.stdout === content &&
-    shell.ok &&
-    shell.stdout === content &&
-    !failure.ok &&
-    failure.code === 7 &&
-    failure.stderr.includes("failed") &&
-    spawned.ok &&
-    output.includes(content) &&
-    preview.port === 3000 &&
-    preview.url.startsWith("https://");
+  const spawn = { ...spawned, output };
+  const command = { exec, failure, port: preview, shell, spawn };
+  const ok = filesOk(files, content) && commandsOk(command, content);
 
   return {
     capabilities: sandbox.capabilities,
     exec,
     failure,
-    file: { exists, listed, text: fileText },
+    file: files.file,
+    inputs: files.inputs,
     ok,
     port: preview,
     provider: sandbox.provider,
     shell,
-    spawn: { ...spawned, output },
+    spawn,
   };
 };
 
@@ -139,7 +239,15 @@ export const expectWorkflow = (payload: Workflow): void => {
   expect(payload.file).toEqual({
     exists: true,
     listed: true,
+    read: "hello from vercel",
+    stream: "hello from vercel",
     text: "hello from vercel",
+  });
+  expect(payload.inputs).toEqual({
+    blob: "blob",
+    buffer: "buffer",
+    bytes: "bytes",
+    stream: "stream",
   });
   expect(payload.exec).toMatchObject({
     code: 0,
@@ -184,10 +292,18 @@ export const expectWorkflowCoverage = (payload: Coverage): void => {
   expect(payload.fixture).toBe("workflow");
   expect(payload.features).toEqual([
     "capabilities",
+    "files.mkdir",
     "files.write",
+    "files.write.bytes",
+    "files.write.arrayBuffer",
+    "files.write.blob",
+    "files.write.readableStream",
     "files.exists",
+    "files.read",
+    "files.stream",
     "files.text",
     "files.list",
+    "files.remove",
     "process.exec",
     "process.shell",
     "process.spawnShell",
