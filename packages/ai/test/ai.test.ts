@@ -1,9 +1,44 @@
 import { expect, test } from "bun:test";
 
+import { RunContext } from "@openai/agents";
 import { create, isSandboxError } from "@sandbox-sdk/core";
 import { local } from "@sandbox-sdk/local";
 
-import { tools } from "../src/index";
+import { claude } from "../src/claude";
+import { aiSdk, tools } from "../src/index";
+import { openai } from "../src/openai";
+
+interface OpenAiTool {
+  name: string;
+  needsApproval: (...args: unknown[]) => Promise<boolean>;
+  parameters: unknown;
+  strict: boolean;
+  type: "function";
+  invoke(context: RunContext, input: string): Promise<unknown>;
+}
+
+interface ClaudeCall {
+  content: { text: string; type: "text" }[];
+  isError?: true;
+  structuredContent?: unknown;
+}
+
+interface ClaudeTool {
+  annotations?: Record<string, unknown>;
+  handler(input: unknown, extra: unknown): Promise<ClaudeCall>;
+  inputSchema: unknown;
+  name: string;
+}
+
+const asOpenAiTool = (value: unknown): OpenAiTool => value as OpenAiTool;
+
+const invokeOpenAi = (value: unknown, input: unknown): Promise<unknown> =>
+  asOpenAiTool(value).invoke(new RunContext(), JSON.stringify(input));
+
+const approvalOpenAi = (value: unknown): Promise<boolean> =>
+  asOpenAiTool(value).needsApproval(new RunContext(), {}, "test-call");
+
+const asClaudeTool = (value: unknown): ClaudeTool => value as ClaudeTool;
 
 test("tools returns prompt context and selected tools", async () => {
   const sandbox = await create({ adapter: local(), cwd: "/workspace" });
@@ -88,6 +123,7 @@ test("tools can read, write, list, and execute", async () => {
 test("tools expose an ai sdk sandbox shape", async () => {
   const sandbox = await create({ adapter: local(), cwd: "/workspace" });
   const kit = tools(sandbox, { timeout: 10_000 });
+  const ai = aiSdk(kit);
 
   const output = await kit.sandbox.executeCommand({
     command: "printf ai",
@@ -99,6 +135,180 @@ test("tools expose an ai sdk sandbox shape", async () => {
     stderr: "",
     stdout: "ai",
   });
+  expect(ai).toEqual({
+    experimental_sandbox: kit.sandbox,
+    system: kit.description,
+    tools: kit.tools,
+  });
+
+  await sandbox.stop();
+});
+
+test("openai creates real agents sdk tools", async () => {
+  const sandbox = await create({ adapter: local(), cwd: "/workspace" });
+  const kit = tools(sandbox, {
+    allow: ["read", "write", "list", "exec", "preview"],
+    cwd: "/workspace",
+  });
+  const agent = openai(kit);
+
+  expect(agent.instructions).toBe(kit.description);
+  expect(Object.keys(agent.tools).toSorted()).toEqual([
+    "exec",
+    "list",
+    "preview",
+    "read",
+    "write",
+  ]);
+
+  const read = asOpenAiTool(agent.tools.read);
+  const write = asOpenAiTool(agent.tools.write);
+  const exec = asOpenAiTool(agent.tools.exec);
+  const list = asOpenAiTool(agent.tools.list);
+
+  expect(read.type).toBe("function");
+  expect(read.name).toBe("sandbox_read");
+  expect(write.name).toBe("sandbox_write");
+  expect(exec.strict).toBe(true);
+  expect(exec.parameters).toMatchObject({ type: "object" });
+  expect(await approvalOpenAi(read)).toBe(false);
+  expect(await approvalOpenAi(list)).toBe(false);
+  expect(await approvalOpenAi(write)).toBe(true);
+  expect(await approvalOpenAi(exec)).toBe(true);
+
+  await invokeOpenAi(write, {
+    path: "/workspace/openai.txt",
+    text: "openai",
+  });
+  const readResult = (await invokeOpenAi(read, {
+    path: "/workspace/openai.txt",
+  })) as { text: string };
+  const execResult = (await invokeOpenAi(exec, {
+    command: "printf agents",
+  })) as { stdout: string };
+
+  expect(readResult.text).toBe("openai");
+  expect(execResult.stdout).toBe("agents");
+
+  await sandbox.stop();
+});
+
+test("openai supports custom approval and prefixes", async () => {
+  const sandbox = await create({ adapter: local(), cwd: "/workspace" });
+  const kit = tools(sandbox, { allow: ["read", "write", "exec"] });
+  const agent = openai(kit, {
+    prefix: "workspace",
+    requireApproval: { exec: false, read: true },
+  });
+
+  expect(asOpenAiTool(agent.tools.read).name).toBe("workspace_read");
+  expect(await approvalOpenAi(agent.tools.read)).toBe(true);
+  expect(await approvalOpenAi(agent.tools.write)).toBe(true);
+  expect(await approvalOpenAi(agent.tools.exec)).toBe(false);
+
+  await sandbox.stop();
+});
+
+test("claude creates in-process mcp tools", async () => {
+  const sandbox = await create({ adapter: local(), cwd: "/workspace" });
+  const kit = tools(sandbox, {
+    allow: ["read", "write", "list", "exec", "preview"],
+    cwd: "/workspace",
+  });
+  const agent = claude(kit);
+
+  expect(agent.instructions).toBe(kit.description);
+  expect(agent.server.type).toBe("sdk");
+  expect(agent.server.name).toBe("sandbox");
+  expect(agent.mcpServers.sandbox).toBe(agent.server);
+  expect(agent.availableTools.toSorted()).toEqual(
+    [
+      "mcp__sandbox__exec",
+      "mcp__sandbox__list",
+      "mcp__sandbox__preview",
+      "mcp__sandbox__read",
+      "mcp__sandbox__write",
+    ].toSorted()
+  );
+  expect(agent.allowedTools.toSorted()).toEqual(
+    ["mcp__sandbox__list", "mcp__sandbox__read"].toSorted()
+  );
+  expect(agent.needsApproval("mcp__sandbox__write")).toBe(true);
+  expect(agent.needsApproval("mcp__sandbox__exec")).toBe(true);
+  expect(agent.needsApproval("mcp__sandbox__read")).toBe(false);
+
+  const writeTool = asClaudeTool(
+    agent.tools.find((item) => item.name === "write")
+  );
+  const readTool = asClaudeTool(
+    agent.tools.find((item) => item.name === "read")
+  );
+  const execTool = asClaudeTool(
+    agent.tools.find((item) => item.name === "exec")
+  );
+
+  expect(readTool.annotations?.readOnlyHint).toBe(true);
+  expect(writeTool.annotations?.destructiveHint).toBe(true);
+
+  const written = await writeTool.handler(
+    {
+      path: "/workspace/claude.txt",
+      text: "claude",
+    },
+    {}
+  );
+  const readResult = await readTool.handler(
+    { path: "/workspace/claude.txt" },
+    {}
+  );
+  const execResult = await execTool.handler({ command: "printf sdk" }, {});
+
+  expect(written.structuredContent).toEqual({ ok: true });
+  expect(readResult.structuredContent).toEqual({ text: "claude" });
+  expect(execResult.structuredContent).toMatchObject({ stdout: "sdk" });
+
+  await sandbox.stop();
+});
+
+test("claude supports approval and server overrides", async () => {
+  const sandbox = await create({ adapter: local(), cwd: "/workspace" });
+  const kit = tools(sandbox, { allow: ["read", "write", "exec"] });
+  const agent = claude(kit, {
+    annotations: { exec: { destructiveHint: false, readOnlyHint: false } },
+    requireApproval: { exec: false, read: true, write: false },
+    serverName: "workspace",
+    serverVersion: "2.0.0",
+  });
+
+  expect(agent.serverName).toBe("workspace");
+  expect(agent.mcpServers.workspace).toBe(agent.server);
+  expect(agent.availableTools).toContain("mcp__workspace__exec");
+  expect(agent.allowedTools.toSorted()).toEqual(
+    ["mcp__workspace__exec", "mcp__workspace__write"].toSorted()
+  );
+  expect(agent.needsApproval("mcp__workspace__read")).toBe(true);
+  expect(agent.needsApproval("mcp__workspace__exec")).toBe(false);
+  expect(agent.needsApproval("mcp__workspace__missing")).toBe(false);
+
+  const allowed = await agent.canUseTool(
+    "mcp__workspace__exec",
+    { command: "printf ok" },
+    {
+      signal: new AbortController().signal,
+      toolUseID: "allowed",
+    }
+  );
+  const denied = await agent.canUseTool(
+    "mcp__workspace__read",
+    { path: "/workspace/file.txt" },
+    {
+      signal: new AbortController().signal,
+      toolUseID: "denied",
+    }
+  );
+
+  expect(allowed.behavior).toBe("allow");
+  expect(denied.behavior).toBe("deny");
 
   await sandbox.stop();
 });
