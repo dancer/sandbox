@@ -5,7 +5,13 @@ import { join } from "node:path";
 
 import { SandboxError, create } from "@sandbox-sdk/core";
 
+import { conformance } from "../../../test/conformance";
 import { local } from "../src/index";
+
+conformance({
+  adapter: () => local(),
+  name: "local",
+});
 
 test("local supports sandbox absolute paths", async () => {
   const root = await mkdtemp(join(tmpdir(), "sandbox-test-"));
