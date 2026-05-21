@@ -13,6 +13,8 @@ const restore = (name: string, value: string | undefined): void => {
   process.env[name] = value;
 };
 
+const snapshotLogs = () => void 0;
+
 test("daytona reports missing credentials before provider calls", async () => {
   const apiKey = process.env.DAYTONA_API_KEY;
   const jwtToken = process.env.DAYTONA_JWT_TOKEN;
@@ -152,14 +154,17 @@ test("daytona maps create options without running a real provider", async () => 
         apiKey: "key",
         autoStopInterval: 5,
         env: { A: "1" },
+        ephemeral: true,
         labels: { owner: "sdk" },
         language: "typescript",
         name: "option-name",
         networkBlockAll: true,
         public: true,
         snapshot: "option-snapshot",
+        snapshotLogs,
         timeout: 1000,
         user: "daytona",
+        volumes: [{ mountPath: "/cache", volumeId: "volume" }],
       }),
       cwd: "/work",
       env: { B: "2" },
@@ -173,6 +178,7 @@ test("daytona maps create options without running a real provider", async () => 
     expect(paramsSeen).toMatchObject({
       autoStopInterval: 5,
       envVars: { A: "1", B: "2" },
+      ephemeral: true,
       labels: { owner: "sdk", task: "test" },
       language: "typescript",
       name: "option-name",
@@ -180,8 +186,12 @@ test("daytona maps create options without running a real provider", async () => 
       public: true,
       snapshot: "input-snapshot",
       user: "daytona",
+      volumes: [{ mountPath: "/cache", volumeId: "volume" }],
     });
-    expect(settingsSeen).toEqual({ timeout: 3 });
+    expect(settingsSeen).toEqual({
+      onSnapshotCreateLogs: snapshotLogs,
+      timeout: 3,
+    });
     expect(folderSeen).toEqual({ mode: "755", path: "/work" });
     await expect(sandbox.ports.expose(0)).rejects.toMatchObject({
       code: "configuration",

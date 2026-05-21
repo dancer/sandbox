@@ -11,6 +11,7 @@ import type {
   Image,
   Resources,
   Sandbox as DaytonaSandbox,
+  VolumeMount,
 } from "@daytona/sdk";
 import {
   abort,
@@ -53,6 +54,8 @@ export type Daytona = DaytonaConfig &
     deleteOnStop?: boolean;
     /** default environment variables applied when creating a sandbox */
     env?: Readonly<Record<string, string>>;
+    /** make the Daytona sandbox ephemeral so stopping it deletes it */
+    ephemeral?: boolean;
     /** image name or Daytona Image used to create the sandbox */
     image?: string | Image;
     /** labels attached to new sandboxes */
@@ -75,10 +78,14 @@ export type Daytona = DaytonaConfig &
     signedPreview?: boolean;
     /** Daytona snapshot id used when create input omits snapshot */
     snapshot?: string;
+    /** stream Daytona image snapshot build logs during image-based sandbox creation */
+    snapshotLogs?: (chunk: string) => void;
     /** create, stop, and delete timeout in milliseconds */
     timeout?: number;
     /** linux user used for supported Daytona operations */
     user?: string;
+    /** Daytona volumes mounted into the created sandbox */
+    volumes?: readonly VolumeMount[];
   }>;
 
 type Raw = DaytonaSandbox;
@@ -196,34 +203,41 @@ const config = (options: Daytona): DaytonaConfig => ({
     : { _experimental: options._experimental }),
 });
 
+const baseParams = (
+  options: Daytona,
+  input: Parameters<Adapter<Raw>["create"]>[0] = {}
+): CreateSandboxBaseParams => ({
+  ...(options.autoArchiveInterval === undefined
+    ? {}
+    : { autoArchiveInterval: options.autoArchiveInterval }),
+  ...(options.autoDeleteInterval === undefined
+    ? {}
+    : { autoDeleteInterval: options.autoDeleteInterval }),
+  ...(options.autoStopInterval === undefined
+    ? {}
+    : { autoStopInterval: options.autoStopInterval }),
+  envVars: { ...options.env, ...input.env },
+  ...(options.ephemeral === undefined ? {} : { ephemeral: options.ephemeral }),
+  labels: { ...options.labels, ...input.metadata },
+  ...(options.language === undefined ? {} : { language: options.language }),
+  ...((input.id ?? options.name) ? { name: input.id ?? options.name } : {}),
+  ...(options.networkAllowList === undefined
+    ? {}
+    : { networkAllowList: options.networkAllowList }),
+  ...(options.networkBlockAll === undefined
+    ? {}
+    : { networkBlockAll: options.networkBlockAll }),
+  ...(options.public === undefined ? {} : { public: options.public }),
+  ...(options.user === undefined ? {} : { user: options.user }),
+  ...(options.volumes === undefined ? {} : { volumes: [...options.volumes] }),
+});
+
 const params = (
   options: Daytona,
   input: Parameters<Adapter<Raw>["create"]>[0] = {}
 ): CreateSandboxFromImageParams | CreateSandboxFromSnapshotParams => {
   const snapshot = input.snapshot ?? input.template ?? options.snapshot;
-  const base: CreateSandboxBaseParams = {
-    ...(options.autoArchiveInterval === undefined
-      ? {}
-      : { autoArchiveInterval: options.autoArchiveInterval }),
-    ...(options.autoDeleteInterval === undefined
-      ? {}
-      : { autoDeleteInterval: options.autoDeleteInterval }),
-    ...(options.autoStopInterval === undefined
-      ? {}
-      : { autoStopInterval: options.autoStopInterval }),
-    envVars: { ...options.env, ...input.env },
-    labels: { ...options.labels, ...input.metadata },
-    ...(options.language === undefined ? {} : { language: options.language }),
-    ...((input.id ?? options.name) ? { name: input.id ?? options.name } : {}),
-    ...(options.networkAllowList === undefined
-      ? {}
-      : { networkAllowList: options.networkAllowList }),
-    ...(options.networkBlockAll === undefined
-      ? {}
-      : { networkBlockAll: options.networkBlockAll }),
-    ...(options.public === undefined ? {} : { public: options.public }),
-    ...(options.user === undefined ? {} : { user: options.user }),
-  };
+  const base = baseParams(options, input);
 
   if (snapshot !== undefined) {
     return {
@@ -258,6 +272,22 @@ const seconds = (value?: number): number | undefined => {
   return milliseconds === undefined
     ? undefined
     : Math.max(1, Math.ceil(milliseconds / 1000));
+};
+
+const createSettings = (
+  options: Daytona,
+  input: Parameters<Adapter<Raw>["create"]>[0]
+): Parameters<DaytonaClient["create"]>[1] => {
+  const createTimeout = seconds(input?.timeout ?? options.timeout);
+  if (createTimeout === undefined && options.snapshotLogs === undefined) {
+    return undefined;
+  }
+  return {
+    ...(options.snapshotLogs === undefined
+      ? {}
+      : { onSnapshotCreateLogs: options.snapshotLogs }),
+    ...(createTimeout === undefined ? {} : { timeout: createTimeout }),
+  };
 };
 
 const missing = (error: unknown): boolean =>
@@ -507,13 +537,10 @@ export const daytona = (options: Daytona = {}): Adapter<Raw> => ({
   async create(input = {}) {
     validate(options);
     const client = new DaytonaClient(config(options));
-    const createTimeout = seconds(input.timeout ?? options.timeout);
-    const createSettings =
-      createTimeout === undefined ? undefined : { timeout: createTimeout };
     const createParams = params(options, input);
     const raw =
       input.id === undefined
-        ? await client.create(createParams, createSettings)
+        ? await client.create(createParams, createSettings(options, input))
         : await client.get(input.id);
     const cwd =
       input.cwd ?? options.cwd ?? (await raw.getWorkDir()) ?? "/home/daytona";

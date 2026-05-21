@@ -1533,6 +1533,8 @@ export type Daytona = DaytonaConfig &
     deleteOnStop?: boolean;
     /** default environment variables applied when creating a sandbox */
     env?: Readonly<Record<string, string>>;
+    /** make the Daytona sandbox ephemeral so stopping it deletes it */
+    ephemeral?: boolean;
     /** image name or Daytona Image used to create the sandbox */
     image?: string | Image;
     /** labels attached to new sandboxes */
@@ -1555,10 +1557,14 @@ export type Daytona = DaytonaConfig &
     signedPreview?: boolean;
     /** Daytona snapshot id used when create input omits snapshot */
     snapshot?: string;
+    /** stream Daytona image snapshot build logs during image-based sandbox creation */
+    snapshotLogs?: (chunk: string) => void;
     /** create, stop, and delete timeout in milliseconds */
     timeout?: number;
     /** linux user used for supported Daytona operations */
     user?: string;
+    /** Daytona volumes mounted into the created sandbox */
+    volumes?: readonly VolumeMount[];
   }>;
 ```
 
