@@ -163,10 +163,11 @@ export const ApiReference = () => (
         <Accordion className="rounded-md border-dotted" type="multiple">
           <PropAccordionItem name="cwd" status="optional" value="cwd">
             <p>
-              Working directory, relative to the sandbox root. Resolved through
-              the same path-safety check as file ops. A <code>cwd</code> that
-              escapes the root throws <code>SandboxError</code> with{" "}
-              <code>code: "path_escape"</code>.
+              Working directory for the command. Cloud adapters forward this to
+              the provider, so use the provider's sandbox path conventions. The
+              local adapter resolves <code>cwd</code> inside its configured root
+              and throws <code>SandboxError</code> with{" "}
+              <code>code: "path_escape"</code> when it would escape.
             </p>
           </PropAccordionItem>
           <PropAccordionItem name="env" status="optional" value="env">
