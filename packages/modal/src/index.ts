@@ -5,7 +5,6 @@ import { dirname } from "node:path/posix";
 
 import {
   abort,
-  bytes,
   sandboxError,
   port,
   quote,
@@ -121,6 +120,7 @@ const capabilities: Capabilities = {
     lifecycle: true,
     network: "create-time",
     secrets: "create-time",
+    tunnels: "create-time",
     volumes: "create-time",
   },
   snapshotCreate: "filesystem",
@@ -334,14 +334,50 @@ const shell = (
   options: Exec
 ): Promise<Result> => execute(raw, cwd, ["sh", "-lc", script], options);
 
+const writeChunks = async (
+  file: ModalSdk.SandboxFile,
+  input: Blob | ReadableStream<Uint8Array>
+): Promise<void> => {
+  const source = input instanceof Blob ? input.stream() : input;
+  const reader = source.getReader();
+  try {
+    while (true) {
+      const next = await reader.read();
+      if (next.done) {
+        return;
+      }
+      await file.write(next.value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+};
+
+const writeInput = async (
+  file: ModalSdk.SandboxFile,
+  input: Input
+): Promise<void> => {
+  if (typeof input === "string") {
+    await file.write(new TextEncoder().encode(input));
+    return;
+  }
+  if (input instanceof Uint8Array) {
+    await file.write(input);
+    return;
+  }
+  if (input instanceof ArrayBuffer) {
+    await file.write(new Uint8Array(input));
+    return;
+  }
+  await writeChunks(file, input);
+};
+
 const write = async (raw: Raw, cwd: string, path: string, input: Input) => {
-  const value = await bytes(input);
   await shell(raw, cwd, `mkdir -p ${quote(dirname(path))}`, {});
   const file = await raw.open(path, "w");
   try {
-    await file.write(
-      typeof value === "string" ? new TextEncoder().encode(value) : value
-    );
+    await writeInput(file, input);
+    await file.flush();
   } finally {
     await file.close();
   }

@@ -319,3 +319,77 @@ test("modal maps create options, tags, commands, and ports", async () => {
     provider: "modal",
   });
 });
+
+test("modal writes readable streams in chunks", async () => {
+  const decoder = new TextDecoder();
+  const execSeen: unknown[] = [];
+  const writes: string[] = [];
+  let closed = false;
+  let flushed = false;
+  let openSeen: unknown;
+  const raw = {
+    exec: (command: string[], options: unknown) => {
+      execSeen.push({ command, options });
+      return Promise.resolve(processOutput());
+    },
+    open: (path: string, mode: string) => {
+      openSeen = { mode, path };
+      return Promise.resolve({
+        close: () => {
+          closed = true;
+          return Promise.resolve();
+        },
+        flush: () => {
+          flushed = true;
+          return Promise.resolve();
+        },
+        write: (data: Uint8Array) => {
+          writes.push(decoder.decode(data));
+          return Promise.resolve();
+        },
+      });
+    },
+    sandboxId: "sandbox",
+    terminate: () => Promise.resolve(),
+  } as unknown as ModalSdk.Sandbox;
+  const client = {
+    apps: {
+      fromName: () => Promise.resolve({}),
+    },
+    images: {
+      fromRegistry: () => ({}),
+    },
+    sandboxes: {
+      create: () => Promise.resolve(raw),
+    },
+  } as unknown as ModalSdk.ModalClient;
+  const input = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(new TextEncoder().encode("chunk-1"));
+      controller.enqueue(new TextEncoder().encode("chunk-2"));
+      controller.close();
+    },
+  });
+
+  const sandbox = await create({
+    adapter: modal({
+      client,
+    }),
+    cwd: "/work",
+  });
+
+  await sandbox.files.write("/work/stream.txt", input);
+
+  expect(openSeen).toEqual({ mode: "w", path: "/work/stream.txt" });
+  expect(writes).toEqual(["chunk-1", "chunk-2"]);
+  expect(flushed).toBe(true);
+  expect(closed).toBe(true);
+  expect(execSeen.at(-1)).toEqual({
+    command: ["sh", "-lc", "mkdir -p /work"],
+    options: {
+      stderr: "pipe",
+      stdout: "pipe",
+      workdir: "/work",
+    },
+  });
+});

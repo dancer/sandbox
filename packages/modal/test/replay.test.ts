@@ -33,6 +33,7 @@ const capabilities = {
     lifecycle: true,
     network: "create-time",
     secrets: "create-time",
+    tunnels: "create-time",
     volumes: "create-time",
   },
   snapshotCreate: "filesystem",

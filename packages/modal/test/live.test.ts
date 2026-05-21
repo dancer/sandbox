@@ -121,6 +121,8 @@ live("modal exposes advertised raw capabilities", async () => {
     const updated = await sandbox.raw.getTags();
     expect(updated.purpose).toBe("sandbox-sdk-updated");
 
+    expect(await sandbox.raw.poll()).toBe(null);
+
     const tunnels = await sandbox.raw.tunnels();
     expect(tunnels[3000]?.url.startsWith("https://")).toBe(true);
 
