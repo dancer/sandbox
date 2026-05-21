@@ -83,9 +83,9 @@ const capabilities: Capabilities = {
     git: true,
     network: true,
   },
-  snapshotCreate: false,
+  snapshotCreate: "memory",
   snapshotRestore: false,
-  snapshotSource: false,
+  snapshotSource: "create-time",
   snapshots: false,
   streaming: "combined",
 };
@@ -120,7 +120,7 @@ const createOptions = (
   options: CodeSandbox,
   input: NonNullable<Parameters<Adapter<Raw>["create"]>[0]>
 ): LocalCreate => {
-  const template = input.template ?? options.template;
+  const template = input.snapshot ?? input.template ?? options.template;
   const lifetime = duration(input.timeout, provider);
   return {
     ...(template === undefined ? {} : { id: template }),
@@ -416,7 +416,10 @@ const createSandbox = (
   provider,
   raw,
   snapshots: {
-    create: () => rejectUnsupported("normalized snapshot creation"),
+    create: async (name) => {
+      await raw.sdk.sandboxes.hibernate(raw.sandbox.id);
+      return { id: raw.sandbox.id, ...(name === undefined ? {} : { name }) };
+    },
     restore: () => rejectUnsupported("in-place snapshot restore"),
   },
   stop: async () => {
@@ -441,9 +444,6 @@ export const codesandbox = (options: CodeSandbox = {}): Adapter<Raw> => ({
   capabilities,
   async create(input = {}) {
     validate(options);
-    if (input.snapshot) {
-      unsupported(provider, "snapshot source");
-    }
     const current = sdk(options);
     const sandbox =
       input.id === undefined

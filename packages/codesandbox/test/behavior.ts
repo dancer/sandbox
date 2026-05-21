@@ -48,6 +48,20 @@ export type Workflow = Readonly<{
   spawn: Command & Readonly<{ output: string }>;
 }>;
 
+export type Source = Readonly<{
+  capabilities: Capabilities;
+  file: Readonly<{
+    text: string;
+  }>;
+  ok: boolean;
+  provider: string;
+  snapshot: Readonly<{
+    id: string;
+    name?: string;
+  }>;
+  source: string;
+}>;
+
 export const expectCoverage = (payload: Coverage): void => {
   expect(payload.provider).toBe("codesandbox");
   expect(payload.fixture).toBe("workflow");
@@ -73,13 +87,24 @@ export const expectCoverage = (payload: Coverage): void => {
     "process.spawnShell",
     "process.failure",
     "ports.expose",
+    "snapshots.create",
+    "snapshotSource",
     "sandbox.raw.delete",
   ]);
-  expect(payload.uncovered).toEqual([
+  expect(payload.uncovered).toEqual(["snapshots.restore"]);
+};
+
+export const expectSourceCoverage = (payload: Coverage): void => {
+  expect(payload.provider).toBe("codesandbox");
+  expect(payload.fixture).toBe("source");
+  expect(payload.features).toEqual([
+    "capabilities",
     "snapshots.create",
-    "snapshots.restore",
     "snapshotSource",
+    "files.text",
+    "sandbox.raw.delete",
   ]);
+  expect(payload.uncovered).toEqual(["snapshots.restore"]);
 };
 
 export const expectWorkflow = (payload: Workflow): void => {
@@ -89,9 +114,9 @@ export const expectWorkflow = (payload: Workflow): void => {
   expect(payload.capabilities.ports).toBe("dynamic");
   expect(payload.capabilities.processExec).toBe(true);
   expect(payload.capabilities.processSpawn).toBe(true);
-  expect(payload.capabilities.snapshotCreate).toBe(false);
+  expect(payload.capabilities.snapshotCreate).toBe("memory");
   expect(payload.capabilities.snapshotRestore).toBe(false);
-  expect(payload.capabilities.snapshotSource).toBe(false);
+  expect(payload.capabilities.snapshotSource).toBe("create-time");
   expect(payload.file).toEqual({
     exists: true,
     listed: true,
@@ -132,4 +157,16 @@ export const expectWorkflow = (payload: Workflow): void => {
   expect(payload.spawn.output).toContain("hello from codesandbox");
   expect(payload.port.port).toBe(3000);
   expect(payload.port.url).toMatch(/^https:\/\//u);
+};
+
+export const expectSource = (payload: Source): void => {
+  expect(payload.ok).toBe(true);
+  expect(payload.provider).toBe("codesandbox");
+  expect(payload.capabilities.snapshotCreate).toBe("memory");
+  expect(payload.capabilities.snapshotRestore).toBe(false);
+  expect(payload.capabilities.snapshotSource).toBe("create-time");
+  expect(payload.snapshot.id).toBeTruthy();
+  expect(payload.snapshot.name).toBe("sandbox-sdk-live");
+  expect(payload.source).toBe(payload.snapshot.id);
+  expect(payload.file.text).toBe("ready");
 };

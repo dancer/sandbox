@@ -120,9 +120,9 @@ test("adapters expose capability-honest feature modes", () => {
       git: true,
       network: true,
     },
-    snapshotCreate: false,
+    snapshotCreate: "memory",
     snapshotRestore: false,
-    snapshotSource: false,
+    snapshotSource: "create-time",
   });
 });
 

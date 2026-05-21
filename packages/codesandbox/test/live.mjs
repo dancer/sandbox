@@ -2,6 +2,7 @@ import { strict as assert } from "node:assert";
 import { randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
+import { setTimeout as sleep } from "node:timers/promises";
 
 import { create } from "@sandbox-sdk/core";
 
@@ -32,6 +33,19 @@ const text = (stream) => new Response(stream).text();
 
 const decode = (value) => decoder.decode(value);
 
+const limit = async (promise, label, milliseconds = 180_000) => {
+  const controller = new AbortController();
+  const expire = async () => {
+    await sleep(milliseconds, undefined, { signal: controller.signal });
+    throw new Error(`${label} timed out`);
+  };
+  try {
+    return await Promise.race([promise, expire()]);
+  } finally {
+    controller.abort();
+  }
+};
+
 const coverage = {
   features: [
     "capabilities",
@@ -55,11 +69,26 @@ const coverage = {
     "process.spawnShell",
     "process.failure",
     "ports.expose",
+    "snapshots.create",
+    "snapshotSource",
     "sandbox.raw.delete",
   ],
   fixture: "workflow",
   provider: "codesandbox",
-  uncovered: ["snapshots.create", "snapshots.restore", "snapshotSource"],
+  uncovered: ["snapshots.restore"],
+};
+
+const sourceCoverage = {
+  features: [
+    "capabilities",
+    "snapshots.create",
+    "snapshotSource",
+    "files.text",
+    "sandbox.raw.delete",
+  ],
+  fixture: "source",
+  provider: "codesandbox",
+  uncovered: ["snapshots.restore"],
 };
 
 const path = (directory, name) => `${directory}/${name}`;
@@ -93,9 +122,15 @@ const sanitize = (payload) => ({
   },
 });
 
-const write = async (fixture) => {
+const sanitizeSource = (payload) => ({
+  ...payload,
+  snapshot: { ...payload.snapshot, id: "snapshot" },
+  source: "snapshot",
+});
+
+const write = async (name, fixture) => {
   const current = import.meta.dirname;
-  const file = path(`${current}/__fixtures__`, "workflow.json");
+  const file = path(`${current}/__fixtures__`, `${name}.json`);
   await mkdir(dirname(file), { recursive: true });
   await writeFile(file, `${JSON.stringify(fixture, null, 2)}\n`);
 };
@@ -216,6 +251,47 @@ const workflow = async (sandbox) => {
   }
 };
 
+const source = async (sandbox) => {
+  const root = `/project/sandbox/sandbox-sdk-source-${randomUUID()}`;
+  const file = path(root, "snapshot.txt");
+  let derived;
+
+  await sandbox.files.mkdir(root);
+  await sandbox.files.write(file, "ready");
+  const snapshot = await sandbox.snapshots.create("sandbox-sdk-live");
+
+  try {
+    derived = await create({
+      adapter: codesandbox({
+        stop: "delete",
+        token,
+      }),
+      cwd: root,
+      snapshot: snapshot.id,
+    });
+    const content = await derived.files.text(file);
+    const payload = {
+      capabilities: derived.capabilities,
+      file: { text: content },
+      ok: content === "ready",
+      provider: derived.provider,
+      snapshot,
+      source: snapshot.id,
+    };
+
+    assert.equal(payload.provider, "codesandbox");
+    assert.equal(payload.file.text, "ready");
+    assert.equal(payload.source, snapshot.id);
+    assert.equal(payload.capabilities.snapshotCreate, "memory");
+    assert.equal(payload.capabilities.snapshotSource, "create-time");
+    assert.equal(payload.capabilities.snapshotRestore, false);
+
+    return payload;
+  } finally {
+    await derived?.stop().catch(ignore);
+  }
+};
+
 const sandbox = await create({
   adapter: codesandbox({
     stop: "delete",
@@ -226,11 +302,20 @@ const sandbox = await create({
 });
 
 try {
-  const payload = await workflow(sandbox);
+  const payload = await limit(workflow(sandbox), "codesandbox workflow");
+  const sourcePayload = await limit(
+    source(sandbox),
+    "codesandbox snapshot source"
+  );
   const fixture = { coverage, payload: sanitize(payload) };
+  const sourceFixture = {
+    coverage: sourceCoverage,
+    payload: sanitizeSource(sourcePayload),
+  };
 
   if (process.env.SANDBOX_SDK_RECORD_FIXTURES === "1") {
-    await write(fixture);
+    await write("workflow", fixture);
+    await write("source", sourceFixture);
   }
 
   console.log("codesandbox live verifier passed");

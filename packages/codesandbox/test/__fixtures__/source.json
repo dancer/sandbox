@@ -1,0 +1,43 @@
+{
+  "coverage": {
+    "features": [
+      "capabilities",
+      "snapshots.create",
+      "snapshotSource",
+      "files.text",
+      "sandbox.raw.delete"
+    ],
+    "fixture": "source",
+    "provider": "codesandbox",
+    "uncovered": ["snapshots.restore"]
+  },
+  "payload": {
+    "capabilities": {
+      "environment": true,
+      "files": true,
+      "ports": "dynamic",
+      "process": true,
+      "processExec": true,
+      "processSpawn": true,
+      "raw": {
+        "git": true,
+        "network": true
+      },
+      "snapshotCreate": "memory",
+      "snapshotRestore": false,
+      "snapshotSource": "create-time",
+      "snapshots": false,
+      "streaming": "combined"
+    },
+    "file": {
+      "text": "ready"
+    },
+    "ok": true,
+    "provider": "codesandbox",
+    "snapshot": {
+      "id": "snapshot",
+      "name": "sandbox-sdk-live"
+    },
+    "source": "snapshot"
+  }
+}

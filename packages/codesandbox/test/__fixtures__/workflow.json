@@ -22,11 +22,13 @@
       "process.spawnShell",
       "process.failure",
       "ports.expose",
+      "snapshots.create",
+      "snapshotSource",
       "sandbox.raw.delete"
     ],
     "fixture": "workflow",
     "provider": "codesandbox",
-    "uncovered": ["snapshots.create", "snapshots.restore", "snapshotSource"]
+    "uncovered": ["snapshots.restore"]
   },
   "payload": {
     "capabilities": {
@@ -40,9 +42,9 @@
         "git": true,
         "network": true
       },
-      "snapshotCreate": false,
+      "snapshotCreate": "memory",
       "snapshotRestore": false,
-      "snapshotSource": false,
+      "snapshotSource": "create-time",
       "snapshots": false,
       "streaming": "combined"
     },
