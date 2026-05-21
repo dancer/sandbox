@@ -86,7 +86,7 @@ const capabilities: Capabilities = {
   raw: {
     git: true,
     lifecycle: true,
-    network: true,
+    previews: true,
     sessions: true,
   },
   snapshotCreate: "memory",

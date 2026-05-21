@@ -24,7 +24,10 @@
       "ports.expose",
       "snapshots.create",
       "snapshotSource",
-      "sandbox.raw.delete"
+      "sandbox.raw.delete",
+      "sandbox.raw.lifecycle",
+      "sandbox.raw.previews",
+      "sandbox.raw.sessions"
     ],
     "fixture": "workflow",
     "provider": "codesandbox",
@@ -41,7 +44,7 @@
       "raw": {
         "git": true,
         "lifecycle": true,
-        "network": true,
+        "previews": true,
         "sessions": true
       },
       "snapshotCreate": "memory",

@@ -90,6 +90,9 @@ export const expectCoverage = (payload: Coverage): void => {
     "snapshots.create",
     "snapshotSource",
     "sandbox.raw.delete",
+    "sandbox.raw.lifecycle",
+    "sandbox.raw.previews",
+    "sandbox.raw.sessions",
   ]);
   expect(payload.uncovered).toEqual(["snapshots.restore"]);
 };

@@ -138,7 +138,7 @@ test("adapters expose capability-honest feature modes", () => {
     raw: {
       git: true,
       lifecycle: true,
-      network: true,
+      previews: true,
       sessions: true,
     },
     snapshotCreate: "memory",

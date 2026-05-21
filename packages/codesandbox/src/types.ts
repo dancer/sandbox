@@ -33,6 +33,53 @@ export type SessionOptions = Readonly<{
   permission?: "read" | "write";
 }>;
 
+export type HostToken = Readonly<{
+  expiresAt: Date | null;
+  lastUsedAt: Date | null;
+  sandboxId: string;
+  token: string;
+  tokenId: string;
+}>;
+
+export type HostTokenInfo = Readonly<{
+  expiresAt: Date | null;
+  lastUsedAt: Date | null;
+  tokenId: string;
+  tokenPrefix: string;
+}>;
+
+export type HostTokens = Readonly<{
+  createToken(
+    sandboxId: string,
+    options: Readonly<{ expiresAt: Date }>
+  ): Promise<HostToken>;
+  getCookies(
+    token: Readonly<{ sandboxId: string; token: string }>
+  ): Record<string, string>;
+  getHeaders(
+    token: Readonly<{ sandboxId: string; token: string }>
+  ): Record<string, string>;
+  getUrl(
+    token: Readonly<{ sandboxId: string; token: string }>,
+    port: number,
+    protocol?: string
+  ): string;
+  listTokens(sandboxId: string): Promise<readonly HostTokenInfo[]>;
+  revokeAllTokens(sandboxId: string): Promise<void>;
+  revokeToken(sandboxId: string, tokenId: string): Promise<void>;
+  updateToken(
+    sandboxId: string,
+    tokenId: string,
+    expiresAt: Date | null
+  ): Promise<HostTokenInfo>;
+}>;
+
+export type Hosts = Readonly<{
+  getCookies(): Record<string, string>;
+  getHeaders(): Record<string, string>;
+  getUrl(port: number, protocol?: string): string;
+}>;
+
 export type Background = Readonly<{
   command: string;
   kill(): Promise<void>;
@@ -74,6 +121,7 @@ export type SandboxClient = Readonly<{
     writeFile(path: string, content: Uint8Array): Promise<void>;
     writeTextFile(path: string, content: string): Promise<void>;
   }>;
+  hosts?: Hosts;
   ports: Readonly<{
     waitForPort(port: number): Promise<{ host: string; port: number }>;
   }>;
@@ -81,15 +129,28 @@ export type SandboxClient = Readonly<{
 }>;
 
 export type ProviderSandbox = Readonly<{
+  bootupType?: string;
+  cluster?: string;
   connect(options?: SessionOptions): Promise<SandboxClient>;
+  createBrowserSession?(options?: SessionOptions): Promise<unknown>;
+  createSession?(options?: SessionOptions): Promise<unknown>;
   id: string;
+  isUpToDate?: boolean;
+  updateHibernationTimeout?(timeoutSeconds: number): Promise<void>;
+  updateTier?(tier: unknown): Promise<void>;
 }>;
 
 export type Sdk = Readonly<{
+  hosts?: HostTokens;
   sandboxes: Readonly<{
     create(options?: LocalCreate): Promise<ProviderSandbox>;
     delete(id: string): Promise<void>;
+    fork?(id: string, options?: LocalCreate): Promise<ProviderSandbox>;
+    get?(id: string): Promise<unknown>;
     hibernate(id: string): Promise<void>;
+    list?(options?: unknown): Promise<unknown>;
+    listRunning?(): Promise<unknown>;
+    restart?(id: string, options?: LocalCreate): Promise<ProviderSandbox>;
     resume(id: string): Promise<ProviderSandbox>;
     shutdown(id: string): Promise<void>;
   }>;
