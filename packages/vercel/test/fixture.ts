@@ -4,6 +4,7 @@ import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import type { Sandbox as CoreSandbox } from "@sandbox-sdk/core";
+import { Snapshot as RawSnapshot } from "@vercel/sandbox";
 import type { Sandbox as RawSandbox } from "@vercel/sandbox";
 
 import { vercel } from "../src/index";
@@ -75,6 +76,19 @@ export const cleanup = async (
   if (sandbox.raw.status !== "stopped") {
     await sandbox.stop();
   }
+};
+
+export const cleanupSnapshot = async (
+  snapshotId: string | undefined
+): Promise<void> => {
+  if (snapshotId === undefined) {
+    return;
+  }
+  const credentials = explicit();
+  const snapshot = await RawSnapshot.get(
+    credentials === undefined ? { snapshotId } : { ...credentials, snapshotId }
+  );
+  await snapshot.delete();
 };
 
 export const workflowFixture = (payload: Workflow): Fixture<Workflow> => ({

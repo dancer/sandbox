@@ -1,6 +1,7 @@
 import { expect } from "bun:test";
 
 import type { Capabilities, Snapshot as CoreSnapshot } from "@sandbox-sdk/core";
+import type { NetworkPolicy } from "@vercel/sandbox";
 
 import type { LiveSandbox } from "./fixture";
 
@@ -35,6 +36,13 @@ type Paths = Readonly<{
   stream: string;
 }>;
 
+type Raw = Readonly<{
+  extended: boolean;
+  networkPolicy: NetworkPolicy | undefined;
+  restoredNetworkPolicy: NetworkPolicy | undefined;
+  status: string;
+}>;
+
 export type Workflow = Readonly<{
   capabilities: Capabilities;
   commands: Commands;
@@ -59,6 +67,7 @@ export type Workflow = Readonly<{
     url: string;
   }>;
   provider: string;
+  raw: Raw;
   shell: Command;
   spawn: Command & Readonly<{ output: string }>;
 }>;
@@ -105,6 +114,9 @@ export const workflowCoverage: Coverage = {
     "process.spawnShell",
     "process.failure",
     "ports.expose",
+    "sandbox.raw.extendTimeout",
+    "sandbox.raw.updateNetworkPolicy",
+    "sandbox.raw.status",
     "sandbox.raw.delete",
   ],
   fixture: "workflow",
@@ -213,7 +225,7 @@ const filesOk = (value: Files, content: string): boolean =>
 const commandsOk = (
   input: Pick<
     Workflow,
-    "commands" | "exec" | "failure" | "port" | "shell" | "spawn"
+    "commands" | "exec" | "failure" | "port" | "raw" | "shell" | "spawn"
   >,
   content: string
 ): boolean =>
@@ -230,7 +242,11 @@ const commandsOk = (
   input.spawn.ok &&
   input.spawn.output.includes(content) &&
   input.port.port === 3000 &&
-  input.port.url.startsWith("https://");
+  input.port.url.startsWith("https://") &&
+  input.raw.extended &&
+  input.raw.networkPolicy === "deny-all" &&
+  input.raw.restoredNetworkPolicy === "allow-all" &&
+  input.raw.status === "running";
 
 export const workflow = async (
   sandbox: LiveSandbox,
@@ -270,13 +286,24 @@ export const workflow = async (
     "echo failed >&2; exit 7",
   ]);
   const preview = await sandbox.ports.expose(3000);
+  const timeoutBefore = sandbox.raw.timeout;
+  await sandbox.raw.extendTimeout(1000);
+  const networkPolicy = await sandbox.raw.updateNetworkPolicy("deny-all");
+  const restoredNetworkPolicy =
+    await sandbox.raw.updateNetworkPolicy("allow-all");
   const commands = {
     create: await sandbox.files.text(locations.create),
     exec: await sandbox.files.text(locations.exec),
     shell: await sandbox.files.text(locations.shell),
   };
   const spawn = { ...spawned, output };
-  const command = { commands, exec, failure, port: preview, shell, spawn };
+  const raw = {
+    extended: sandbox.raw.timeout >= timeoutBefore + 1000,
+    networkPolicy,
+    restoredNetworkPolicy,
+    status: sandbox.raw.status,
+  };
+  const command = { commands, exec, failure, port: preview, raw, shell, spawn };
   const ok = filesOk(files, content) && commandsOk(command, content);
 
   return {
@@ -289,6 +316,7 @@ export const workflow = async (
     ok,
     port: preview,
     provider: sandbox.provider,
+    raw,
     shell,
     spawn,
   };
@@ -367,6 +395,12 @@ export const expectWorkflow = (payload: Workflow): void => {
   expect(payload.spawn.output).toContain("hello from vercel");
   expect(payload.port.port).toBe(3000);
   expect(payload.port.url).toMatch(/^https:\/\//u);
+  expect(payload.raw).toEqual({
+    extended: true,
+    networkPolicy: "deny-all",
+    restoredNetworkPolicy: "allow-all",
+    status: "running",
+  });
 };
 
 export const expectSource = (payload: Source): void => {

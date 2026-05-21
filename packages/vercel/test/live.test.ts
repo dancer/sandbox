@@ -6,6 +6,7 @@ import { expectSource, expectWorkflow, source, workflow } from "./behavior";
 import {
   adapter,
   cleanup,
+  cleanupSnapshot,
   cwd,
   enabled,
   path,
@@ -42,12 +43,14 @@ live("vercel creates and starts from a live snapshot", async () => {
     cwd,
   });
   let derived: LiveSandbox | undefined;
+  let snapshotId: string | undefined;
 
   try {
     await sandbox.files.write(file, "ready");
 
     const snapshot = await sandbox.snapshots.create("sandbox-sdk-live");
     expect(snapshot.id).toBeTruthy();
+    snapshotId = snapshot.id;
 
     derived = await create({
       adapter: adapter(),
@@ -60,5 +63,6 @@ live("vercel creates and starts from a live snapshot", async () => {
     await record("source", sourceFixture(payload));
   } finally {
     await Promise.all([cleanup(derived), cleanup(sandbox)]);
+    await cleanupSnapshot(snapshotId);
   }
 });

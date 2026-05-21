@@ -22,6 +22,9 @@
       "process.spawnShell",
       "process.failure",
       "ports.expose",
+      "sandbox.raw.extendTimeout",
+      "sandbox.raw.updateNetworkPolicy",
+      "sandbox.raw.status",
       "sandbox.raw.delete"
     ],
     "fixture": "workflow",
@@ -82,6 +85,12 @@
       "url": "https://preview.example.com"
     },
     "provider": "vercel",
+    "raw": {
+      "extended": true,
+      "networkPolicy": "deny-all",
+      "restoredNetworkPolicy": "allow-all",
+      "status": "running"
+    },
     "shell": {
       "code": 0,
       "ok": true,
