@@ -1457,6 +1457,8 @@ codesandbox adapter configuration
 
 ```ts
 export type CodeSandbox = Readonly<{
+  /** wakeup behavior for hibernated CodeSandbox VMs */
+  automaticWakeupConfig?: CreateOptions["automaticWakeupConfig"];
   /** existing codesandbox sdk client for tests or custom transport */
   client?: Sdk;
   /** options forwarded to the codesandbox sdk constructor */
@@ -1481,6 +1483,8 @@ export type CodeSandbox = Readonly<{
   tags?: readonly string[];
   /** template sandbox id used for new sandboxes */
   template?: string;
+  /** default hibernation timeout in milliseconds for new sandboxes */
+  timeout?: number;
   /** sandbox title shown in codesandbox */
   title?: string;
   /** api token. falls back to CSB_API_KEY */
@@ -1616,8 +1620,14 @@ export type E2B = Readonly<{
   env?: Readonly<Record<string, string>>;
   /** extra headers sent to the e2b api */
   headers?: Readonly<Record<string, string>>;
+  /** e2b lifecycle behavior such as pause or kill when timeout is reached */
+  lifecycle?: SandboxLifecycle;
   /** metadata attached to new sandboxes */
   metadata?: Readonly<Record<string, string>>;
+  /** e2b mcp gateway configuration enabled for new sandboxes */
+  mcp?: McpServer;
+  /** e2b network policy for outbound traffic and public preview access */
+  network?: SandboxNetworkOpts;
   /** request timeout in milliseconds for e2b api calls */
   requestTimeout?: number;
   /** custom sandbox url for advanced or debug deployments */
@@ -1630,6 +1640,8 @@ export type E2B = Readonly<{
   timeout?: number;
   /** linux user used for file and command operations */
   user?: string;
+  /** e2b volume mounts keyed by sandbox mount path */
+  volumeMounts?: Readonly<Record<string, Volume | string>>;
 }>;
 ```
 
