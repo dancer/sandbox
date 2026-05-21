@@ -42,11 +42,11 @@
     "test": "bun test test"
   },
   "dependencies": {
-    "@cloudflare/sandbox": "^0.10.1",
+    "@cloudflare/sandbox": "^0.10.2",
     "@sandbox-sdk/core": "workspace:*"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260520.1",
+    "@cloudflare/workers-types": "^4.20260521.1",
     "typescript": "^5.9.3"
   }
 }

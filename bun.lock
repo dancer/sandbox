@@ -5,7 +5,7 @@
     "": {
       "name": "sandbox",
       "devDependencies": {
-        "@cloudflare/sandbox": "^0.10.1",
+        "@cloudflare/sandbox": "^0.10.2",
         "@cloudflare/workers-types": "^4.20260521.1",
         "@sandbox-sdk/ai": "workspace:*",
         "@sandbox-sdk/blaxel": "workspace:*",
@@ -29,12 +29,12 @@
       "name": "@sandbox-sdk/cloudflare-live",
       "version": "0.0.0",
       "dependencies": {
-        "@cloudflare/sandbox": "^0.10.1",
+        "@cloudflare/sandbox": "^0.10.2",
         "@sandbox-sdk/cloudflare": "workspace:*",
         "@sandbox-sdk/core": "workspace:*",
       },
       "devDependencies": {
-        "@cloudflare/workers-types": "^4.20260520.1",
+        "@cloudflare/workers-types": "^4.20260521.1",
         "typescript": "^5.9.3",
       },
     },
@@ -108,11 +108,11 @@
       "name": "@sandbox-sdk/cloudflare",
       "version": "0.0.0",
       "dependencies": {
-        "@cloudflare/sandbox": "^0.10.1",
+        "@cloudflare/sandbox": "^0.10.2",
         "@sandbox-sdk/core": "workspace:*",
       },
       "devDependencies": {
-        "@cloudflare/workers-types": "^4.20260520.1",
+        "@cloudflare/workers-types": "^4.20260521.1",
         "typescript": "^5.9.3",
       },
     },
@@ -387,7 +387,7 @@
 
     "@cloudflare/containers": ["@cloudflare/containers@0.3.4", "", {}, "sha512-6kWodmgBSug/rr9fjcWrZcKhxmWTEc1BTKC6nVv7yvYaRRvV3rZPZjq9R17eN0l9cl2LNc03wp/Z6OV+0uDwXA=="],
 
-    "@cloudflare/sandbox": ["@cloudflare/sandbox@0.10.1", "", { "dependencies": { "@cloudflare/containers": "^0.3.0", "aws4fetch": "^1.0.20", "capnweb": "^0.6.1", "hono": "^4.12.18" }, "peerDependencies": { "@openai/agents": "^0.3.3", "@opencode-ai/sdk": "^1.1.40", "@xterm/xterm": ">=5.0.0" }, "optionalPeers": ["@openai/agents", "@opencode-ai/sdk", "@xterm/xterm"] }, "sha512-l5QH0zemshvsYGvF5K/Lee1WydL93Oc1jZlVC2gRQkRwsNxNvHpfNn59B4/u68lax6iLGemWGd/TdJHzoq6MiQ=="],
+    "@cloudflare/sandbox": ["@cloudflare/sandbox@0.10.2", "", { "dependencies": { "@cloudflare/containers": "^0.3.0", "aws4fetch": "^1.0.20", "capnweb": "^0.6.1", "hono": "^4.12.18" }, "peerDependencies": { "@openai/agents": "^0.3.3", "@opencode-ai/sdk": "^1.1.40", "@xterm/xterm": ">=5.0.0" }, "optionalPeers": ["@openai/agents", "@opencode-ai/sdk", "@xterm/xterm"] }, "sha512-gZXcUaVMaVc/aBYFdgvyJGyibx0K16j+wWH/XDET63nWRpQKBlWM0dijhZb17OMRw/FWb+7utOdpNGMKyNMyCg=="],
 
     "@cloudflare/workers-types": ["@cloudflare/workers-types@4.20260521.1", "", {}, "sha512-cerUUdckXWiNm0x0XEIomBkr58xja5hn/1F9wzzDfJTE96L98L/Ra0ToTxKfzsXLklPflOagce8Vhg0vx8Ytgw=="],
 

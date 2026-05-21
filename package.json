@@ -30,7 +30,7 @@
     "prepare": "husky"
   },
   "devDependencies": {
-    "@cloudflare/sandbox": "^0.10.1",
+    "@cloudflare/sandbox": "^0.10.2",
     "@cloudflare/workers-types": "^4.20260521.1",
     "@sandbox-sdk/ai": "workspace:*",
     "@sandbox-sdk/blaxel": "workspace:*",
