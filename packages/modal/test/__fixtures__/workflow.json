@@ -15,7 +15,9 @@
       "files.list",
       "files.remove",
       "process.exec",
+      "process.exec.options",
       "process.shell",
+      "process.shell.options",
       "process.spawn.unsupported",
       "process.failure",
       "ports.expose",
@@ -40,6 +42,10 @@
       "snapshots": false,
       "streaming": "separate",
       "volumes": true
+    },
+    "commands": {
+      "exec": "exec-env",
+      "shell": "shell-env"
     },
     "exec": {
       "code": 0,

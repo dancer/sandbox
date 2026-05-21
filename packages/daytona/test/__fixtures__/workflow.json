@@ -15,7 +15,9 @@
       "files.list",
       "files.remove",
       "process.exec",
+      "process.exec.options",
       "process.shell",
+      "process.shell.options",
       "process.spawnShell",
       "process.failure",
       "ports.expose",
@@ -41,6 +43,10 @@
       "snapshotSource": "create-time",
       "snapshots": false,
       "volumes": true
+    },
+    "commands": {
+      "exec": "exec-env",
+      "shell": "shell-env"
     },
     "exec": {
       "code": 0,

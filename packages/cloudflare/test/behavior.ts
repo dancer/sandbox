@@ -20,7 +20,9 @@ export const coverage = (payload: Coverage): void => {
     "files.list",
     "files.remove",
     "process.exec",
+    "process.exec.options",
     "process.shell",
+    "process.shell.options",
     "process.spawnShell",
     "process.failure",
     "sandbox.stop",
@@ -72,6 +74,10 @@ export const workflow = ({ body, response }: Result): void => {
     buffer: "buffer",
     bytes: "bytes",
     stream: "stream",
+  });
+  expect(body.commands).toEqual({
+    exec: "exec-env",
+    shell: "shell-env",
   });
   expect(body.exec).toMatchObject({
     code: 0,

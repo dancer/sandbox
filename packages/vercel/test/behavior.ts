@@ -17,17 +17,25 @@ type Files = Readonly<{
   removed: boolean;
 }>;
 
+type Commands = Readonly<{
+  exec: string;
+  shell: string;
+}>;
+
 type Paths = Readonly<{
   blob: string;
   buffer: string;
   bytes: string;
+  exec: string;
   file: string;
   remove: string;
+  shell: string;
   stream: string;
 }>;
 
 export type Workflow = Readonly<{
   capabilities: Capabilities;
+  commands: Commands;
   exec: Command;
   failure: Command;
   file: Readonly<{
@@ -90,8 +98,10 @@ const paths = (directory: string, file: string): Paths => ({
   blob: `${directory}/blob.txt`,
   buffer: `${directory}/buffer.txt`,
   bytes: `${directory}/bytes.txt`,
+  exec: `${directory}/exec-env.txt`,
   file,
   remove: `${directory}/remove.txt`,
+  shell: `${directory}/shell-env.txt`,
   stream: `${directory}/stream.txt`,
 });
 
@@ -149,13 +159,18 @@ const filesOk = (value: Files, content: string): boolean =>
   value.removed;
 
 const commandsOk = (
-  input: Pick<Workflow, "exec" | "failure" | "port" | "shell" | "spawn">,
+  input: Pick<
+    Workflow,
+    "commands" | "exec" | "failure" | "port" | "shell" | "spawn"
+  >,
   content: string
 ): boolean =>
   input.exec.ok &&
   input.exec.stdout === content &&
   input.shell.ok &&
   input.shell.stdout === content &&
+  input.commands.exec === "exec-env" &&
+  input.commands.shell === "shell-env" &&
   !input.failure.ok &&
   input.failure.code === 7 &&
   input.failure.stderr.includes("failed") &&
@@ -177,6 +192,17 @@ export const workflow = async (
   const files = await readFiles(sandbox, locations, directory);
   const exec = await sandbox.process.exec("cat", [file]);
   const shell = await sandbox.process.shell(`cat ${file}`);
+  const execOptions = await sandbox.process.exec(
+    "sh",
+    ["-lc", 'printf %s "$SANDBOX_SDK_EXEC" > exec-env.txt'],
+    { cwd: directory, env: { SANDBOX_SDK_EXEC: "exec-env" } }
+  );
+  const shellOptions = await sandbox.process.shell(
+    'printf %s "$SANDBOX_SDK_SHELL" > shell-env.txt',
+    { cwd: directory, env: { SANDBOX_SDK_SHELL: "shell-env" } }
+  );
+  expect(execOptions).toMatchObject({ code: 0, ok: true });
+  expect(shellOptions).toMatchObject({ code: 0, ok: true });
   const running = await sandbox.process.spawnShell(`cat ${file}`);
   const output = await text(running.output);
   const spawned = await running.result;
@@ -185,12 +211,17 @@ export const workflow = async (
     "echo failed >&2; exit 7",
   ]);
   const preview = await sandbox.ports.expose(3000);
+  const commands = {
+    exec: await sandbox.files.text(locations.exec),
+    shell: await sandbox.files.text(locations.shell),
+  };
   const spawn = { ...spawned, output };
-  const command = { exec, failure, port: preview, shell, spawn };
+  const command = { commands, exec, failure, port: preview, shell, spawn };
   const ok = filesOk(files, content) && commandsOk(command, content);
 
   return {
     capabilities: sandbox.capabilities,
+    commands,
     exec,
     failure,
     file: files.file,
@@ -249,6 +280,10 @@ export const expectWorkflow = (payload: Workflow): void => {
     bytes: "bytes",
     stream: "stream",
   });
+  expect(payload.commands).toEqual({
+    exec: "exec-env",
+    shell: "shell-env",
+  });
   expect(payload.exec).toMatchObject({
     code: 0,
     ok: true,
@@ -305,7 +340,9 @@ export const expectWorkflowCoverage = (payload: Coverage): void => {
     "files.list",
     "files.remove",
     "process.exec",
+    "process.exec.options",
     "process.shell",
+    "process.shell.options",
     "process.spawnShell",
     "process.failure",
     "ports.expose",

@@ -48,7 +48,9 @@ const coverage = {
     "files.list",
     "files.remove",
     "process.exec",
+    "process.exec.options",
     "process.shell",
+    "process.shell.options",
     "process.spawnShell",
     "process.failure",
     "ports.expose",
@@ -78,6 +80,12 @@ const ignore = (error) => error;
 
 const sanitize = (payload) => ({
   ...payload,
+  failure: {
+    code: payload.failure.code,
+    ok: payload.failure.ok,
+    stderr: "failed\n",
+    stdout: "",
+  },
   port: {
     ...payload.port,
     url: "https://preview.csb.app",
@@ -100,6 +108,8 @@ const workflow = async (sandbox) => {
   const blobFile = path(root, "blob.txt");
   const streamFile = path(root, "stream.txt");
   const removeFile = path(root, "remove.txt");
+  const execFile = path(root, "exec-env.txt");
+  const shellFile = path(root, "shell-env.txt");
 
   await sandbox.files.mkdir(root);
   await sandbox.files.write(file, content);
@@ -114,6 +124,23 @@ const workflow = async (sandbox) => {
 
   const exec = command(await sandbox.process.exec("cat", [file]));
   const shell = command(await sandbox.process.shell(`cat ${file}`));
+  command(
+    await sandbox.process.exec(
+      "sh",
+      ["-lc", 'printf %s "$SANDBOX_SDK_EXEC" > exec-env.txt'],
+      { cwd: root, env: { SANDBOX_SDK_EXEC: "exec-env" } }
+    )
+  );
+  command(
+    await sandbox.process.shell(
+      'printf %s "$SANDBOX_SDK_SHELL" > shell-env.txt',
+      { cwd: root, env: { SANDBOX_SDK_SHELL: "shell-env" } }
+    )
+  );
+  const commands = {
+    exec: await sandbox.files.text(execFile),
+    shell: await sandbox.files.text(shellFile),
+  };
   const running = await sandbox.process.spawnShell(`cat ${file}`);
   const output = await text(running.output);
   const spawned = command(await running.result);
@@ -130,6 +157,7 @@ const workflow = async (sandbox) => {
 
     const payload = {
       capabilities: sandbox.capabilities,
+      commands,
       exec,
       failure: failed,
       file: {
@@ -163,6 +191,8 @@ const workflow = async (sandbox) => {
     assert.equal(payload.inputs.buffer, "buffer");
     assert.equal(payload.inputs.bytes, "bytes");
     assert.equal(payload.inputs.stream, "stream");
+    assert.equal(payload.commands.exec, "exec-env");
+    assert.equal(payload.commands.shell, "shell-env");
     assert.equal(payload.exec.stdout, content);
     assert.equal(payload.shell.stdout, content);
     assert.match(payload.spawn.output, /hello from codesandbox/u);

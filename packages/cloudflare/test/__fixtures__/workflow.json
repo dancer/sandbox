@@ -15,7 +15,9 @@
       "files.list",
       "files.remove",
       "process.exec",
+      "process.exec.options",
       "process.shell",
+      "process.shell.options",
       "process.spawnShell",
       "process.failure",
       "sandbox.stop"
@@ -40,6 +42,10 @@
       "snapshots": false,
       "streaming": "separate",
       "volumes": "volume"
+    },
+    "commands": {
+      "exec": "exec-env",
+      "shell": "shell-env"
     },
     "exec": {
       "code": 0,

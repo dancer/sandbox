@@ -67,7 +67,9 @@ export const workflowFeatures = (
   "files.list",
   "files.remove",
   "process.exec",
+  "process.exec.options",
   "process.shell",
+  "process.shell.options",
   spawn ? "process.spawnShell" : "process.spawn.unsupported",
   "process.failure",
   ...(port ? ["ports.expose"] : []),
@@ -161,6 +163,10 @@ export const expectWorkflow = (payload: Payload, expected: Workflow): void => {
     buffer: "buffer",
     bytes: "bytes",
     stream: "stream",
+  });
+  expect(payload.commands).toEqual({
+    exec: "exec-env",
+    shell: "shell-env",
   });
   expect(payload.exec).toMatchObject({
     code: 0,

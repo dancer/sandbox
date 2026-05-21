@@ -33,8 +33,14 @@ type Inputs = Readonly<{
   stream: string;
 }>;
 
+type Commands = Readonly<{
+  exec: string;
+  shell: string;
+}>;
+
 export type Payload = Readonly<{
   capabilities: Capabilities;
+  commands?: Commands;
   exec?: Result;
   failure?: Result;
   file: File;
@@ -123,6 +129,8 @@ export const workflow = async (
   const blobFile = path(root, "blob.txt");
   const streamFile = path(root, "stream.txt");
   const removeFile = path(root, "remove.txt");
+  const execFile = path(root, "exec-env.txt");
+  const shellFile = path(root, "shell-env.txt");
   let server: Running | undefined;
 
   await sandbox.files.mkdir(root);
@@ -170,6 +178,7 @@ export const workflow = async (
   let exec: Result | undefined;
   let shell: Result | undefined;
   let failure: Result | undefined;
+  let commands: Commands | undefined;
   let spawn: (Result & Readonly<{ output: string }>) | undefined;
   let unsupported = { spawn: false, spawnShell: false };
   let preview: Url | undefined;
@@ -177,6 +186,22 @@ export const workflow = async (
   if (supports(sandbox, "processExec")) {
     exec = match(await sandbox.process.exec("cat", [file]), input.content);
     shell = match(await sandbox.process.shell(`cat ${file}`), input.content);
+    const execOptions = await sandbox.process.exec(
+      "sh",
+      ["-lc", 'printf %s "$SANDBOX_SDK_EXEC" > exec-env.txt'],
+      { cwd: root, env: { SANDBOX_SDK_EXEC: "exec-env" } }
+    );
+    const shellOptions = await sandbox.process.shell(
+      'printf %s "$SANDBOX_SDK_SHELL" > shell-env.txt',
+      { cwd: root, env: { SANDBOX_SDK_SHELL: "shell-env" } }
+    );
+    expect(execOptions).toMatchObject({ code: 0, ok: true });
+    expect(shellOptions).toMatchObject({ code: 0, ok: true });
+    commands = {
+      exec: await sandbox.files.text(execFile),
+      shell: await sandbox.files.text(shellFile),
+    };
+    expect(commands).toEqual({ exec: "exec-env", shell: "shell-env" });
     failure = failed(
       await sandbox.process.exec("sh", ["-lc", "echo failed >&2; exit 7"])
     );
@@ -221,6 +246,7 @@ export const workflow = async (
 
   return {
     capabilities: sandbox.capabilities,
+    commands,
     exec,
     failure,
     file: filePayload,

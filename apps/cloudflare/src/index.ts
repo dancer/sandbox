@@ -214,6 +214,8 @@ const handleLive = async (env: Env, url: URL): Promise<Response> => {
   const blobFile = `${cwd}/blob.txt`;
   const streamFile = `${cwd}/stream.txt`;
   const removeFile = `${cwd}/remove.txt`;
+  const execFile = `${cwd}/exec-env.txt`;
+  const shellFile = `${cwd}/shell-env.txt`;
   let sandbox: CoreSandbox | undefined;
 
   try {
@@ -250,6 +252,19 @@ const handleLive = async (env: Env, url: URL): Promise<Response> => {
     const removed = !(await sandbox.files.exists(removeFile));
     const exec = await sandbox.process.exec("cat", [file]);
     const shell = await sandbox.process.shell(`cat ${file}`);
+    const execOptions = await sandbox.process.exec(
+      "sh",
+      ["-lc", 'printf %s "$SANDBOX_SDK_EXEC" > exec-env.txt'],
+      { cwd, env: { SANDBOX_SDK_EXEC: "exec-env" } }
+    );
+    const shellOptions = await sandbox.process.shell(
+      'printf %s "$SANDBOX_SDK_SHELL" > shell-env.txt',
+      { cwd, env: { SANDBOX_SDK_SHELL: "shell-env" } }
+    );
+    const commands = {
+      exec: await sandbox.files.text(execFile),
+      shell: await sandbox.files.text(shellFile),
+    };
     const failed = await sandbox.process.exec("sh", [
       "-lc",
       "echo failed >&2; exit 7",
@@ -272,6 +287,10 @@ const handleLive = async (env: Env, url: URL): Promise<Response> => {
       exec.stdout === message,
       shell.ok,
       shell.stdout === message,
+      execOptions.ok,
+      shellOptions.ok,
+      commands.exec === "exec-env",
+      commands.shell === "shell-env",
       !failed.ok,
       failed.code === 7,
       failed.stderr.includes("failed"),
@@ -281,6 +300,7 @@ const handleLive = async (env: Env, url: URL): Promise<Response> => {
 
     return json({
       capabilities: sandbox.capabilities,
+      commands,
       exec,
       failure: failed,
       file: { exists, listed, read, stream, text: content },
