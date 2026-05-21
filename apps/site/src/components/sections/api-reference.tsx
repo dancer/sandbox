@@ -217,10 +217,11 @@ export const ApiReference = () => (
         ports.expose(port, options?)
       </Heading>
       <p>
-        Returns a public URL routed to <code>port</code> inside the sandbox.
-        Adapters that can't tunnel (the local adapter) throw{" "}
-        <code>SandboxError</code> with <code>code: "unsupported"</code>. Branch
-        on <code>sandbox.capabilities.ports</code> first.
+        Returns a URL routed to <code>port</code> inside the sandbox. Local
+        sandboxes return derived localhost URLs; provider adapters may return
+        public tunnels, create-time port URLs, or reject unsupported exposure
+        with <code>SandboxError</code>. Branch on{" "}
+        <code>sandbox.capabilities.ports</code> first.
       </p>
       <CodeBlock code={PORTS_EXAMPLE} lang="ts" />
       <div className="flex flex-col gap-2">

@@ -102,8 +102,11 @@ const capabilities: Capabilities = {
   raw: {
     desktop: true,
     git: true,
+    interpreter: true,
+    lifecycle: "dynamic",
     network: "dynamic",
-    volumes: true,
+    pty: true,
+    volumes: "create-time",
   },
   snapshotCreate: false,
   snapshotRestore: false,
