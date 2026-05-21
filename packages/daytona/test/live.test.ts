@@ -1,5 +1,6 @@
-import { test } from "bun:test";
+import { expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
+import { setTimeout as delay } from "node:timers/promises";
 
 import { create } from "@sandbox-sdk/core";
 
@@ -14,11 +15,48 @@ const credentialed = Boolean(
 const enabled = credentialed;
 const live = enabled ? test : test.skip;
 
+const withTimeout = async <Value>(
+  promise: Promise<Value>,
+  label: string,
+  milliseconds = 60_000
+): Promise<Value> => {
+  const controller = new AbortController();
+  const timeout = (async (): Promise<never> => {
+    await delay(milliseconds, undefined, {
+      signal: controller.signal,
+    });
+    throw new Error(`${label} timed out`);
+  })();
+
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    controller.abort();
+  }
+};
+
+const waitFor = async (
+  predicate: () => boolean,
+  label: string,
+  milliseconds = 10_000
+): Promise<void> => {
+  const started = Date.now();
+
+  while (!predicate()) {
+    if (Date.now() - started > milliseconds) {
+      throw new Error(`${label} timed out`);
+    }
+
+    await delay(100);
+  }
+};
+
 live("daytona runs a live sandbox workflow", async () => {
   const cwd = `/tmp/sandbox-sdk-${randomUUID()}`;
   const sandbox = await create({
     adapter: daytona({
       deleteOnStop: true,
+      networkBlockAll: false,
       timeout: 300_000,
     }),
     cwd,
@@ -38,6 +76,85 @@ live("daytona runs a live sandbox workflow", async () => {
         "snapshotSource",
       ])
     );
+  } finally {
+    await sandbox.stop();
+  }
+});
+
+live("daytona exposes advertised raw capabilities", async () => {
+  const cwd = `/tmp/sandbox-sdk-raw-${randomUUID()}`;
+  const pty = `sandbox-sdk-${randomUUID()}`;
+  let output = "";
+  const sandbox = await create({
+    adapter: daytona({
+      deleteOnStop: true,
+      timeout: 300_000,
+    }),
+    cwd,
+  });
+
+  try {
+    await sandbox.process.exec("git", ["init", "-b", "main"], { cwd });
+    await sandbox.files.write(`${cwd}/raw.txt`, "raw");
+
+    await sandbox.raw.git.add(cwd, ["raw.txt"]);
+    const commit = await sandbox.raw.git.commit(
+      cwd,
+      "raw",
+      "sandbox sdk",
+      "sandbox@example.com"
+    );
+    expect(commit.sha).toBeTruthy();
+
+    const git = await sandbox.raw.git.status(cwd);
+    expect(git.currentBranch).toBe("main");
+
+    const labels = await sandbox.raw.setLabels({ sandboxSdk: "raw" });
+    expect(labels.sandboxSdk).toBe("raw");
+    expect(sandbox.raw.networkBlockAll).toBe(false);
+
+    await sandbox.raw.setAutostopInterval(15);
+
+    const context = await sandbox.raw.codeInterpreter.createContext(cwd);
+    try {
+      const interpreter = await sandbox.raw.codeInterpreter.runCode(
+        'print("raw-interpreter")',
+        { context }
+      );
+      expect(interpreter.stdout).toContain("raw-interpreter");
+      expect(interpreter.error).toBeUndefined();
+    } finally {
+      await sandbox.raw.codeInterpreter.deleteContext(context);
+    }
+
+    const handle = await withTimeout(
+      sandbox.raw.process.createPty({
+        cols: 80,
+        cwd,
+        id: pty,
+        onData: (chunk) => {
+          output += new TextDecoder().decode(chunk);
+        },
+        rows: 24,
+      }),
+      "daytona pty create"
+    );
+
+    try {
+      const sessions = await sandbox.raw.process.listPtySessions();
+      expect(sessions.some((session) => session.id === pty)).toBe(true);
+      const info = await sandbox.raw.process.getPtySessionInfo(pty);
+      expect(info.id).toBe(pty);
+      const resized = await sandbox.raw.process.resizePtySession(pty, 100, 30);
+      expect(resized.cols).toBe(100);
+      expect(resized.rows).toBe(30);
+
+      await handle.sendInput("printf raw-pty\\n");
+      await waitFor(() => output.includes("raw-pty"), "daytona pty output");
+      await withTimeout(handle.kill(), "daytona pty kill");
+    } finally {
+      await handle.disconnect();
+    }
   } finally {
     await sandbox.stop();
   }
