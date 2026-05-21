@@ -121,7 +121,7 @@ const capabilities: Capabilities = {
     lifecycle: true,
     network: "create-time",
     secrets: "create-time",
-    volumes: true,
+    volumes: "create-time",
   },
   snapshotCreate: "filesystem",
   snapshotRestore: false,
