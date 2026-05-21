@@ -101,11 +101,25 @@ test("e2b maps create and command options without running a real provider", asyn
         apiKey: "key",
         env: { A: "1" },
         headers: { header: "value" },
+        lifecycle: { autoResume: true, onTimeout: "pause" },
+        mcp: {
+          filesystem: {
+            args: ["/work"],
+            command: "npx",
+          },
+        },
         metadata: { owner: "sdk" },
+        network: {
+          allowOut: ["registry.npmjs.org"],
+          denyOut: ["0.0.0.0/0"],
+        },
         requestTimeout: 123,
         template: "option-template",
         timeout: 456,
         user: "runner",
+        volumeMounts: {
+          "/data": "cache-volume",
+        },
       }),
       cwd: "/work",
       env: { B: "2" },
@@ -121,10 +135,24 @@ test("e2b maps create and command options without running a real provider", asyn
       apiKey: "key",
       envs: { A: "1", B: "2" },
       headers: { header: "value" },
+      lifecycle: { autoResume: true, onTimeout: "pause" },
+      mcp: {
+        filesystem: {
+          args: ["/work"],
+          command: "npx",
+        },
+      },
       metadata: { owner: "sdk", task: "test" },
+      network: {
+        allowOut: ["registry.npmjs.org"],
+        denyOut: ["0.0.0.0/0"],
+      },
       requestTimeoutMs: 123,
       template: "snapshot",
       timeoutMs: 789,
+      volumeMounts: {
+        "/data": "cache-volume",
+      },
     });
     expect(mkdirSeen).toEqual({
       options: { user: "runner" },

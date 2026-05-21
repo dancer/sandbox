@@ -19,7 +19,15 @@ import type {
   Sandbox,
 } from "@sandbox-sdk/core";
 import { CommandExitError, FileType, Sandbox as E2BSandbox } from "e2b";
-import type { CommandHandle, SandboxConnectOpts, SandboxOpts } from "e2b";
+import type {
+  CommandHandle,
+  McpServer,
+  SandboxConnectOpts,
+  SandboxLifecycle,
+  SandboxNetworkOpts,
+  SandboxOpts,
+  Volume,
+} from "e2b";
 
 /** native e2b sandbox object exposed as `sandbox.raw` */
 export type E2BRaw = E2BSandbox;
@@ -44,8 +52,14 @@ export type E2B = Readonly<{
   env?: Readonly<Record<string, string>>;
   /** extra headers sent to the e2b api */
   headers?: Readonly<Record<string, string>>;
+  /** e2b lifecycle behavior such as pause or kill when timeout is reached */
+  lifecycle?: SandboxLifecycle;
   /** metadata attached to new sandboxes */
   metadata?: Readonly<Record<string, string>>;
+  /** e2b mcp gateway configuration enabled for new sandboxes */
+  mcp?: McpServer;
+  /** e2b network policy for outbound traffic and public preview access */
+  network?: SandboxNetworkOpts;
   /** request timeout in milliseconds for e2b api calls */
   requestTimeout?: number;
   /** custom sandbox url for advanced or debug deployments */
@@ -58,6 +72,8 @@ export type E2B = Readonly<{
   timeout?: number;
   /** linux user used for file and command operations */
   user?: string;
+  /** e2b volume mounts keyed by sandbox mount path */
+  volumeMounts?: Readonly<Record<string, Volume | string>>;
 }>;
 
 type Raw = E2BRaw;
@@ -136,12 +152,20 @@ const createOptions = (
       ? {}
       : { allowInternetAccess: options.allowInternetAccess }),
     envs: { ...options.env, ...input.env },
+    ...(options.lifecycle === undefined
+      ? {}
+      : { lifecycle: options.lifecycle }),
+    ...(options.mcp === undefined ? {} : { mcp: options.mcp }),
     metadata: { ...options.metadata, ...input.metadata },
+    ...(options.network === undefined ? {} : { network: options.network }),
     ...(options.secure === undefined ? {} : { secure: options.secure }),
     ...((input.snapshot ?? input.template ?? options.template)
       ? { template: input.snapshot ?? input.template ?? options.template }
       : {}),
     ...(timeout === undefined ? {} : { timeoutMs: timeout }),
+    ...(options.volumeMounts === undefined
+      ? {}
+      : { volumeMounts: { ...options.volumeMounts } }),
   };
 };
 

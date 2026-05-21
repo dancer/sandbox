@@ -38,6 +38,8 @@ export type { CodeSandboxRaw } from "./types.js";
 
 /** codesandbox adapter configuration */
 export type CodeSandbox = Readonly<{
+  /** wakeup behavior for hibernated CodeSandbox VMs */
+  automaticWakeupConfig?: CreateOptions["automaticWakeupConfig"];
   /** existing codesandbox sdk client for tests or custom transport */
   client?: Sdk;
   /** options forwarded to the codesandbox sdk constructor */
@@ -62,6 +64,8 @@ export type CodeSandbox = Readonly<{
   tags?: readonly string[];
   /** template sandbox id used for new sandboxes */
   template?: string;
+  /** default hibernation timeout in milliseconds for new sandboxes */
+  timeout?: number;
   /** sandbox title shown in codesandbox */
   title?: string;
   /** api token. falls back to CSB_API_KEY */
@@ -121,9 +125,12 @@ const createOptions = (
   input: NonNullable<Parameters<Adapter<Raw>["create"]>[0]>
 ): LocalCreate => {
   const template = input.snapshot ?? input.template ?? options.template;
-  const lifetime = duration(input.timeout, provider);
+  const lifetime = duration(input.timeout ?? options.timeout, provider);
   return {
     ...(template === undefined ? {} : { id: template }),
+    ...(options.automaticWakeupConfig === undefined
+      ? {}
+      : { automaticWakeupConfig: options.automaticWakeupConfig }),
     ...(options.privacy === undefined ? {} : { privacy: options.privacy }),
     ...(options.title === undefined ? {} : { title: options.title }),
     ...(options.description === undefined

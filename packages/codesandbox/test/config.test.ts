@@ -132,10 +132,15 @@ test("codesandbox maps create options and normalized operations", async () => {
 
   const current = await create({
     adapter: codesandbox({
+      automaticWakeupConfig: {
+        http: true,
+        websocket: false,
+      },
       client: sdk,
       description: "description",
       env: { A: "1" },
       tags: ["sandbox-sdk"],
+      timeout: 3000,
       title: "title",
     }),
     cwd: "/work",
@@ -147,6 +152,10 @@ test("codesandbox maps create options and normalized operations", async () => {
   expect(current.id).toBe("sandbox");
   expect(current.cwd).toBe("/work");
   expect(createSeen).toMatchObject({
+    automaticWakeupConfig: {
+      http: true,
+      websocket: false,
+    },
     description: "description",
     hibernationTimeoutSeconds: 5,
     id: "template",
@@ -228,6 +237,66 @@ test("codesandbox maps create options and normalized operations", async () => {
   await current.stop();
   expect(disconnected).toBe(true);
   expect(shutdownSeen).toBe("sandbox");
+});
+
+test("codesandbox uses adapter timeout when create input omits one", async () => {
+  let createSeen: unknown;
+  const client = {
+    commands: {
+      run: () => Promise.resolve("ok"),
+      runBackground: () =>
+        Promise.resolve({
+          command: "sleep 1",
+          kill: () => Promise.resolve(),
+          onOutput: () => ({ dispose: () => {} }),
+          open: () => Promise.resolve(""),
+          waitUntilComplete: () => Promise.resolve(""),
+        }),
+    },
+    disconnect: () => Promise.resolve(),
+    fs: {
+      mkdir: () => Promise.resolve(),
+      readFile: () => Promise.resolve(new Uint8Array()),
+      readTextFile: () => Promise.resolve(""),
+      readdir: () => Promise.resolve([]),
+      remove: () => Promise.resolve(),
+      stat: () => Promise.resolve({ mtime: 0, size: 0 }),
+      writeFile: () => Promise.resolve(),
+      writeTextFile: () => Promise.resolve(),
+    },
+    ports: {
+      waitForPort: () =>
+        Promise.resolve({ host: "https://preview.csb.app", port: 3000 }),
+    },
+    workspacePath: "/project/sandbox",
+  };
+  const sandbox = {
+    connect: () => Promise.resolve(client),
+    id: "sandbox",
+  };
+  const sdk = {
+    sandboxes: {
+      create: (options: unknown) => {
+        createSeen = options;
+        return Promise.resolve(sandbox);
+      },
+      delete: () => Promise.resolve(),
+      hibernate: () => Promise.resolve(),
+      resume: () => Promise.resolve(sandbox),
+      shutdown: () => Promise.resolve(),
+    },
+  };
+
+  await create({
+    adapter: codesandbox({
+      client: sdk,
+      timeout: 2500,
+    }),
+  });
+
+  expect(createSeen).toMatchObject({
+    hibernationTimeoutSeconds: 3,
+  });
 });
 
 test("codesandbox starts from a normalized snapshot source", async () => {
