@@ -18,6 +18,8 @@ test("e2b reports missing credentials before provider calls", async () => {
   try {
     await expect(create({ adapter: e2b() })).rejects.toMatchObject({
       code: "configuration",
+      message:
+        "E2B credentials missing. Set E2B_API_KEY or E2B_ACCESS_TOKEN, or pass apiKey or accessToken to e2b().",
       provider: "e2b",
     });
   } finally {

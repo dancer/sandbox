@@ -100,7 +100,7 @@ const validate = (options: E2B): void => {
 
   throw sandboxError(
     provider,
-    "E2B credentials missing. Set E2B_API_KEY or pass apiKey to e2b().",
+    "E2B credentials missing. Set E2B_API_KEY or E2B_ACCESS_TOKEN, or pass apiKey or accessToken to e2b().",
     "configuration"
   );
 };
