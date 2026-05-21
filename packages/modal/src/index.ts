@@ -115,9 +115,11 @@ const capabilities: Capabilities = {
   processExec: true,
   processSpawn: false,
   raw: {
+    buckets: "create-time",
     gpu: "create-time",
     lifecycle: true,
     network: "create-time",
+    pty: true,
     secrets: "create-time",
     tunnels: "create-time",
     volumes: "create-time",

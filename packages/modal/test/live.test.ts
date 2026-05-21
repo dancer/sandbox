@@ -129,6 +129,12 @@ live("modal exposes advertised raw capabilities", async () => {
     const credentials = await sandbox.raw.createConnectToken();
     expect(credentials.url.startsWith("https://")).toBe(true);
     expect(credentials.token.length).toBeGreaterThan(0);
+
+    const pty = await sandbox.raw.exec(["sh", "-lc", "printf raw-pty"], {
+      pty: true,
+    });
+    expect(await pty.stdout.readText()).toContain("raw-pty");
+    expect(await pty.wait()).toBe(0);
   } finally {
     await sandbox.stop();
   }
