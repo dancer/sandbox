@@ -171,6 +171,8 @@ export type Port = Readonly<{
   host?: string;
   /** preview protocol preference when the provider supports it */
   protocol?: "http" | "https" | "tcp";
+  /** stable preview token when the provider supports custom preview URLs */
+  token?: string;
 }>;
 
 /** normalized sandbox instance returned by every adapter */

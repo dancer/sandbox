@@ -230,7 +230,9 @@ test("cloudflare allows preview ports over the system range", async () => {
   });
 
   try {
-    await expect(sandbox.ports.expose(8080)).resolves.toEqual({
+    await expect(
+      sandbox.ports.expose(8080, { token: "verify" })
+    ).resolves.toEqual({
       port: 8080,
       url: "https://preview.example.com",
     });
@@ -239,6 +241,7 @@ test("cloudflare allows preview ports over the system range", async () => {
       options: {
         hostname: "example.com",
         name: "api",
+        token: "verify",
       },
       port: 8080,
     });

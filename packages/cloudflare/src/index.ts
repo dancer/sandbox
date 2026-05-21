@@ -199,6 +199,52 @@ const wait = async (
   return result(output.exitCode, logs.stdout, logs.stderr);
 };
 
+const lazy = <Output>(factory: () => Promise<Output>): Promise<Output> => {
+  let promise: Promise<Output> | undefined;
+  const get = (): Promise<Output> => {
+    promise ??= factory();
+    return promise;
+  };
+
+  return {
+    // oxlint-disable-next-line promise/prefer-await-to-then
+    catch: (onrejected) => get().catch(onrejected),
+    // oxlint-disable-next-line promise/prefer-await-to-then
+    finally: (onfinally) => get().finally(onfinally),
+    // oxlint-disable-next-line unicorn/no-thenable promise/prefer-await-to-then promise/prefer-catch
+    then: (onfulfilled, onrejected) => get().then(onfulfilled, onrejected),
+    [Symbol.toStringTag]: "Promise",
+  } as Promise<Output>;
+};
+
+const logs = (
+  raw: Native,
+  process: Awaited<ReturnType<Native["startProcess"]>>
+): ReadableStream<Uint8Array> => {
+  let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+
+  return new ReadableStream<Uint8Array>(
+    {
+      async cancel(reason) {
+        await reader?.cancel(reason);
+      },
+      async pull(controller) {
+        if (reader === undefined) {
+          const output = await raw.streamProcessLogs(process.id);
+          reader = output.getReader();
+        }
+        const chunk = await reader.read();
+        if (chunk.done) {
+          controller.close();
+          return;
+        }
+        controller.enqueue(chunk.value);
+      },
+    },
+    { highWaterMark: 0 }
+  );
+};
+
 const spawnLine = async (
   raw: Native,
   cwd: string,
@@ -213,14 +259,13 @@ const spawnLine = async (
       ...(options.env === undefined ? {} : { env: { ...options.env } }),
       ...(timeout === undefined ? {} : { timeout }),
     });
-    const output = await raw.streamProcessLogs(process.id);
     return {
       id: process.id,
       kill: async (signal = "SIGTERM") => {
         await process.kill(signal);
       },
-      output,
-      result: wait(raw, process),
+      output: logs(raw, process),
+      result: lazy(() => wait(raw, process)),
     };
   } catch (error) {
     throw sandboxError(provider, "Process spawn failed", "process", error);
@@ -296,6 +341,7 @@ const createSandbox = <ProviderRaw>(
       const output = await raw.exposePort(target, {
         hostname,
         ...(options.name === undefined ? {} : { name: options.name }),
+        ...(input?.token === undefined ? {} : { token: input.token }),
       });
       return {
         port: target,
