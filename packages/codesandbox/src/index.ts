@@ -385,6 +385,17 @@ const list = async (client: SandboxClient, path: string): Promise<Entry[]> => {
   return entries.toSorted((left, right) => left.path.localeCompare(right.path));
 };
 
+const wrap = async <Value>(
+  action: () => Promise<Value> | Value,
+  feature: string
+): Promise<Value> => {
+  try {
+    return await action();
+  } catch (error) {
+    throw sandboxError(provider, `${feature} failed`, "provider", error);
+  }
+};
+
 const createSandbox = (
   raw: Raw,
   cwd: string,
@@ -393,14 +404,15 @@ const createSandbox = (
   capabilities,
   cwd,
   files: {
-    exists: (path) => exists(raw.client, path),
-    list: (path = cwd) => list(raw.client, path),
-    mkdir: (path) => mkdir(raw.client, path),
-    read: (path) => raw.client.fs.readFile(path),
-    remove: (path) => raw.client.fs.remove(path, true),
-    stream: async (path) => readable(await raw.client.fs.readFile(path)),
-    text: (path) => raw.client.fs.readTextFile(path),
-    write: (path, input) => write(raw.client, path, input),
+    exists: (path) => wrap(() => exists(raw.client, path), "exists"),
+    list: (path = cwd) => wrap(() => list(raw.client, path), "list"),
+    mkdir: (path) => wrap(() => mkdir(raw.client, path), "mkdir"),
+    read: (path) => wrap(() => raw.client.fs.readFile(path), "read"),
+    remove: (path) => wrap(() => raw.client.fs.remove(path, true), "remove"),
+    stream: async (path) =>
+      readable(await wrap(() => raw.client.fs.readFile(path), "stream")),
+    text: (path) => wrap(() => raw.client.fs.readTextFile(path), "text"),
+    write: (path, input) => wrap(() => write(raw.client, path, input), "write"),
   },
   id: raw.sandbox.id,
   ports: {
@@ -409,7 +421,10 @@ const createSandbox = (
       if (options.host !== undefined || options.protocol === "tcp") {
         unsupported(provider, "custom preview hosts or tcp previews");
       }
-      const preview = await raw.client.ports.waitForPort(target);
+      const preview = await wrap(
+        () => raw.client.ports.waitForPort(target),
+        "port exposure"
+      );
       return { port: target, url: url(preview.host) };
     },
   },
@@ -432,19 +447,19 @@ const createSandbox = (
     restore: () => rejectUnsupported("in-place snapshot restore"),
   },
   stop: async () => {
-    await raw.client.disconnect();
+    await wrap(() => raw.client.disconnect(), "disconnect");
     if (stop === "disconnect") {
       return;
     }
     if (stop === "delete") {
-      await raw.sdk.sandboxes.delete(raw.sandbox.id);
+      await wrap(() => raw.sdk.sandboxes.delete(raw.sandbox.id), "stop");
       return;
     }
     if (stop === "hibernate") {
-      await raw.sdk.sandboxes.hibernate(raw.sandbox.id);
+      await wrap(() => raw.sdk.sandboxes.hibernate(raw.sandbox.id), "stop");
       return;
     }
-    await raw.sdk.sandboxes.shutdown(raw.sandbox.id);
+    await wrap(() => raw.sdk.sandboxes.shutdown(raw.sandbox.id), "stop");
   },
 });
 
@@ -460,7 +475,7 @@ export const codesandbox = (options: CodeSandbox = {}): Adapter<Raw> => ({
         : await current.sandboxes.resume(input.id);
     const client = await sandbox.connect(session(options, input));
     const cwd = input.cwd ?? options.cwd ?? client.workspacePath;
-    await mkdir(client, cwd);
+    await wrap(() => mkdir(client, cwd), "mkdir");
     return createSandbox(
       { client, sandbox, sdk: current },
       cwd,

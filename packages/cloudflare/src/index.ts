@@ -147,6 +147,17 @@ const rejectUnsupported = (feature: string): Promise<never> => {
   }
 };
 
+const wrap = async <Value>(
+  action: () => Promise<Value> | Value,
+  feature: string
+): Promise<Value> => {
+  try {
+    return await action();
+  } catch (error) {
+    throw sandboxError(provider, `${feature} failed`, "provider", error);
+  }
+};
+
 const validatePort = (value: number): number => {
   const target = port(value, provider);
   if (target >= 1024 && target !== 3000) {
@@ -299,11 +310,14 @@ const createSandbox = <ProviderRaw>(
   cwd,
   files: {
     exists: async (path) => {
-      const output = await raw.exists(path);
+      const output = await wrap(() => raw.exists(path), "exists");
       return output.exists;
     },
     list: async (path = cwd) => {
-      const entries = await raw.listFiles(path, options.list);
+      const entries = await wrap(
+        () => raw.listFiles(path, options.list),
+        "list"
+      );
       return entries.files
         .map(
           (entry): Entry => ({
@@ -316,24 +330,33 @@ const createSandbox = <ProviderRaw>(
         .toSorted((left, right) => left.path.localeCompare(right.path));
     },
     mkdir: async (path) => {
-      await raw.mkdir(path, { recursive: true });
+      await wrap(() => raw.mkdir(path, { recursive: true }), "mkdir");
     },
     read: async (path) => {
-      const output = await raw.readFile(path, { encoding: "base64" });
+      const output = await wrap(
+        () => raw.readFile(path, { encoding: "base64" }),
+        "read"
+      );
       return binary(output.content);
     },
     remove: async (path) => {
-      await raw.deleteFile(path);
+      await wrap(() => raw.deleteFile(path), "remove");
     },
     stream: async (path) => {
-      const output = await raw.readFile(path, { encoding: "base64" });
+      const output = await wrap(
+        () => raw.readFile(path, { encoding: "base64" }),
+        "stream"
+      );
       return stream(binary(output.content));
     },
     text: async (path) => {
-      const output = await raw.readFile(path, { encoding: "utf-8" });
+      const output = await wrap(
+        () => raw.readFile(path, { encoding: "utf-8" }),
+        "text"
+      );
       return output.content;
     },
-    write: (path, input) => write(raw, path, input),
+    write: (path, input) => wrap(() => write(raw, path, input), "write"),
   },
   id: options.id ?? "default",
   ports: {
@@ -348,11 +371,15 @@ const createSandbox = <ProviderRaw>(
         );
       }
       validateHostname(hostname);
-      const output = await raw.exposePort(target, {
-        hostname,
-        ...(options.name === undefined ? {} : { name: options.name }),
-        ...(input?.token === undefined ? {} : { token: input.token }),
-      });
+      const output = await wrap(
+        () =>
+          raw.exposePort(target, {
+            hostname,
+            ...(options.name === undefined ? {} : { name: options.name }),
+            ...(input?.token === undefined ? {} : { token: input.token }),
+          }),
+        "port exposure"
+      );
       return {
         port: target,
         url: output.url,
@@ -374,7 +401,7 @@ const createSandbox = <ProviderRaw>(
     restore: () => rejectUnsupported("snapshots"),
   },
   stop: async () => {
-    await raw.destroy();
+    await wrap(() => raw.destroy(), "stop");
   },
 });
 

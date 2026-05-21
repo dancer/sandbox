@@ -389,6 +389,17 @@ const rejectUnsupported = (feature: string): Promise<never> => {
   }
 };
 
+const wrap = async <Value>(
+  action: () => Promise<Value> | Value,
+  feature: string
+): Promise<Value> => {
+  try {
+    return await action();
+  } catch (error) {
+    throw sandboxError(provider, `${feature} failed`, "provider", error);
+  }
+};
+
 const createSandbox = (
   raw: Raw,
   cwd: string,
@@ -398,20 +409,25 @@ const createSandbox = (
   cwd,
   files: {
     exists: async (path) => {
-      const output = await shell(raw, cwd, `test -e ${quote(path)}`, {});
+      const output = await wrap(
+        () => shell(raw, cwd, `test -e ${quote(path)}`, {}),
+        "exists"
+      );
       return output.ok;
     },
-    list: (path = cwd) => list(raw, cwd, path),
+    list: (path = cwd) => wrap(() => list(raw, cwd, path), "list"),
     mkdir: async (path) => {
-      await shell(raw, cwd, `mkdir -p ${quote(path)}`, {});
+      await wrap(() => shell(raw, cwd, `mkdir -p ${quote(path)}`, {}), "mkdir");
     },
-    read: (path) => read(raw, path),
+    read: (path) => wrap(() => read(raw, path), "read"),
     remove: async (path) => {
-      await shell(raw, cwd, `rm -rf ${quote(path)}`, {});
+      await wrap(() => shell(raw, cwd, `rm -rf ${quote(path)}`, {}), "remove");
     },
-    stream: async (path) => readable(await read(raw, path)),
-    text: async (path) => new TextDecoder().decode(await read(raw, path)),
-    write: (path, input) => write(raw, cwd, path, input),
+    stream: async (path) =>
+      readable(await wrap(() => read(raw, path), "stream")),
+    text: async (path) =>
+      new TextDecoder().decode(await wrap(() => read(raw, path), "text")),
+    write: (path, input) => wrap(() => write(raw, cwd, path, input), "write"),
   },
   id: raw.sandboxId,
   ports: {
@@ -424,7 +440,7 @@ const createSandbox = (
           "unsupported"
         );
       }
-      const tunnels = await raw.tunnels();
+      const tunnels = await wrap(() => raw.tunnels(), "port exposure");
       const tunnel = tunnels[target];
       if (!tunnel) {
         throw sandboxError(provider, "Modal tunnel not found", "not_found");
@@ -443,13 +459,13 @@ const createSandbox = (
   raw,
   snapshots: {
     create: async (name) => {
-      const snapshot = await raw.snapshotFilesystem();
+      const snapshot = await wrap(() => raw.snapshotFilesystem(), "snapshot");
       return { id: snapshot.imageId, ...(name === undefined ? {} : { name }) };
     },
     restore: () => rejectUnsupported("in-place snapshot restore"),
   },
   stop: async () => {
-    await raw.terminate();
+    await wrap(() => raw.terminate(), "stop");
   },
 });
 

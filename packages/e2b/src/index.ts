@@ -191,6 +191,17 @@ const rejectUnsupported = (feature: string): Promise<never> => {
   }
 };
 
+const wrap = async <Value>(
+  action: () => Promise<Value> | Value,
+  feature: string
+): Promise<Value> => {
+  try {
+    return await action();
+  } catch (error) {
+    throw sandboxError(provider, `${feature} failed`, "provider", error);
+  }
+};
+
 const executeLine = async (
   raw: Raw,
   cwd: string,
@@ -337,9 +348,9 @@ const createSandbox = (
   capabilities,
   cwd,
   files: {
-    exists: (path) => raw.files.exists(path),
+    exists: (path) => wrap(() => raw.files.exists(path), "exists"),
     list: async (path = cwd) => {
-      const entries = await raw.files.list(path);
+      const entries = await wrap(() => raw.files.list(path), "list");
       return entries
         .map((entry): Entry => {
           const item: Entry = {
@@ -354,33 +365,55 @@ const createSandbox = (
         .toSorted((left, right) => left.path.localeCompare(right.path));
     },
     mkdir: async (path) => {
-      await raw.files.makeDir(path, user === undefined ? {} : { user });
+      await wrap(
+        () => raw.files.makeDir(path, user === undefined ? {} : { user }),
+        "mkdir"
+      );
     },
     read: (path) =>
-      raw.files.read(path, {
-        format: "bytes",
-        ...(user === undefined ? {} : { user }),
-      }),
+      wrap(
+        () =>
+          raw.files.read(path, {
+            format: "bytes",
+            ...(user === undefined ? {} : { user }),
+          }),
+        "read"
+      ),
     remove: async (path) => {
-      await raw.files.remove(path, user === undefined ? {} : { user });
+      await wrap(
+        () => raw.files.remove(path, user === undefined ? {} : { user }),
+        "remove"
+      );
     },
     stream: async (path) =>
       readable(
-        await raw.files.read(path, {
-          format: "bytes",
-          ...(user === undefined ? {} : { user }),
-        })
+        await wrap(
+          () =>
+            raw.files.read(path, {
+              format: "bytes",
+              ...(user === undefined ? {} : { user }),
+            }),
+          "stream"
+        )
       ),
     text: (path) =>
-      raw.files.read(path, {
-        format: "text",
-        ...(user === undefined ? {} : { user }),
-      }),
+      wrap(
+        () =>
+          raw.files.read(path, {
+            format: "text",
+            ...(user === undefined ? {} : { user }),
+          }),
+        "text"
+      ),
     write: async (path, input) => {
-      await raw.files.write(
-        path,
-        await content(input),
-        user === undefined ? {} : { user }
+      await wrap(
+        async () =>
+          raw.files.write(
+            path,
+            await content(input),
+            user === undefined ? {} : { user }
+          ),
+        "write"
       );
     },
   },
@@ -411,8 +444,9 @@ const createSandbox = (
   raw,
   snapshots: {
     create: async (name) => {
-      const snapshot = await raw.createSnapshot(
-        name === undefined ? undefined : { name }
+      const snapshot = await wrap(
+        () => raw.createSnapshot(name === undefined ? undefined : { name }),
+        "snapshot"
       );
       return name === undefined
         ? { id: snapshot.snapshotId }
@@ -421,7 +455,7 @@ const createSandbox = (
     restore: () => rejectUnsupported("in-place snapshot restore"),
   },
   stop: async () => {
-    await raw.kill();
+    await wrap(() => raw.kill(), "stop");
   },
 });
 
@@ -437,7 +471,11 @@ export const e2b = (options: E2B = {}): Adapter<Raw> => ({
         : await E2BSandbox.connect(input.id, connection(options));
 
     if (input.id === undefined) {
-      await raw.files.makeDir(cwd, options.user ? { user: options.user } : {});
+      await wrap(
+        () =>
+          raw.files.makeDir(cwd, options.user ? { user: options.user } : {}),
+        "mkdir"
+      );
     }
 
     return createSandbox(raw, cwd, options.user);

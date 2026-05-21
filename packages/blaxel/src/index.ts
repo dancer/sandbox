@@ -247,6 +247,17 @@ const exists = async (raw: Raw, path: string): Promise<boolean> => {
   }
 };
 
+const wrap = async <Value>(
+  action: () => Promise<Value> | Value,
+  feature: string
+): Promise<Value> => {
+  try {
+    return await action();
+  } catch (error) {
+    throw sandboxError(provider, `${feature} failed`, "provider", error);
+  }
+};
+
 const list = async (raw: Raw, path: string): Promise<Entry[]> => {
   const entries = await raw.fs.ls(path);
   return [
@@ -391,25 +402,30 @@ const createSandbox = (raw: Raw, cwd: string): Sandbox<Raw> => ({
   capabilities,
   cwd,
   files: {
-    exists: (path) => exists(raw, path),
-    list: (path = cwd) => list(raw, path),
-    mkdir: (path) => mkdir(raw, path),
-    read: (path) => read(raw, path),
+    exists: (path) => wrap(() => exists(raw, path), "exists"),
+    list: (path = cwd) => wrap(() => list(raw, path), "list"),
+    mkdir: (path) => wrap(() => mkdir(raw, path), "mkdir"),
+    read: (path) => wrap(() => read(raw, path), "read"),
     remove: async (path) => {
-      await raw.fs.rm(path, true);
+      await wrap(() => raw.fs.rm(path, true), "remove");
     },
-    stream: async (path) => readable(await read(raw, path)),
-    text: (path) => raw.fs.read(path),
-    write: (path, input) => write(raw, path, input),
+    stream: async (path) =>
+      readable(await wrap(() => read(raw, path), "stream")),
+    text: (path) => wrap(() => raw.fs.read(path), "text"),
+    write: (path, input) => wrap(() => write(raw, path, input), "write"),
   },
   id: raw.metadata.name,
   ports: {
     expose: async (value) => {
       const target = port(value, provider);
-      const preview = await raw.previews.createIfNotExists({
-        metadata: { name: `sandbox-sdk-${target}` },
-        spec: { port: target, public: true },
-      });
+      const preview = await wrap(
+        () =>
+          raw.previews.createIfNotExists({
+            metadata: { name: `sandbox-sdk-${target}` },
+            spec: { port: target, public: true },
+          }),
+        "port exposure"
+      );
       const { url } = preview.spec;
       if (!url) {
         throw sandboxError(
@@ -436,7 +452,7 @@ const createSandbox = (raw: Raw, cwd: string): Sandbox<Raw> => ({
     restore: () => rejectUnsupported(provider, "in-place snapshot restore"),
   },
   stop: async () => {
-    await raw.delete();
+    await wrap(() => raw.delete(), "stop");
   },
 });
 
@@ -460,7 +476,7 @@ export const blaxel = (options: Blaxel = {}): Adapter<Raw> => ({
           })
         : await SandboxInstance.get(input.id);
 
-    await mkdir(raw, cwd);
+    await wrap(() => mkdir(raw, cwd), "mkdir");
     return createSandbox(raw, cwd);
   },
   provider,

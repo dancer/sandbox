@@ -440,6 +440,17 @@ const rejectUnsupported = (feature: string): Promise<never> => {
   }
 };
 
+const wrap = async <Value>(
+  action: () => Promise<Value> | Value,
+  feature: string
+): Promise<Value> => {
+  try {
+    return await action();
+  } catch (error) {
+    throw sandboxError(provider, `${feature} failed`, "provider", error);
+  }
+};
+
 const createSandbox = (
   raw: Raw,
   cwd: string,
@@ -466,7 +477,7 @@ const createSandbox = (
     },
     list: async (path = cwd) => {
       const base = path.replace(/\/$/u, "");
-      const entries = await raw.fs.listFiles(path);
+      const entries = await wrap(() => raw.fs.listFiles(path), "list");
       return entries
         .map(
           (entry): Entry => ({
@@ -479,20 +490,26 @@ const createSandbox = (
         .toSorted((left, right) => left.path.localeCompare(right.path));
     },
     mkdir: async (path) => {
-      await raw.fs.createFolder(path, "755");
+      await wrap(() => raw.fs.createFolder(path, "755"), "mkdir");
     },
-    read: async (path) => new Uint8Array(await raw.fs.downloadFile(path)),
+    read: async (path) =>
+      new Uint8Array(await wrap(() => raw.fs.downloadFile(path), "read")),
     remove: async (path) => {
-      await raw.fs.deleteFile(path, true);
+      await wrap(() => raw.fs.deleteFile(path, true), "remove");
     },
     stream: async (path) =>
-      readable(new Uint8Array(await raw.fs.downloadFile(path))),
+      readable(
+        new Uint8Array(await wrap(() => raw.fs.downloadFile(path), "stream"))
+      ),
     text: async (path) => {
-      const output = await raw.fs.downloadFile(path);
+      const output = await wrap(() => raw.fs.downloadFile(path), "text");
       return output.toString("utf-8");
     },
     write: async (path, input) => {
-      await raw.fs.uploadFile(await content(input), path);
+      await wrap(
+        async () => raw.fs.uploadFile(await content(input), path),
+        "write"
+      );
     },
   },
   id: raw.id,
@@ -500,8 +517,11 @@ const createSandbox = (
     expose: async (value) => {
       const target = port(value, provider);
       const preview = options.signedPreview
-        ? await raw.getSignedPreviewUrl(target, options.previewExpires)
-        : await raw.getPreviewLink(target);
+        ? await wrap(
+            () => raw.getSignedPreviewUrl(target, options.previewExpires),
+            "port exposure"
+          )
+        : await wrap(() => raw.getPreviewLink(target), "port exposure");
       return {
         port: target,
         url: preview.url,
@@ -524,10 +544,10 @@ const createSandbox = (
   },
   stop: async () => {
     if (options.deleteOnStop) {
-      await raw.delete(seconds(options.timeout));
+      await wrap(() => raw.delete(seconds(options.timeout)), "stop");
       return;
     }
-    await raw.stop(seconds(options.timeout));
+    await wrap(() => raw.stop(seconds(options.timeout)), "stop");
   },
 });
 
@@ -545,7 +565,7 @@ export const daytona = (options: Daytona = {}): Adapter<Raw> => ({
     const cwd =
       input.cwd ?? options.cwd ?? (await raw.getWorkDir()) ?? "/home/daytona";
 
-    await raw.fs.createFolder(cwd, "755");
+    await wrap(() => raw.fs.createFolder(cwd, "755"), "mkdir");
 
     return createSandbox(raw, cwd, options);
   },

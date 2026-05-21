@@ -25,8 +25,7 @@ const LIST_EXAMPLE = `const entries = await sandbox.files.list("src");
 //   each entry: { path, kind: "file" | "directory", size?, modified? }`;
 
 const REMOVE_EXAMPLE = `await sandbox.files.remove("dist");
-// removes files and directories recursively, idempotent:
-// missing paths resolve successfully`;
+// removes files and directories recursively when the provider supports it`;
 
 const SHELL_EXAMPLE = `const result = await sandbox.process.shell("bun main.ts", {
   cwd: "src",
@@ -137,9 +136,10 @@ export const ApiReference = () => (
         files.remove(path)
       </Heading>
       <p>
-        Removes a file or directory recursively. Idempotent: missing paths
-        resolve successfully across all adapters, so callers don't need to
-        special-case "not found".
+        Removes a file or directory recursively when the provider supports it.
+        Missing paths follow provider semantics, so catch{" "}
+        <code>SandboxError</code> with <code>code: "not_found"</code> or{" "}
+        <code>code: "provider"</code> when deleting optional paths.
       </p>
       <CodeBlock code={REMOVE_EXAMPLE} lang="ts" />
     </section>

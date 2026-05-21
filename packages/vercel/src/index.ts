@@ -451,9 +451,12 @@ const createSandbox = (
   capabilities,
   cwd,
   files: {
-    exists: (path) => raw.fs.exists(path),
+    exists: (path) => wrap(() => raw.fs.exists(path), "exists"),
     list: async (path = cwd) => {
-      const entries = await raw.fs.readdir(path, { withFileTypes: true });
+      const entries = await wrap(
+        () => raw.fs.readdir(path, { withFileTypes: true }),
+        "list"
+      );
       return entries
         .map(
           (entry): Entry => ({
@@ -464,18 +467,24 @@ const createSandbox = (
         .toSorted((left, right) => left.path.localeCompare(right.path));
     },
     mkdir: async (path) => {
-      await raw.fs.mkdir(path, { recursive: true });
+      await wrap(() => raw.fs.mkdir(path, { recursive: true }), "mkdir");
     },
     read: (path) => wrap(() => read(raw, path, cwd), "read"),
     remove: async (path) => {
-      await raw.fs.rm(path, { force: true, recursive: true });
+      await wrap(
+        () => raw.fs.rm(path, { force: true, recursive: true }),
+        "remove"
+      );
     },
     stream: async (path) =>
       readable(await wrap(() => read(raw, path, cwd), "read")),
     text: async (path) =>
       new TextDecoder().decode(await wrap(() => read(raw, path, cwd), "read")),
     write: async (path: string, input: Input) => {
-      await raw.writeFiles([{ content: await bytes(input), path }]);
+      await wrap(
+        async () => raw.writeFiles([{ content: await bytes(input), path }]),
+        "write"
+      );
     },
   },
   id: raw.sandboxId,
@@ -513,13 +522,13 @@ const createSandbox = (
   raw,
   snapshots: {
     create: async () => {
-      const snapshot = await raw.snapshot();
+      const snapshot = await wrap(() => raw.snapshot(), "snapshot");
       return { id: snapshot.snapshotId };
     },
     restore: () => rejectUnsupported("in-place snapshot restore"),
   },
   stop: async () => {
-    await raw.stop({ blocking: true });
+    await wrap(() => raw.stop({ blocking: true }), "stop");
   },
 });
 

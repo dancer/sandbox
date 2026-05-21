@@ -18,9 +18,11 @@ export const Errors = () => (
       Errors
     </Heading>
     <p>
-      Every method throws a single <code>SandboxError</code> with a normalized{" "}
-      <code>code</code> and the provider name on <code>provider</code>. The
-      original provider error is attached as <code>cause</code>.
+      Normalized SDK methods throw <code>SandboxError</code> with a normalized{" "}
+      <code>code</code> and the provider name on <code>provider</code>. When a
+      provider failure is wrapped, the original provider error is attached as{" "}
+      <code>cause</code>. Native calls through <code>sandbox.raw</code> keep
+      native provider errors.
     </p>
     <CodeBlock code={ERROR_EXAMPLE} lang="ts" />
     <div className="flex flex-col gap-2">
