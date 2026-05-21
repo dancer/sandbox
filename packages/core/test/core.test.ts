@@ -13,6 +13,7 @@ import {
   isSandboxError,
   port,
   rawCapabilityMode,
+  requireRawCapability,
   requireCapability,
   result,
   sandboxError,
@@ -465,8 +466,10 @@ test("capability helpers handle boolean and mode capabilities", () => {
   expect(supports(current, "snapshots")).toBe(false);
   expect(supportsRaw(current, "desktop")).toBe(true);
   expect(rawCapabilityMode(current, "desktop")).toBe(true);
+  expect(requireRawCapability(current, "desktop")).toBe(true);
   expect(supportsRaw(current, "git")).toBe(true);
   expect(supportsRaw(current, "pty")).toBe(false);
+  expect(() => requireRawCapability(current, "pty")).toThrow(SandboxError);
 });
 
 test("unsupported throws a typed sandbox error", () => {

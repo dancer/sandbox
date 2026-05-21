@@ -52,6 +52,9 @@ test("tools returns prompt context and selected tools", async () => {
   expect(kit.description).toContain("/workspace");
   expect(kit.description).not.toContain("snapshot creation");
   expect(kit.description).not.toContain("snapshot restore");
+  expect(kit.description).toContain(
+    "No provider-specific raw capabilities are advertised."
+  );
   expect(Object.keys(kit.tools).toSorted()).toEqual([
     "exec",
     "list",
@@ -368,7 +371,9 @@ test("tools omit preview when ports are unsupported", async () => {
 
   expect(kit.tools.preview).toBeUndefined();
   expect(kit.description).toContain("Allowed sandbox tools: none");
-  expect(kit.description).toContain("Unavailable capabilities: ports");
+  expect(kit.description).toContain(
+    "Unavailable normalized capabilities: ports"
+  );
 
   await sandbox.stop();
 });

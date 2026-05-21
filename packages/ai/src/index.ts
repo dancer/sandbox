@@ -1,5 +1,5 @@
 import { sandboxError, supports, supportsRaw } from "@sandbox-sdk/core";
-import type { Result, Sandbox } from "@sandbox-sdk/core";
+import type { RawCapability, Result, Sandbox } from "@sandbox-sdk/core";
 
 const schemaKey = Symbol.for("vercel.ai.schema");
 
@@ -320,13 +320,14 @@ const description = (
   maxOutput: number
 ): string => {
   const labels = allowed.length === 0 ? "none" : allowed.join(", ");
+  const raw = (
+    ["desktop", "git", "network", "pty", "secrets", "volumes"] as const
+  ).filter((capability: RawCapability) => supportsRaw(sandbox, capability));
   const unavailable = [
     supports(sandbox, "ports") ? undefined : "ports",
     supports(sandbox, "snapshotCreate") ? undefined : "snapshot creation",
     supports(sandbox, "snapshotRestore") ? undefined : "snapshot restore",
     supports(sandbox, "processSpawn") ? undefined : "background processes",
-    supportsRaw(sandbox, "pty") ? undefined : "pty",
-    supportsRaw(sandbox, "desktop") ? undefined : "desktop",
   ].filter((item): item is string => item !== undefined);
 
   return [
@@ -339,8 +340,11 @@ const description = (
     "The exec tool accepts shell command strings; use args only for explicit argv execution.",
     `Command stdout and stderr are each capped at ${maxOutput} characters.`,
     unavailable.length === 0
-      ? "All advertised sandbox capabilities are available."
-      : `Unavailable capabilities: ${unavailable.join(", ")}.`,
+      ? "All normalized sandbox capabilities are available."
+      : `Unavailable normalized capabilities: ${unavailable.join(", ")}.`,
+    raw.length === 0
+      ? "No provider-specific raw capabilities are advertised."
+      : `Provider-specific raw capabilities: ${raw.join(", ")}. Host code can use sandbox.raw for these; the agent tools only expose the normalized tools above.`,
   ].join("\n");
 };
 

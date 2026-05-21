@@ -566,6 +566,20 @@ export declare const rawCapabilityMode: (
 ) => Exclude<Mode, false> | undefined;
 ```
 
+#### `requireRawCapability`
+
+require a provider-specific raw capability and throw when missing
+
+```ts
+export declare const requireRawCapability: (
+  subject: {
+    capabilities: Capabilities;
+    provider?: string;
+  },
+  capability: RawCapability
+) => Exclude<Mode, false>;
+```
+
 #### `supportsRaw`
 
 true when a provider-specific feature is available through `sandbox.raw`

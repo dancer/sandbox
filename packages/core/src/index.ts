@@ -151,6 +151,18 @@ export const rawCapabilityMode = (
   return value === undefined || value === false ? undefined : value;
 };
 
+/** require a provider-specific raw capability and throw when missing */
+export const requireRawCapability = (
+  subject: { capabilities: Capabilities; provider?: string },
+  capability: RawCapability
+): Exclude<Mode, false> => {
+  const value = rawCapabilityMode(subject, capability);
+  if (value !== undefined) {
+    return value;
+  }
+  return unsupported(subject.provider ?? "sandbox", `raw ${capability}`);
+};
+
 /** true when a provider-specific feature is available through `sandbox.raw` */
 export const supportsRaw = (
   subject: { capabilities: Capabilities },
