@@ -118,6 +118,69 @@ const present = (value: string | undefined): value is string =>
 
 const env = (name: string): string | undefined => globalThis.process?.env[name];
 
+const decode = (value: string): unknown => {
+  const base64 = value.replaceAll("-", "+").replaceAll("_", "/");
+  const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, "=");
+  return JSON.parse(globalThis.atob(padded));
+};
+
+const oidc = (
+  token: string | undefined
+):
+  | {
+      projectId: string;
+      teamId: string;
+      token: string;
+    }
+  | undefined => {
+  if (!present(token)) {
+    return undefined;
+  }
+  try {
+    const payload = decode(token.split(".")[1] ?? "");
+    if (
+      typeof payload === "object" &&
+      payload !== null &&
+      "owner_id" in payload &&
+      "project_id" in payload &&
+      typeof payload.owner_id === "string" &&
+      typeof payload.project_id === "string"
+    ) {
+      if (
+        "exp" in payload &&
+        typeof payload.exp === "number" &&
+        payload.exp * 1000 <= Date.now()
+      ) {
+        throw sandboxError(
+          provider,
+          "VERCEL_OIDC_TOKEN has expired. Run `vercel env pull .env.local --scope birthstone --yes` and retry.",
+          "configuration"
+        );
+      }
+      return {
+        projectId: payload.project_id,
+        teamId: payload.owner_id,
+        token,
+      };
+    }
+  } catch (error) {
+    if (error instanceof SandboxError) {
+      throw error;
+    }
+    throw sandboxError(
+      provider,
+      "VERCEL_OIDC_TOKEN must be a valid Vercel OIDC token.",
+      "configuration",
+      error
+    );
+  }
+  throw sandboxError(
+    provider,
+    "VERCEL_OIDC_TOKEN must include owner_id and project_id claims.",
+    "configuration"
+  );
+};
+
 const credentials = (
   options: Vercel
 ): {
@@ -128,6 +191,17 @@ const credentials = (
   const projectId = options.projectId ?? env("VERCEL_PROJECT_ID");
   const teamId = options.teamId ?? env("VERCEL_TEAM_ID");
   const token = options.token ?? env("VERCEL_TOKEN");
+  const fallback = oidc(env("VERCEL_OIDC_TOKEN"));
+  if (present(token) || present(teamId) || present(projectId)) {
+    return {
+      ...(present(projectId) ? { projectId } : {}),
+      ...(present(teamId) ? { teamId } : {}),
+      ...(present(token) ? { token } : {}),
+    };
+  }
+  if (fallback !== undefined) {
+    return fallback;
+  }
   return {
     ...(present(projectId) ? { projectId } : {}),
     ...(present(teamId) ? { teamId } : {}),
@@ -142,9 +216,6 @@ const validate = (options: Vercel): void => {
     present(input.teamId) &&
     present(input.projectId)
   ) {
-    return;
-  }
-  if (present(env("VERCEL_OIDC_TOKEN"))) {
     return;
   }
   if (present(input.token)) {

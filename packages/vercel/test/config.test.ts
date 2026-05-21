@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { Buffer } from "node:buffer";
 
 import { create } from "@sandbox-sdk/core";
 import { Sandbox as VercelSandbox } from "@vercel/sandbox";
@@ -18,6 +19,12 @@ const logs = async function* logs(): AsyncIterable<{
   stream: string;
 }> {};
 
+const token = (payload: Record<string, unknown>): string => {
+  const encode = (value: unknown): string =>
+    Buffer.from(JSON.stringify(value), "utf8").toString("base64url");
+  return `${encode({ alg: "none", typ: "JWT" })}.${encode(payload)}.`;
+};
+
 test("vercel reports missing credentials before provider calls", async () => {
   const oidc = process.env.VERCEL_OIDC_TOKEN;
   const token = process.env.VERCEL_TOKEN;
@@ -36,6 +43,89 @@ test("vercel reports missing credentials before provider calls", async () => {
   } finally {
     restore("VERCEL_OIDC_TOKEN", oidc);
     restore("VERCEL_TOKEN", token);
+    restore("VERCEL_TEAM_ID", teamId);
+    restore("VERCEL_PROJECT_ID", projectId);
+  }
+});
+
+test("vercel passes oidc credentials directly to provider", async () => {
+  const oidc = process.env.VERCEL_OIDC_TOKEN;
+  const access = process.env.VERCEL_TOKEN;
+  const teamId = process.env.VERCEL_TEAM_ID;
+  const projectId = process.env.VERCEL_PROJECT_ID;
+  const original = VercelSandbox.create;
+  const raw = {
+    fs: {
+      mkdir: () => Promise.resolve(),
+    },
+    sandboxId: "sandbox",
+    stop: () => Promise.resolve(),
+  } as unknown as VercelSandbox;
+  let seen: unknown;
+  const value = token({
+    exp: Math.floor(Date.now() / 1000) + 60,
+    owner_id: "team",
+    project_id: "project",
+  });
+
+  process.env.VERCEL_OIDC_TOKEN = value;
+  process.env.VERCEL_TOKEN = "";
+  process.env.VERCEL_TEAM_ID = "";
+  process.env.VERCEL_PROJECT_ID = "";
+  VercelSandbox.create = ((input?: unknown) => {
+    seen = input;
+    return Promise.resolve(raw);
+  }) as typeof VercelSandbox.create;
+
+  try {
+    const sandbox = await create({ adapter: vercel() });
+
+    expect(sandbox.id).toBe("sandbox");
+    expect(seen).toMatchObject({
+      projectId: "project",
+      teamId: "team",
+      token: value,
+    });
+  } finally {
+    VercelSandbox.create = original;
+    restore("VERCEL_OIDC_TOKEN", oidc);
+    restore("VERCEL_TOKEN", access);
+    restore("VERCEL_TEAM_ID", teamId);
+    restore("VERCEL_PROJECT_ID", projectId);
+  }
+});
+
+test("vercel reports expired oidc credentials before provider calls", async () => {
+  const oidc = process.env.VERCEL_OIDC_TOKEN;
+  const access = process.env.VERCEL_TOKEN;
+  const teamId = process.env.VERCEL_TEAM_ID;
+  const projectId = process.env.VERCEL_PROJECT_ID;
+  const original = VercelSandbox.create;
+  let called = false;
+
+  process.env.VERCEL_OIDC_TOKEN = token({
+    exp: Math.floor(Date.now() / 1000) - 60,
+    owner_id: "team",
+    project_id: "project",
+  });
+  process.env.VERCEL_TOKEN = "";
+  process.env.VERCEL_TEAM_ID = "";
+  process.env.VERCEL_PROJECT_ID = "";
+  VercelSandbox.create = (() => {
+    called = true;
+    return Promise.reject(new Error("provider called"));
+  }) as typeof VercelSandbox.create;
+
+  try {
+    await expect(create({ adapter: vercel() })).rejects.toMatchObject({
+      code: "configuration",
+      provider: "vercel",
+    });
+    expect(called).toBe(false);
+  } finally {
+    VercelSandbox.create = original;
+    restore("VERCEL_OIDC_TOKEN", oidc);
+    restore("VERCEL_TOKEN", access);
     restore("VERCEL_TEAM_ID", teamId);
     restore("VERCEL_PROJECT_ID", projectId);
   }
