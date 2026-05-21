@@ -320,7 +320,7 @@ const vercelRow = (context: Context): Row => {
   );
 };
 
-export const credentialRows = (context: Context = {}): readonly Row[] => [
+const allRows = (context: Context): readonly Row[] => [
   blaxelRow(context),
   cloudflareRow(context),
   complete(
@@ -339,6 +339,19 @@ export const credentialRows = (context: Context = {}): readonly Row[] => [
   modalRow(context),
   vercelRow(context),
 ];
+
+export const credentialRows = (
+  context: Context = {},
+  providers: readonly string[] = []
+): readonly Row[] => {
+  const currentRows = allRows(context);
+  if (providers.length === 0) {
+    return currentRows;
+  }
+
+  const requested = new Set(providers);
+  return currentRows.filter((entry) => requested.has(entry.provider));
+};
 
 const pad = (input: string, size: number): string => input.padEnd(size, " ");
 
@@ -383,5 +396,19 @@ export const formatRows = (rows: readonly Row[]): string => {
 };
 
 if (import.meta.main) {
-  console.log(formatRows(credentialRows()));
+  const providers = process.argv.slice(2);
+  const filtered = credentialRows({}, providers);
+  const known = new Set(credentialRows().map((entry) => entry.provider));
+  const unknown = providers.filter((provider) => !known.has(provider));
+
+  if (unknown.length > 0) {
+    console.error(`unknown provider: ${unknown.join(", ")}`);
+    process.exit(1);
+  }
+
+  console.log(formatRows(filtered));
+
+  if (filtered.some((entry) => entry.status !== "ready")) {
+    process.exit(1);
+  }
 }

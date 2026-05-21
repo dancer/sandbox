@@ -35,6 +35,27 @@ describe("credentialRows", () => {
     expect(formatRows(rows)).toContain("no secret values were printed");
   });
 
+  test("filters credential rows by provider", () => {
+    const rows = credentialRows(
+      {
+        env: {
+          CSB_API_KEY: "token",
+          DAYTONA_API_KEY: "token",
+        },
+        exists: () => false,
+        home: "/tmp/sandbox-sdk",
+        now: 1_900_000_000_000,
+      },
+      ["codesandbox", "daytona"]
+    );
+
+    expect(rows.map((entry) => entry.provider)).toEqual([
+      "codesandbox",
+      "daytona",
+    ]);
+    expect(rows.every((entry) => entry.status === "ready")).toBe(true);
+  });
+
   test("reports Cloudflare workflow as partial until preview host is present", () => {
     expect(
       row("cloudflare", {
