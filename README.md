@@ -36,7 +36,7 @@ Swap the adapter import to target a provider and keep the rest of your agent loo
 ## What You Get
 
 - One API across providers: create sandboxes, stream, read, and write files, run commands, expose ports, use snapshots where supported, and clean up
-- Capability checks: branch on provider support instead of guessing what works
+- Capability checks: branch on normalized support instead of guessing what works
 - Provider escape hatch: every adapter exposes its native client through `sandbox.raw`
 - Safe cleanup: `withSandbox` stops sandboxes after success or failure
 - Cancellation: pass `AbortSignal` and `timeout` to command calls
@@ -126,7 +126,8 @@ async function tuneNetwork(sandbox: Sandbox<VercelRaw>) {
 }
 ```
 
-Use `raw` for features that do not have one clean cross-provider meaning:
+Use `supportsRaw(sandbox, "...")` and `raw` for features that do not have one
+clean cross-provider meaning:
 Cloudflare sessions, backups, code contexts, desktop, and bucket mounts; Vercel
 network policy and timeout extension; E2B Git and PTY; Daytona SSH, PTY, LSP,
 network settings, and resize; Modal volumes, tags, connect tokens, GPUs, and

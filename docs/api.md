@@ -16,22 +16,30 @@ normalized feature flags adapters expose for runtime branching
 
 ```ts
 export type Capability =
-  | "desktop"
   | "environment"
   | "files"
-  | "git"
-  | "network"
   | "ports"
   | "process"
   | "processExec"
   | "processSpawn"
-  | "pty"
-  | "secrets"
   | "snapshotCreate"
   | "snapshotRestore"
   | "snapshotSource"
   | "snapshots"
-  | "streaming"
+  | "streaming";
+```
+
+#### `RawCapability`
+
+provider-specific capabilities available through `sandbox.raw`
+
+```ts
+export type RawCapability =
+  | "desktop"
+  | "git"
+  | "network"
+  | "pty"
+  | "secrets"
   | "volumes";
 ```
 
@@ -58,7 +66,12 @@ export type Mode =
 provider capability map used by `supports`, `capabilityMode`, and docs
 
 ```ts
-export type Capabilities = Readonly<Partial<Record<Capability, Mode>>>;
+export type Capabilities = Readonly<
+  Partial<Record<Capability, Mode>> & {
+    /** provider-specific powers available through `sandbox.raw` */
+    raw?: Partial<Record<RawCapability, Mode>>;
+  }
+>;
 ```
 
 #### `Input`
@@ -537,6 +550,32 @@ export declare const supports: (
     capabilities: Capabilities;
   },
   capability: Capability
+) => boolean;
+```
+
+#### `rawCapabilityMode`
+
+return the advertised mode for a provider-specific raw capability
+
+```ts
+export declare const rawCapabilityMode: (
+  subject: {
+    capabilities: Capabilities;
+  },
+  capability: RawCapability
+) => Exclude<Mode, false> | undefined;
+```
+
+#### `supportsRaw`
+
+true when a provider-specific feature is available through `sandbox.raw`
+
+```ts
+export declare const supportsRaw: (
+  subject: {
+    capabilities: Capabilities;
+  },
+  capability: RawCapability
 ) => boolean;
 ```
 

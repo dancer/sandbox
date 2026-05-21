@@ -7,6 +7,7 @@ import type {
   Input,
   Mode,
   Options,
+  RawCapability,
   Result,
   Running,
   Sandbox,
@@ -29,6 +30,7 @@ export type {
   Port,
   Ports,
   Process,
+  RawCapability,
   Result,
   Running,
   Sandbox,
@@ -139,6 +141,21 @@ export const supports = (
   subject: { capabilities: Capabilities },
   capability: Capability
 ): boolean => capabilityMode(subject, capability) !== undefined;
+
+/** return the advertised mode for a provider-specific raw capability */
+export const rawCapabilityMode = (
+  subject: { capabilities: Capabilities },
+  capability: RawCapability
+): Exclude<Mode, false> | undefined => {
+  const value = subject.capabilities.raw?.[capability];
+  return value === undefined || value === false ? undefined : value;
+};
+
+/** true when a provider-specific feature is available through `sandbox.raw` */
+export const supportsRaw = (
+  subject: { capabilities: Capabilities },
+  capability: RawCapability
+): boolean => rawCapabilityMode(subject, capability) !== undefined;
 
 /** validate and return a normalized tcp port number */
 export const port = (value: number, provider = "sandbox"): number => {

@@ -75,12 +75,14 @@ const provider = "codesandbox";
 const capabilities: Capabilities = {
   environment: true,
   files: true,
-  git: true,
-  network: true,
   ports: "dynamic",
   process: true,
   processExec: true,
   processSpawn: true,
+  raw: {
+    git: true,
+    network: true,
+  },
   snapshotCreate: false,
   snapshotRestore: false,
   snapshotSource: false,

@@ -66,20 +66,22 @@ export type Cloudflare = Readonly<{
 const provider = "cloudflare";
 
 const capabilities: Capabilities = {
-  desktop: true,
   environment: true,
   files: true,
-  git: true,
-  network: true,
   ports: "dynamic",
   process: true,
   processExec: true,
   processSpawn: "separate",
+  raw: {
+    desktop: true,
+    git: true,
+    network: true,
+    volumes: "volume",
+  },
   snapshotCreate: false,
   snapshotRestore: false,
   snapshots: false,
   streaming: "separate",
-  volumes: "volume",
 };
 
 const validate = (options: Cloudflare): void => {

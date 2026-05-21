@@ -86,20 +86,22 @@ type Raw = DaytonaSandbox;
 const provider = "daytona";
 
 const capabilities: Capabilities = {
-  desktop: true,
   environment: true,
   files: true,
-  git: true,
-  network: "dynamic",
   ports: "dynamic",
   process: true,
   processExec: true,
   processSpawn: "combined",
+  raw: {
+    desktop: true,
+    git: true,
+    network: "dynamic",
+    volumes: true,
+  },
   snapshotCreate: false,
   snapshotRestore: false,
   snapshotSource: "create-time",
   snapshots: false,
-  volumes: true,
 };
 
 const present = (value: string | undefined): value is string =>

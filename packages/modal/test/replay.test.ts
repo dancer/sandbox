@@ -24,17 +24,19 @@ const json = async <Body>(name: string): Promise<Fixture<Body>> =>
 const capabilities = {
   environment: true,
   files: true,
-  network: "create-time",
   ports: "create-time",
   process: true,
   processExec: true,
   processSpawn: false,
+  raw: {
+    network: "create-time",
+    volumes: true,
+  },
   snapshotCreate: "filesystem",
   snapshotRestore: false,
   snapshotSource: "create-time",
   snapshots: false,
   streaming: "separate",
-  volumes: true,
 } as const;
 
 const workflow: Workflow = {

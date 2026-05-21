@@ -12,10 +12,12 @@ import {
   fromSimpleInsecureSandbox,
   isSandboxError,
   port,
+  rawCapabilityMode,
   requireCapability,
   result,
   sandboxError,
   supports,
+  supportsRaw,
   timeout,
   unsupported,
   withSandbox,
@@ -440,6 +442,10 @@ test("capability helpers handle boolean and mode capabilities", () => {
     ports: "create-time",
     processExec: true,
     processSpawn: false,
+    raw: {
+      desktop: true,
+      git: true,
+    },
     snapshotCreate: "disk",
     snapshotRestore: false,
     snapshotSource: "create-time",
@@ -457,9 +463,10 @@ test("capability helpers handle boolean and mode capabilities", () => {
   expect(supports(current, "snapshotRestore")).toBe(false);
   expect(supports(current, "snapshotSource")).toBe(true);
   expect(supports(current, "snapshots")).toBe(false);
-  expect(supports(current, "desktop")).toBe(false);
-  expect(capabilityMode(current, "desktop")).toBeUndefined();
-  expect(() => requireCapability(current, "desktop")).toThrow(SandboxError);
+  expect(supportsRaw(current, "desktop")).toBe(true);
+  expect(rawCapabilityMode(current, "desktop")).toBe(true);
+  expect(supportsRaw(current, "git")).toBe(true);
+  expect(supportsRaw(current, "pty")).toBe(false);
 });
 
 test("unsupported throws a typed sandbox error", () => {

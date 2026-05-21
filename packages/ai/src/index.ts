@@ -1,4 +1,4 @@
-import { sandboxError, supports } from "@sandbox-sdk/core";
+import { sandboxError, supports, supportsRaw } from "@sandbox-sdk/core";
 import type { Result, Sandbox } from "@sandbox-sdk/core";
 
 const schemaKey = Symbol.for("vercel.ai.schema");
@@ -325,8 +325,8 @@ const description = (
     supports(sandbox, "snapshotCreate") ? undefined : "snapshot creation",
     supports(sandbox, "snapshotRestore") ? undefined : "snapshot restore",
     supports(sandbox, "processSpawn") ? undefined : "background processes",
-    supports(sandbox, "pty") ? undefined : "pty",
-    supports(sandbox, "desktop") ? undefined : "desktop",
+    supportsRaw(sandbox, "pty") ? undefined : "pty",
+    supportsRaw(sandbox, "desktop") ? undefined : "desktop",
   ].filter((item): item is string => item !== undefined);
 
   return [

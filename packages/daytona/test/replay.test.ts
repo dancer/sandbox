@@ -15,20 +15,22 @@ const json = async <Body>(name: string): Promise<Fixture<Body>> =>
 
 const workflow: Workflow = {
   capabilities: {
-    desktop: true,
     environment: true,
     files: true,
-    git: true,
-    network: "dynamic",
     ports: "dynamic",
     process: true,
     processExec: true,
     processSpawn: "combined",
+    raw: {
+      desktop: true,
+      git: true,
+      network: "dynamic",
+      volumes: true,
+    },
     snapshotCreate: false,
     snapshotRestore: false,
     snapshotSource: "create-time",
     snapshots: false,
-    volumes: true,
   },
   content: "hello from daytona",
   features: workflowFeatures(true, true),

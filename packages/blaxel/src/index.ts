@@ -44,17 +44,19 @@ const provider = "blaxel";
 const capabilities: Capabilities = {
   environment: true,
   files: true,
-  network: "create-time",
   ports: "dynamic",
   process: true,
   processExec: true,
   processSpawn: true,
+  raw: {
+    network: "create-time",
+    volumes: true,
+  },
   snapshotCreate: false,
   snapshotRestore: false,
   snapshotSource: false,
   snapshots: false,
   streaming: "combined",
-  volumes: true,
 };
 
 const noop = (): void => void 0;

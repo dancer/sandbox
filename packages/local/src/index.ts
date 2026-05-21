@@ -295,7 +295,6 @@ export const local = (options: Local = {}): Adapter<Raw> => ({
     process: true,
     processExec: true,
     processSpawn: "combined",
-    secrets: false,
     snapshotCreate: "filesystem",
     snapshotRestore: "filesystem",
     snapshots: "filesystem",

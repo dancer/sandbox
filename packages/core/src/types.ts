@@ -1,21 +1,24 @@
 /** normalized feature flags adapters expose for runtime branching */
 export type Capability =
-  | "desktop"
   | "environment"
   | "files"
-  | "git"
-  | "network"
   | "ports"
   | "process"
   | "processExec"
   | "processSpawn"
-  | "pty"
-  | "secrets"
   | "snapshotCreate"
   | "snapshotRestore"
   | "snapshotSource"
   | "snapshots"
-  | "streaming"
+  | "streaming";
+
+/** provider-specific capabilities available through `sandbox.raw` */
+export type RawCapability =
+  | "desktop"
+  | "git"
+  | "network"
+  | "pty"
+  | "secrets"
   | "volumes";
 
 /** capability mode details when a feature exists but has provider-specific shape */
@@ -32,7 +35,12 @@ export type Mode =
   | "volume";
 
 /** provider capability map used by `supports`, `capabilityMode`, and docs */
-export type Capabilities = Readonly<Partial<Record<Capability, Mode>>>;
+export type Capabilities = Readonly<
+  Partial<Record<Capability, Mode>> & {
+    /** provider-specific powers available through `sandbox.raw` */
+    raw?: Partial<Record<RawCapability, Mode>>;
+  }
+>;
 
 /** file write input accepted by every adapter */
 export type Input =

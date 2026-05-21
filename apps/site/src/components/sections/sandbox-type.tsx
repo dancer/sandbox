@@ -15,17 +15,19 @@ const SANDBOX_TYPE = `type Sandbox<Raw = unknown> = Readonly<{
 }>;
 
 type Capability =
-  | "desktop"
   | "environment"
   | "files"
+  | "process"
+  | "ports"
+  | "snapshots"
+  | "streaming";
+
+type RawCapability =
+  | "desktop"
   | "git"
   | "network"
-  | "process"
   | "pty"
-  | "ports"
   | "secrets"
-  | "snapshots"
-  | "streaming"
   | "volumes";
 
 type Mode =
@@ -40,7 +42,11 @@ type Mode =
   | "separate"
   | "volume";
 
-type Capabilities = Readonly<Partial<Record<Capability, Mode>>>;`;
+type Capabilities = Readonly<
+  Partial<Record<Capability, Mode>> & {
+    raw?: Partial<Record<RawCapability, Mode>>;
+  }
+>;`;
 
 export const SandboxType = () => (
   <section>
@@ -52,7 +58,9 @@ export const SandboxType = () => (
       (<code>files</code>, <code>process</code>, <code>ports</code>,{" "}
       <code>snapshots</code>, <code>raw</code>) plus identifiers and a lifecycle
       hook. <code>capabilities</code> declares what the underlying provider can
-      do. Branch on it instead of catching unsupported errors.
+      do through the normalized API. Provider-specific powers live under{" "}
+      <code>capabilities.raw</code> and are available through{" "}
+      <code>sandbox.raw</code>.
     </p>
     <CodeBlock code={SANDBOX_TYPE} lang="ts" />
     <p>

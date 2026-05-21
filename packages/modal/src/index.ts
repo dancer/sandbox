@@ -62,17 +62,19 @@ const provider = "modal";
 const capabilities: Capabilities = {
   environment: true,
   files: true,
-  network: "create-time",
   ports: "create-time",
   process: true,
   processExec: true,
   processSpawn: false,
+  raw: {
+    network: "create-time",
+    volumes: true,
+  },
   snapshotCreate: "filesystem",
   snapshotRestore: false,
   snapshotSource: "create-time",
   snapshots: false,
   streaming: "separate",
-  volumes: true,
 };
 
 const present = (value: string | undefined): value is string =>

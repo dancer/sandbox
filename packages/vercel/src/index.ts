@@ -104,11 +104,13 @@ const provider = "vercel";
 const capabilities: Capabilities = {
   environment: true,
   files: true,
-  network: "dynamic",
   ports: "create-time",
   process: true,
   processExec: true,
   processSpawn: "separate",
+  raw: {
+    network: "dynamic",
+  },
   snapshotCreate: "disk",
   snapshotRestore: false,
   snapshotSource: "create-time",

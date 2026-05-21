@@ -25,13 +25,15 @@ const workflow: Workflow = {
   capabilities: {
     environment: true,
     files: true,
-    git: true,
-    network: true,
     ports: "derived",
     process: true,
     processExec: true,
     processSpawn: "combined",
-    pty: true,
+    raw: {
+      git: true,
+      network: true,
+      pty: true,
+    },
     snapshotCreate: "disk",
     snapshotRestore: false,
     snapshotSource: "create-time",
