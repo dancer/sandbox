@@ -19,6 +19,7 @@ export type Coverage = Readonly<{
 export type Workflow = Readonly<{
   capabilities: Capabilities;
   commands: Readonly<{
+    create: string;
     exec: string;
     shell: string;
   }>;
@@ -64,6 +65,7 @@ export const expectCoverage = (payload: Coverage): void => {
     "files.text",
     "files.list",
     "files.remove",
+    "environment.create",
     "process.exec",
     "process.exec.options",
     "process.shell",
@@ -104,6 +106,7 @@ export const expectWorkflow = (payload: Workflow): void => {
     stream: "stream",
   });
   expect(payload.commands).toEqual({
+    create: "create-env",
     exec: "exec-env",
     shell: "shell-env",
   });

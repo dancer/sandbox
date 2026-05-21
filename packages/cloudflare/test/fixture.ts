@@ -12,6 +12,7 @@ type Command = Readonly<{
 export type Payload = Readonly<{
   capabilities: Record<string, unknown>;
   commands: Readonly<{
+    create: string;
     exec: string;
     shell: string;
   }>;
@@ -93,6 +94,7 @@ export const workflowCoverage: Coverage = {
     "files.text",
     "files.list",
     "files.remove",
+    "environment.create",
     "process.exec",
     "process.exec.options",
     "process.shell",

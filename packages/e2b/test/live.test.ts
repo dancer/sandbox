@@ -18,6 +18,7 @@ live("e2b runs a live sandbox workflow", async () => {
   const sandbox = await create({
     adapter: e2b({ timeout: 300_000 }),
     cwd,
+    env: { SANDBOX_SDK_CREATE: "create-env" },
   });
 
   try {

@@ -40,6 +40,7 @@ export const workflow = ({ body, response }: Result): void => {
     stream: "stream",
   });
   expect(body.commands).toEqual({
+    create: "create-env",
     exec: "exec-env",
     shell: "shell-env",
   });

@@ -22,6 +22,7 @@ live("vercel runs a live sandbox workflow", async () => {
   const sandbox = await create({
     adapter: adapter(),
     cwd,
+    env: { SANDBOX_SDK_CREATE: "create-env" },
     ports: [3000],
   });
 

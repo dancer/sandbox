@@ -47,6 +47,7 @@ const coverage = {
     "files.text",
     "files.list",
     "files.remove",
+    "environment.create",
     "process.exec",
     "process.exec.options",
     "process.shell",
@@ -108,6 +109,7 @@ const workflow = async (sandbox) => {
   const blobFile = path(root, "blob.txt");
   const streamFile = path(root, "stream.txt");
   const removeFile = path(root, "remove.txt");
+  const createFile = path(root, "create-env.txt");
   const execFile = path(root, "exec-env.txt");
   const shellFile = path(root, "shell-env.txt");
 
@@ -127,6 +129,13 @@ const workflow = async (sandbox) => {
   command(
     await sandbox.process.exec(
       "sh",
+      ["-lc", 'printf %s "$SANDBOX_SDK_CREATE" > create-env.txt'],
+      { cwd: root }
+    )
+  );
+  command(
+    await sandbox.process.exec(
+      "sh",
       ["-lc", 'printf %s "$SANDBOX_SDK_EXEC" > exec-env.txt'],
       { cwd: root, env: { SANDBOX_SDK_EXEC: "exec-env" } }
     )
@@ -138,6 +147,7 @@ const workflow = async (sandbox) => {
     )
   );
   const commands = {
+    create: await sandbox.files.text(createFile),
     exec: await sandbox.files.text(execFile),
     shell: await sandbox.files.text(shellFile),
   };
@@ -192,6 +202,7 @@ const workflow = async (sandbox) => {
     assert.equal(payload.inputs.bytes, "bytes");
     assert.equal(payload.inputs.stream, "stream");
     assert.equal(payload.commands.exec, "exec-env");
+    assert.equal(payload.commands.create, "create-env");
     assert.equal(payload.commands.shell, "shell-env");
     assert.equal(payload.exec.stdout, content);
     assert.equal(payload.shell.stdout, content);
@@ -211,6 +222,7 @@ const sandbox = await create({
     token,
   }),
   cwd: "/project/sandbox",
+  env: { SANDBOX_SDK_CREATE: "create-env" },
 });
 
 try {

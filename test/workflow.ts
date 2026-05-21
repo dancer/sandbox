@@ -34,6 +34,7 @@ type Inputs = Readonly<{
 }>;
 
 type Commands = Readonly<{
+  create: string;
   exec: string;
   shell: string;
 }>;
@@ -129,6 +130,7 @@ export const workflow = async (
   const blobFile = path(root, "blob.txt");
   const streamFile = path(root, "stream.txt");
   const removeFile = path(root, "remove.txt");
+  const createFile = path(root, "create-env.txt");
   const execFile = path(root, "exec-env.txt");
   const shellFile = path(root, "shell-env.txt");
   let server: Running | undefined;
@@ -186,6 +188,11 @@ export const workflow = async (
   if (supports(sandbox, "processExec")) {
     exec = match(await sandbox.process.exec("cat", [file]), input.content);
     shell = match(await sandbox.process.shell(`cat ${file}`), input.content);
+    const createOptions = await sandbox.process.exec(
+      "sh",
+      ["-lc", 'printf %s "$SANDBOX_SDK_CREATE" > create-env.txt'],
+      { cwd: root }
+    );
     const execOptions = await sandbox.process.exec(
       "sh",
       ["-lc", 'printf %s "$SANDBOX_SDK_EXEC" > exec-env.txt'],
@@ -196,12 +203,18 @@ export const workflow = async (
       { cwd: root, env: { SANDBOX_SDK_SHELL: "shell-env" } }
     );
     expect(execOptions).toMatchObject({ code: 0, ok: true });
+    expect(createOptions).toMatchObject({ code: 0, ok: true });
     expect(shellOptions).toMatchObject({ code: 0, ok: true });
     commands = {
+      create: await sandbox.files.text(createFile),
       exec: await sandbox.files.text(execFile),
       shell: await sandbox.files.text(shellFile),
     };
-    expect(commands).toEqual({ exec: "exec-env", shell: "shell-env" });
+    expect(commands).toEqual({
+      create: "create-env",
+      exec: "exec-env",
+      shell: "shell-env",
+    });
     failure = failed(
       await sandbox.process.exec("sh", ["-lc", "echo failed >&2; exit 7"])
     );

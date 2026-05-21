@@ -17,6 +17,7 @@
       "volumes": "volume"
     },
     "commands": {
+      "create": "create-env",
       "exec": "exec-env",
       "shell": "shell-env"
     },
@@ -76,6 +77,7 @@
       "files.text",
       "files.list",
       "files.remove",
+      "environment.create",
       "process.exec",
       "process.exec.options",
       "process.shell",

@@ -22,6 +22,7 @@ live("daytona runs a live sandbox workflow", async () => {
       timeout: 300_000,
     }),
     cwd,
+    env: { SANDBOX_SDK_CREATE: "create-env" },
   });
 
   try {

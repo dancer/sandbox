@@ -66,6 +66,7 @@ export const workflowFeatures = (
   "files.text",
   "files.list",
   "files.remove",
+  "environment.create",
   "process.exec",
   "process.exec.options",
   "process.shell",
@@ -165,6 +166,7 @@ export const expectWorkflow = (payload: Payload, expected: Workflow): void => {
     stream: "stream",
   });
   expect(payload.commands).toEqual({
+    create: "create-env",
     exec: "exec-env",
     shell: "shell-env",
   });

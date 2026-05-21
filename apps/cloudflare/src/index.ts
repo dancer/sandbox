@@ -214,6 +214,7 @@ const handleLive = async (env: Env, url: URL): Promise<Response> => {
   const blobFile = `${cwd}/blob.txt`;
   const streamFile = `${cwd}/stream.txt`;
   const removeFile = `${cwd}/remove.txt`;
+  const createFile = `${cwd}/create-env.txt`;
   const execFile = `${cwd}/exec-env.txt`;
   const shellFile = `${cwd}/shell-env.txt`;
   let sandbox: CoreSandbox | undefined;
@@ -227,6 +228,7 @@ const handleLive = async (env: Env, url: URL): Promise<Response> => {
         options,
       }),
       cwd,
+      env: { SANDBOX_SDK_CREATE: "create-env" },
     });
     await sandbox.files.mkdir(cwd);
     await sandbox.files.write(file, message);
@@ -252,6 +254,11 @@ const handleLive = async (env: Env, url: URL): Promise<Response> => {
     const removed = !(await sandbox.files.exists(removeFile));
     const exec = await sandbox.process.exec("cat", [file]);
     const shell = await sandbox.process.shell(`cat ${file}`);
+    const createOptions = await sandbox.process.exec(
+      "sh",
+      ["-lc", 'printf %s "$SANDBOX_SDK_CREATE" > create-env.txt'],
+      { cwd }
+    );
     const execOptions = await sandbox.process.exec(
       "sh",
       ["-lc", 'printf %s "$SANDBOX_SDK_EXEC" > exec-env.txt'],
@@ -262,6 +269,7 @@ const handleLive = async (env: Env, url: URL): Promise<Response> => {
       { cwd, env: { SANDBOX_SDK_SHELL: "shell-env" } }
     );
     const commands = {
+      create: await sandbox.files.text(createFile),
       exec: await sandbox.files.text(execFile),
       shell: await sandbox.files.text(shellFile),
     };
@@ -287,8 +295,10 @@ const handleLive = async (env: Env, url: URL): Promise<Response> => {
       exec.stdout === message,
       shell.ok,
       shell.stdout === message,
+      createOptions.ok,
       execOptions.ok,
       shellOptions.ok,
+      commands.create === "create-env",
       commands.exec === "exec-env",
       commands.shell === "shell-env",
       !failed.ok,

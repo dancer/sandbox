@@ -18,6 +18,7 @@ type Files = Readonly<{
 }>;
 
 type Commands = Readonly<{
+  create: string;
   exec: string;
   shell: string;
 }>;
@@ -26,6 +27,7 @@ type Paths = Readonly<{
   blob: string;
   buffer: string;
   bytes: string;
+  create: string;
   exec: string;
   file: string;
   remove: string;
@@ -95,6 +97,7 @@ export const workflowCoverage: Coverage = {
     "files.text",
     "files.list",
     "files.remove",
+    "environment.create",
     "process.exec",
     "process.exec.options",
     "process.shell",
@@ -146,6 +149,7 @@ const paths = (directory: string, file: string): Paths => ({
   blob: `${directory}/blob.txt`,
   buffer: `${directory}/buffer.txt`,
   bytes: `${directory}/bytes.txt`,
+  create: `${directory}/create-env.txt`,
   exec: `${directory}/exec-env.txt`,
   file,
   remove: `${directory}/remove.txt`,
@@ -218,6 +222,7 @@ const commandsOk = (
   input.shell.ok &&
   input.shell.stdout === content &&
   input.commands.exec === "exec-env" &&
+  input.commands.create === "create-env" &&
   input.commands.shell === "shell-env" &&
   !input.failure.ok &&
   input.failure.code === 7 &&
@@ -240,6 +245,11 @@ export const workflow = async (
   const files = await readFiles(sandbox, locations, directory);
   const exec = await sandbox.process.exec("cat", [file]);
   const shell = await sandbox.process.shell(`cat ${file}`);
+  const createOptions = await sandbox.process.exec(
+    "sh",
+    ["-lc", 'printf %s "$SANDBOX_SDK_CREATE" > create-env.txt'],
+    { cwd: directory }
+  );
   const execOptions = await sandbox.process.exec(
     "sh",
     ["-lc", 'printf %s "$SANDBOX_SDK_EXEC" > exec-env.txt'],
@@ -249,6 +259,7 @@ export const workflow = async (
     'printf %s "$SANDBOX_SDK_SHELL" > shell-env.txt',
     { cwd: directory, env: { SANDBOX_SDK_SHELL: "shell-env" } }
   );
+  expect(createOptions).toMatchObject({ code: 0, ok: true });
   expect(execOptions).toMatchObject({ code: 0, ok: true });
   expect(shellOptions).toMatchObject({ code: 0, ok: true });
   const running = await sandbox.process.spawnShell(`cat ${file}`);
@@ -260,6 +271,7 @@ export const workflow = async (
   ]);
   const preview = await sandbox.ports.expose(3000);
   const commands = {
+    create: await sandbox.files.text(locations.create),
     exec: await sandbox.files.text(locations.exec),
     shell: await sandbox.files.text(locations.shell),
   };
@@ -329,6 +341,7 @@ export const expectWorkflow = (payload: Workflow): void => {
     stream: "stream",
   });
   expect(payload.commands).toEqual({
+    create: "create-env",
     exec: "exec-env",
     shell: "shell-env",
   });
