@@ -31,7 +31,8 @@ export type RawCapability =
   | "sessions"
   | "system"
   | "tunnels"
-  | "volumes";
+  | "volumes"
+  | "watching";
 
 /** capability mode details when a feature exists but has provider-specific shape */
 export type Mode =

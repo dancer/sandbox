@@ -340,6 +340,7 @@ const description = (
       "system",
       "tunnels",
       "volumes",
+      "watching",
     ] as const
   ).filter((capability: RawCapability) => supportsRaw(sandbox, capability));
   const unavailable = [

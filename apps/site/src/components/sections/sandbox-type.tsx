@@ -40,7 +40,8 @@ type RawCapability =
   | "sessions"
   | "system"
   | "tunnels"
-  | "volumes";
+  | "volumes"
+  | "watching";
 
 type Mode =
   | boolean

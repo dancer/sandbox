@@ -10,6 +10,7 @@ let exposeSeen: unknown;
 let executeSeen: unknown;
 let getSeen: unknown;
 let mkdirSeen: unknown;
+let readSeen: unknown;
 let setEnvSeen: unknown;
 let writeSeen: unknown;
 
@@ -31,6 +32,20 @@ const raw = {
   mkdir: (path: string, options: unknown) => {
     mkdirSeen = { options, path };
     return Promise.resolve();
+  },
+  readFile: (path: string, options?: unknown) => {
+    readSeen = { options, path };
+    if ((options as { encoding?: string } | undefined)?.encoding === "none") {
+      return Promise.resolve({
+        content: new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode("streamed"));
+            controller.close();
+          },
+        }),
+      });
+    }
+    return Promise.resolve({ content: "c3RyZWFtZWQ=" });
   },
   setEnvVars: (input: unknown) => {
     setEnvSeen = input;
@@ -250,6 +265,30 @@ test("cloudflare allows preview ports over the system range", async () => {
   }
 });
 
+test("cloudflare rejects invalid preview tokens before provider calls", async () => {
+  for (const token of ["", "API", "api-v1", "abcdefghijklmnopq"]) {
+    exposeCalls = 0;
+    const sandbox = await create({
+      adapter: cloudflare({
+        binding,
+        hostname: "example.com",
+      }),
+    });
+
+    try {
+      await expect(sandbox.ports.expose(8080, { token })).rejects.toMatchObject(
+        {
+          code: "configuration",
+          provider: "cloudflare",
+        }
+      );
+      expect(exposeCalls).toBe(0);
+    } finally {
+      await sandbox.stop();
+    }
+  }
+});
+
 test("cloudflare writes readable streams through base64 content", async () => {
   writeSeen = undefined;
   const sandbox = await create({
@@ -269,6 +308,42 @@ test("cloudflare writes readable streams through base64 content", async () => {
     expect(writeSeen).toEqual({
       content: "AQID",
       options: { encoding: "base64" },
+      path: "/workspace/data.bin",
+    });
+  } finally {
+    await sandbox.stop();
+  }
+});
+
+test("cloudflare uses readable streams directly with rpc transport", async () => {
+  readSeen = undefined;
+  writeSeen = undefined;
+  const sandbox = await create({
+    adapter: cloudflare({
+      binding,
+      options: { transport: "rpc" },
+    }),
+  });
+  const input = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(new Uint8Array([1, 2, 3]));
+      controller.close();
+    },
+  });
+
+  try {
+    await sandbox.files.write("/workspace/data.bin", input);
+    expect(writeSeen).toEqual({
+      content: input,
+      options: undefined,
+      path: "/workspace/data.bin",
+    });
+
+    await expect(
+      new Response(await sandbox.files.stream("/workspace/data.bin")).text()
+    ).resolves.toBe("streamed");
+    expect(readSeen).toEqual({
+      options: { encoding: "none" },
       path: "/workspace/data.bin",
     });
   } finally {

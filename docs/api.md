@@ -52,7 +52,8 @@ export type RawCapability =
   | "sessions"
   | "system"
   | "tunnels"
-  | "volumes";
+  | "volumes"
+  | "watching";
 ```
 
 #### `Mode`
