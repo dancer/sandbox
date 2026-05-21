@@ -110,6 +110,29 @@ More providers will be added as adapters are written.
 
 See `examples/` for minimal local, provider, and AI tool starting points.
 
+## Provider Power
+
+The normalized `Sandbox` API should stay small and consistent. Provider-specific
+features stay available through `sandbox.raw`, and every adapter exports a typed
+raw alias so advanced usage keeps editor autocomplete and compile-time checks:
+
+```ts
+import type { Sandbox } from "@sandbox-sdk/core";
+import type { VercelRaw } from "@sandbox-sdk/vercel";
+
+async function tuneNetwork(sandbox: Sandbox<VercelRaw>) {
+  await sandbox.raw.updateNetworkPolicy("deny-all");
+  await sandbox.raw.extendTimeout(300_000);
+}
+```
+
+Use `raw` for features that do not have one clean cross-provider meaning:
+Cloudflare sessions, backups, code contexts, desktop, and bucket mounts; Vercel
+network policy and timeout extension; E2B Git and PTY; Daytona SSH, PTY, LSP,
+network settings, and resize; Modal volumes, tags, connect tokens, GPUs, and
+directory or memory snapshots; Blaxel drives, previews, sessions, system
+upgrades, and codegen; and CodeSandbox VM lifecycle or session internals.
+
 ## AI Tools
 
 `@sandbox-sdk/ai` wraps a configured sandbox as ready-made tools plus prompt context for agents that need to read files, write files, list directories, run commands, and open previews when ports are supported.
@@ -255,7 +278,7 @@ CodeSandbox config and replay tests.
 - Blaxel: `BL_WORKSPACE` with `BL_API_KEY` or `BL_CLIENT_CREDENTIALS`, or Blaxel CLI config; set `BL_REGION` when you need a specific region
 - Cloudflare: deploy `apps/cloudflare` and set `CLOUDFLARE_SANDBOX_WORKER_URL` and `CLOUDFLARE_SANDBOX_TOKEN`; set `CLOUDFLARE_SANDBOX_PREVIEW_HOST` to verify `ports.expose()`
 - CodeSandbox: `CSB_API_KEY`
-- Daytona: `DAYTONA_API_KEY`; set `DAYTONA_TARGET` when you need a specific region
+- Daytona: `DAYTONA_API_KEY`
 - E2B: `E2B_API_KEY` or `E2B_ACCESS_TOKEN`
 - Modal: `MODAL_TOKEN_ID` and `MODAL_TOKEN_SECRET`, or Modal CLI config
 - Vercel: `VERCEL_OIDC_TOKEN`, or `VERCEL_TOKEN`, `VERCEL_TEAM_ID`, and `VERCEL_PROJECT_ID`
