@@ -69,8 +69,8 @@ const ROWS: { capability: string; cells: Record<ColumnKey, Cell> }[] = [
       blaxel: ok,
       cloudflare: ok,
       codesandbox: ok,
-      daytona: no(
-        "Daytona exposes buffered exec and shell commands in this adapter. Background process spawn stays behind raw until the provider surface is stable."
+      daytona: warn(
+        "Daytona background spawn is normalized through SDK sessions, so output and completion are supported through the shared process handle."
       ),
       e2b: ok,
       local: ok,
