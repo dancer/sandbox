@@ -103,3 +103,31 @@ live("modal creates and starts from a live snapshot", async () => {
     await Promise.all([derived?.stop(), sandbox.stop()]);
   }
 });
+
+live("modal exposes advertised raw capabilities", async () => {
+  const cwd = "/app";
+  const sandbox = await create({
+    adapter: adapter(),
+    cwd,
+    metadata: { purpose: "sandbox-sdk-raw" },
+    ports: [3000],
+  });
+
+  try {
+    const tags = await sandbox.raw.getTags();
+    expect(tags.purpose).toBe("sandbox-sdk-raw");
+
+    await sandbox.raw.setTags({ purpose: "sandbox-sdk-updated" });
+    const updated = await sandbox.raw.getTags();
+    expect(updated.purpose).toBe("sandbox-sdk-updated");
+
+    const tunnels = await sandbox.raw.tunnels();
+    expect(tunnels[3000]?.url.startsWith("https://")).toBe(true);
+
+    const credentials = await sandbox.raw.createConnectToken();
+    expect(credentials.url.startsWith("https://")).toBe(true);
+    expect(credentials.token.length).toBeGreaterThan(0);
+  } finally {
+    await sandbox.stop();
+  }
+});
