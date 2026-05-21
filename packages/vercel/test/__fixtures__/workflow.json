@@ -86,9 +86,9 @@
     "spawn": {
       "code": 0,
       "ok": true,
-      "output": "hello from vercel",
       "stderr": "",
-      "stdout": "hello from vercel"
+      "stdout": "hello from vercel",
+      "output": "hello from vercel"
     }
   }
 }

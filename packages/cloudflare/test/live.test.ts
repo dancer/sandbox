@@ -1,15 +1,27 @@
 import { test } from "bun:test";
 
 import { ports, workflow } from "./behavior";
-import { enabled, execute, executePorts, portsEnabled } from "./fixture";
+import {
+  enabled,
+  execute,
+  executePorts,
+  portsEnabled,
+  portsFixture,
+  record,
+  workflowFixture,
+} from "./fixture";
 
 const live = enabled() ? test : test.skip;
 const livePorts = portsEnabled() ? test : test.skip;
 
 live("cloudflare runs a live sandbox workflow", async () => {
-  workflow(await execute());
+  const result = await execute();
+  workflow(result);
+  await record("workflow", workflowFixture(result));
 });
 
 livePorts("cloudflare exposes a live preview port", async () => {
-  ports(await executePorts());
+  const result = await executePorts();
+  ports(result);
+  await record("ports", portsFixture(result));
 });

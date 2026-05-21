@@ -1,3 +1,7 @@
+import { mkdir } from "node:fs/promises";
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+
 type Command = Readonly<{
   code: number;
   ok: boolean;
@@ -7,6 +11,10 @@ type Command = Readonly<{
 
 export type Payload = Readonly<{
   capabilities: Record<string, unknown>;
+  commands: Readonly<{
+    exec: string;
+    shell: string;
+  }>;
   error?: string;
   exec: Command;
   failure: Command;
@@ -63,6 +71,59 @@ export type Coverage = Readonly<{
   provider: string;
   uncovered: readonly string[];
 }>;
+
+type Fixture<Body> = Readonly<{
+  body: Body;
+  coverage: Coverage;
+  status: number;
+}>;
+
+export const workflowCoverage: Coverage = {
+  features: [
+    "capabilities",
+    "files.mkdir",
+    "files.write",
+    "files.write.bytes",
+    "files.write.arrayBuffer",
+    "files.write.blob",
+    "files.write.readableStream",
+    "files.exists",
+    "files.read",
+    "files.stream",
+    "files.text",
+    "files.list",
+    "files.remove",
+    "process.exec",
+    "process.exec.options",
+    "process.shell",
+    "process.shell.options",
+    "process.spawnShell",
+    "process.failure",
+    "sandbox.stop",
+  ],
+  fixture: "workflow",
+  provider: "cloudflare",
+  uncovered: ["ports.expose", "snapshots.create", "snapshots.restore"],
+};
+
+export const portsCoverage: Coverage = {
+  features: [
+    "capabilities",
+    "process.spawnShell",
+    "ports.expose",
+    "preview.fetch",
+    "process.kill",
+    "sandbox.stop",
+  ],
+  fixture: "ports",
+  provider: "cloudflare",
+  uncovered: [
+    "files.list",
+    "process.exec",
+    "snapshots.create",
+    "snapshots.restore",
+  ],
+};
 
 const liveRoute = "/sandbox-sdk/live";
 const portsRoute = "/sandbox-sdk/ports";
@@ -186,4 +247,43 @@ export const executePorts = async (): Promise<PortResult> => {
 
     throw error;
   }
+};
+
+export const workflowFixture = (input: Result): Fixture<Payload> => ({
+  body: {
+    ...input.body,
+    spawn: {
+      ...input.body.spawn,
+      output: "hello from cloudflare",
+    },
+  },
+  coverage: workflowCoverage,
+  status: input.response.status,
+});
+
+export const portsFixture = (input: PortResult): Fixture<PortPayload> => ({
+  body: {
+    ...input.body,
+    id: "sandbox",
+    port: {
+      ...input.body.port,
+      url: "https://8080-sandbox-fixture-preview.example.com",
+    },
+  },
+  coverage: portsCoverage,
+  status: input.response.status,
+});
+
+export const record = async <Body>(
+  name: string,
+  value: Fixture<Body>
+): Promise<void> => {
+  if (process.env.SANDBOX_SDK_RECORD_FIXTURES !== "1") {
+    return;
+  }
+  const file = fileURLToPath(
+    new URL(`__fixtures__/${name}.json`, import.meta.url)
+  );
+  await mkdir(dirname(file), { recursive: true });
+  await Bun.write(file, `${JSON.stringify(value, null, 2)}\n`);
 };

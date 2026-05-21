@@ -1,31 +1,4 @@
 {
-  "coverage": {
-    "features": [
-      "capabilities",
-      "files.mkdir",
-      "files.write",
-      "files.write.bytes",
-      "files.write.arrayBuffer",
-      "files.write.blob",
-      "files.write.readableStream",
-      "files.exists",
-      "files.read",
-      "files.stream",
-      "files.text",
-      "files.list",
-      "files.remove",
-      "process.exec",
-      "process.exec.options",
-      "process.shell",
-      "process.shell.options",
-      "process.spawnShell",
-      "process.failure",
-      "sandbox.stop"
-    ],
-    "fixture": "workflow",
-    "provider": "cloudflare",
-    "uncovered": ["ports.expose", "snapshots.create", "snapshots.restore"]
-  },
   "body": {
     "capabilities": {
       "desktop": true,
@@ -56,7 +29,7 @@
     "failure": {
       "code": 7,
       "ok": false,
-      "stderr": "failed\n",
+      "stderr": "failed",
       "stdout": ""
     },
     "file": {
@@ -83,10 +56,37 @@
     "spawn": {
       "code": 0,
       "ok": true,
-      "output": "hello from cloudflare",
       "stderr": "",
-      "stdout": "hello from cloudflare"
+      "stdout": "hello from cloudflare\n",
+      "output": "hello from cloudflare"
     }
+  },
+  "coverage": {
+    "features": [
+      "capabilities",
+      "files.mkdir",
+      "files.write",
+      "files.write.bytes",
+      "files.write.arrayBuffer",
+      "files.write.blob",
+      "files.write.readableStream",
+      "files.exists",
+      "files.read",
+      "files.stream",
+      "files.text",
+      "files.list",
+      "files.remove",
+      "process.exec",
+      "process.exec.options",
+      "process.shell",
+      "process.shell.options",
+      "process.spawnShell",
+      "process.failure",
+      "sandbox.stop"
+    ],
+    "fixture": "workflow",
+    "provider": "cloudflare",
+    "uncovered": ["ports.expose", "snapshots.create", "snapshots.restore"]
   },
   "status": 200
 }

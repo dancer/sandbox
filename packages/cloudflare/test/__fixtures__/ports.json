@@ -16,6 +16,13 @@
       "streaming": "separate",
       "volumes": "volume"
     },
+    "id": "sandbox",
+    "local": {
+      "code": 0,
+      "ok": true,
+      "stderr": "",
+      "stdout": "hello from cloudflare port"
+    },
     "ok": true,
     "port": {
       "port": 8080,

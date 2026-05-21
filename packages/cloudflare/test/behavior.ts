@@ -1,56 +1,20 @@
 import { expect } from "bun:test";
 
 import type { Coverage, PortResult, Result } from "./fixture";
+import { portsCoverage, workflowCoverage } from "./fixture";
 
 export const coverage = (payload: Coverage): void => {
   expect(payload.provider).toBe("cloudflare");
   expect(payload.fixture).toBe("workflow");
-  expect(payload.features).toEqual([
-    "capabilities",
-    "files.mkdir",
-    "files.write",
-    "files.write.bytes",
-    "files.write.arrayBuffer",
-    "files.write.blob",
-    "files.write.readableStream",
-    "files.exists",
-    "files.read",
-    "files.stream",
-    "files.text",
-    "files.list",
-    "files.remove",
-    "process.exec",
-    "process.exec.options",
-    "process.shell",
-    "process.shell.options",
-    "process.spawnShell",
-    "process.failure",
-    "sandbox.stop",
-  ]);
-  expect(payload.uncovered).toEqual([
-    "ports.expose",
-    "snapshots.create",
-    "snapshots.restore",
-  ]);
+  expect(payload.features).toEqual(workflowCoverage.features);
+  expect(payload.uncovered).toEqual(workflowCoverage.uncovered);
 };
 
 export const portCoverage = (payload: Coverage): void => {
   expect(payload.provider).toBe("cloudflare");
   expect(payload.fixture).toBe("ports");
-  expect(payload.features).toEqual([
-    "capabilities",
-    "process.spawnShell",
-    "ports.expose",
-    "preview.fetch",
-    "process.kill",
-    "sandbox.stop",
-  ]);
-  expect(payload.uncovered).toEqual([
-    "files.list",
-    "process.exec",
-    "snapshots.create",
-    "snapshots.restore",
-  ]);
+  expect(payload.features).toEqual(portsCoverage.features);
+  expect(payload.uncovered).toEqual(portsCoverage.uncovered);
 };
 
 export const workflow = ({ body, response }: Result): void => {

@@ -80,6 +80,54 @@ export type Source = Readonly<{
   source: string | undefined;
 }>;
 
+export const workflowCoverage: Coverage = {
+  features: [
+    "capabilities",
+    "files.mkdir",
+    "files.write",
+    "files.write.bytes",
+    "files.write.arrayBuffer",
+    "files.write.blob",
+    "files.write.readableStream",
+    "files.exists",
+    "files.read",
+    "files.stream",
+    "files.text",
+    "files.list",
+    "files.remove",
+    "process.exec",
+    "process.exec.options",
+    "process.shell",
+    "process.shell.options",
+    "process.spawnShell",
+    "process.failure",
+    "ports.expose",
+    "sandbox.raw.delete",
+  ],
+  fixture: "workflow",
+  provider: "vercel",
+  uncovered: ["snapshots.create", "snapshotSource"],
+};
+
+export const sourceCoverage: Coverage = {
+  features: [
+    "capabilities",
+    "snapshots.create",
+    "snapshotSource",
+    "files.exists",
+    "files.text",
+    "sandbox.raw.delete",
+  ],
+  fixture: "source",
+  provider: "vercel",
+  uncovered: [
+    "ports.expose",
+    "process.exec",
+    "process.shell",
+    "process.spawnShell",
+  ],
+};
+
 export const text = (stream: ReadableStream<Uint8Array>): Promise<string> =>
   new Response(stream).text();
 
@@ -325,47 +373,13 @@ export const expectSource = (payload: Source): void => {
 export const expectWorkflowCoverage = (payload: Coverage): void => {
   expect(payload.provider).toBe("vercel");
   expect(payload.fixture).toBe("workflow");
-  expect(payload.features).toEqual([
-    "capabilities",
-    "files.mkdir",
-    "files.write",
-    "files.write.bytes",
-    "files.write.arrayBuffer",
-    "files.write.blob",
-    "files.write.readableStream",
-    "files.exists",
-    "files.read",
-    "files.stream",
-    "files.text",
-    "files.list",
-    "files.remove",
-    "process.exec",
-    "process.exec.options",
-    "process.shell",
-    "process.shell.options",
-    "process.spawnShell",
-    "process.failure",
-    "ports.expose",
-    "sandbox.raw.delete",
-  ]);
-  expect(payload.uncovered).toEqual(["snapshots.create", "snapshotSource"]);
+  expect(payload.features).toEqual(workflowCoverage.features);
+  expect(payload.uncovered).toEqual(workflowCoverage.uncovered);
 };
 
 export const expectSourceCoverage = (payload: Coverage): void => {
   expect(payload.provider).toBe("vercel");
   expect(payload.fixture).toBe("source");
-  expect(payload.features).toEqual([
-    "capabilities",
-    "snapshots.create",
-    "snapshotSource",
-    "files.exists",
-    "files.text",
-    "sandbox.raw.delete",
-  ]);
-  expect(payload.uncovered).toEqual([
-    "ports.expose",
-    "process.exec",
-    "process.shell",
-    "process.spawnShell",
-  ]);
+  expect(payload.features).toEqual(sourceCoverage.features);
+  expect(payload.uncovered).toEqual(sourceCoverage.uncovered);
 };
