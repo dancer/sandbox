@@ -19,15 +19,15 @@ const logs = async function* logs(): AsyncIterable<{
   stream: string;
 }> {};
 
-const token = (payload: Record<string, unknown>): string => {
-  const encode = (value: unknown): string =>
-    Buffer.from(JSON.stringify(value), "utf8").toString("base64url");
-  return `${encode({ alg: "none", typ: "JWT" })}.${encode(payload)}.`;
-};
+const encode = (value: unknown): string =>
+  Buffer.from(JSON.stringify(value), "utf-8").toString("base64url");
+
+const jwt = (payload: Record<string, unknown>): string =>
+  `${encode({ alg: "none", typ: "JWT" })}.${encode(payload)}.`;
 
 test("vercel reports missing credentials before provider calls", async () => {
   const oidc = process.env.VERCEL_OIDC_TOKEN;
-  const token = process.env.VERCEL_TOKEN;
+  const accessToken = process.env.VERCEL_TOKEN;
   const teamId = process.env.VERCEL_TEAM_ID;
   const projectId = process.env.VERCEL_PROJECT_ID;
   process.env.VERCEL_OIDC_TOKEN = "";
@@ -42,7 +42,7 @@ test("vercel reports missing credentials before provider calls", async () => {
     });
   } finally {
     restore("VERCEL_OIDC_TOKEN", oidc);
-    restore("VERCEL_TOKEN", token);
+    restore("VERCEL_TOKEN", accessToken);
     restore("VERCEL_TEAM_ID", teamId);
     restore("VERCEL_PROJECT_ID", projectId);
   }
@@ -62,7 +62,7 @@ test("vercel passes oidc credentials directly to provider", async () => {
     stop: () => Promise.resolve(),
   } as unknown as VercelSandbox;
   let seen: unknown;
-  const value = token({
+  const value = jwt({
     exp: Math.floor(Date.now() / 1000) + 60,
     owner_id: "team",
     project_id: "project",
@@ -103,7 +103,7 @@ test("vercel reports expired oidc credentials before provider calls", async () =
   const original = VercelSandbox.create;
   let called = false;
 
-  process.env.VERCEL_OIDC_TOKEN = token({
+  process.env.VERCEL_OIDC_TOKEN = jwt({
     exp: Math.floor(Date.now() / 1000) - 60,
     owner_id: "team",
     project_id: "project",
@@ -142,7 +142,7 @@ test("vercel reports incomplete access token config", async () => {
 
 test("vercel passes env access token credentials to provider", async () => {
   const oidc = process.env.VERCEL_OIDC_TOKEN;
-  const token = process.env.VERCEL_TOKEN;
+  const accessToken = process.env.VERCEL_TOKEN;
   const teamId = process.env.VERCEL_TEAM_ID;
   const projectId = process.env.VERCEL_PROJECT_ID;
   const original = VercelSandbox.create;
@@ -176,7 +176,7 @@ test("vercel passes env access token credentials to provider", async () => {
   } finally {
     VercelSandbox.create = original;
     restore("VERCEL_OIDC_TOKEN", oidc);
-    restore("VERCEL_TOKEN", token);
+    restore("VERCEL_TOKEN", accessToken);
     restore("VERCEL_TEAM_ID", teamId);
     restore("VERCEL_PROJECT_ID", projectId);
   }

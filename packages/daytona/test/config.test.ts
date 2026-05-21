@@ -264,7 +264,7 @@ test("daytona maps background process APIs", async () => {
         onStdout?: (chunk: string) => void
       ) => {
         onStdout?.("hello");
-        return Promise.resolve({ stdout: "hello", stderr: "" });
+        return Promise.resolve({ stderr: "", stdout: "hello" });
       },
     },
     stop: () => Promise.resolve(),

@@ -302,11 +302,7 @@ const execute = (
   options: Exec
 ): Promise<Result> => executeLine(raw, cwd, command(executable, args), options);
 
-const runLine = (
-  cwd: string,
-  line: string,
-  options: Exec | Spawn
-): string => {
+const runLine = (cwd: string, line: string, options: Exec | Spawn): string => {
   const values = Object.entries(options.env ?? {}).map(([name, value]) =>
     quote(`${name}=${value}`)
   );
@@ -326,7 +322,7 @@ const spawnLine = async (
   const logs = stream();
   try {
     await raw.process.createSession(session);
-    const command = await raw.process.executeSessionCommand(
+    const started = await raw.process.executeSessionCommand(
       session,
       {
         command: runLine(cwd, line, options),
@@ -335,15 +331,19 @@ const spawnLine = async (
       },
       timeout
     );
-    const id = command.cmdId;
-    const output = raw.process
-      .getSessionCommandLogs(
-        session,
-        id,
-        (chunk) => logs.append(chunk),
-        (chunk) => logs.append(chunk)
-      )
-      .finally(() => logs.close());
+    const id = started.cmdId;
+    const output = (async (): Promise<void> => {
+      try {
+        await raw.process.getSessionCommandLogs(
+          session,
+          id,
+          (chunk) => logs.append(chunk),
+          (chunk) => logs.append(chunk)
+        );
+      } finally {
+        logs.close();
+      }
+    })();
     const final = (async (): Promise<Result> => {
       await output;
       const [state, value] = await Promise.all([
@@ -360,7 +360,13 @@ const spawnLine = async (
     options.signal?.addEventListener(
       "abort",
       () => {
-        void raw.process.deleteSession(session).finally(() => logs.close());
+        void (async () => {
+          try {
+            await raw.process.deleteSession(session);
+          } finally {
+            logs.close();
+          }
+        })();
       },
       { once: true }
     );
