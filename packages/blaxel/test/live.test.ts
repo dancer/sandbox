@@ -1,4 +1,4 @@
-import { test } from "bun:test";
+import { expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
@@ -54,6 +54,54 @@ live("blaxel runs a live sandbox workflow", async () => {
         "snapshotSource",
       ])
     );
+  } finally {
+    await sandbox.stop();
+  }
+});
+
+live("blaxel exposes advertised raw capabilities", async () => {
+  const sandbox = await create({
+    adapter: adapter(),
+    cwd: "/app",
+  });
+
+  try {
+    const session = await sandbox.raw.sessions.create({
+      expiresAt: new Date(Date.now() + 300_000),
+    });
+    try {
+      expect(session.name).toBeTruthy();
+      expect(session.url.startsWith("https://")).toBe(true);
+      expect(session.token.length).toBeGreaterThan(0);
+
+      const sessions = await sandbox.raw.sessions.list();
+      expect(sessions.some((current) => current.name === session.name)).toBe(
+        true
+      );
+    } finally {
+      await sandbox.raw.sessions.delete(session.name);
+    }
+
+    const preview = await sandbox.raw.previews.createIfNotExists({
+      metadata: { name: "sandbox-sdk-raw" },
+      spec: { port: 15_501, public: true },
+    });
+    try {
+      expect(preview.name).toBe("sandbox-sdk-raw");
+      expect(preview.spec.url?.startsWith("https://")).toBe(true);
+
+      const previews = await sandbox.raw.previews.list();
+      expect(previews.some((current) => current.name === preview.name)).toBe(
+        true
+      );
+    } finally {
+      await sandbox.raw.previews.delete(preview.name);
+    }
+
+    const mounts = await sandbox.raw.drives.list();
+    expect(Array.isArray(mounts)).toBe(true);
+    expect(typeof sandbox.raw.system.upgrade).toBe("function");
+    expect(typeof sandbox.raw.codegen.reranking).toBe("function");
   } finally {
     await sandbox.stop();
   }
