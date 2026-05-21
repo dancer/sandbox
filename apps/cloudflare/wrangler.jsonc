@@ -2,6 +2,8 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "verify",
   "main": "src/index.ts",
+  "workers_dev": true,
+  "preview_urls": true,
   "compatibility_date": "2026-05-13",
   "compatibility_flags": ["nodejs_compat"],
   "containers": [
