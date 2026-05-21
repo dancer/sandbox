@@ -32,7 +32,7 @@ const workflow: Workflow = {
     raw: {
       git: true,
       mcp: "create-time",
-      network: true,
+      network: "create-time",
       pty: true,
       volumes: "create-time",
     },
