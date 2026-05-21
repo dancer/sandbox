@@ -11,206 +11,377 @@ type Row = Readonly<{
   status: Status;
 }>;
 
-const envValue = (name: string): string | undefined => {
-  const current = process.env[name]?.trim();
-  return current === "" ? undefined : current;
+type Context = Readonly<{
+  env?: Readonly<Record<string, string | undefined>>;
+  exists?: (path: string) => boolean;
+  home?: string;
+  now?: number;
+}>;
+
+type Oidc = Readonly<{
+  details: string;
+  status: Status;
+}>;
+
+type Claims = Readonly<{
+  exp?: number;
+  owner_id?: string;
+  project_id?: string;
+}>;
+
+const current = (context: Context): Required<Context> => ({
+  env: context.env ?? process.env,
+  exists: context.exists ?? existsSync,
+  home: context.home ?? homedir(),
+  now: context.now ?? Date.now(),
+});
+
+const envValue = (name: string, context: Context): string | undefined => {
+  const active = current(context).env[name]?.trim();
+  return active === "" ? undefined : active;
 };
 
-const has = (name: string): boolean => envValue(name) !== undefined;
+const has = (name: string, context: Context): boolean =>
+  envValue(name, context) !== undefined;
 
-const all = (names: readonly string[]): boolean => names.every(has);
+const all = (names: readonly string[], context: Context): boolean =>
+  names.every((name) => has(name, context));
 
-const any = (names: readonly string[]): boolean => names.some(has);
+const any = (names: readonly string[], context: Context): boolean =>
+  names.some((name) => has(name, context));
 
-const modalConfig = (): boolean =>
-  has("MODAL_CONFIG_PATH") || existsSync(join(homedir(), ".modal.toml"));
+const modalConfig = (context: Context): boolean => {
+  const active = current(context);
+  return (
+    has("MODAL_CONFIG_PATH", context) ||
+    active.exists(join(active.home, ".modal.toml"))
+  );
+};
 
-const blaxelConfig = (): boolean =>
-  existsSync(join(homedir(), ".blaxel", "config.yaml"));
+const blaxelConfig = (context: Context): boolean =>
+  current(context).exists(
+    join(current(context).home, ".blaxel", "config.yaml")
+  );
+
+const decode = (value: string): unknown => {
+  const base64 = value.replaceAll("-", "+").replaceAll("_", "/");
+  const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, "=");
+  return JSON.parse(globalThis.atob(padded));
+};
+
+const claims = (token: string): Claims | undefined => {
+  try {
+    const payload = decode(token.split(".")[1] ?? "");
+    if (typeof payload !== "object" || payload === null) {
+      return undefined;
+    }
+    return {
+      ...("exp" in payload && typeof payload.exp === "number"
+        ? { exp: payload.exp }
+        : {}),
+      ...("owner_id" in payload && typeof payload.owner_id === "string"
+        ? { owner_id: payload.owner_id }
+        : {}),
+      ...("project_id" in payload && typeof payload.project_id === "string"
+        ? { project_id: payload.project_id }
+        : {}),
+    };
+  } catch {
+    return undefined;
+  }
+};
+
+const oidc = (token: string, now: number): Oidc => {
+  const payload = claims(token);
+  if (payload?.owner_id === undefined || payload.project_id === undefined) {
+    return {
+      details:
+        "VERCEL_OIDC_TOKEN is invalid; run `vercel env pull .env.local --scope birthstone --yes`",
+      status: "missing",
+    };
+  }
+  if (payload.exp !== undefined && payload.exp * 1000 <= now) {
+    return {
+      details:
+        "VERCEL_OIDC_TOKEN expired; run `vercel env pull .env.local --scope birthstone --yes`",
+      status: "missing",
+    };
+  }
+  if (payload.exp !== undefined && payload.exp * 1000 - now <= 60 * 60 * 1000) {
+    return {
+      details:
+        "VERCEL_OIDC_TOKEN expires soon; run `vercel env pull .env.local --scope birthstone --yes` before longer verification",
+      status: "partial",
+    };
+  }
+  return {
+    details: "ready",
+    status: "ready",
+  };
+};
+
+const validUrl = (value: string): boolean => {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:";
+  } catch {
+    return false;
+  }
+};
+
+const validHost = (value: string): boolean => {
+  if (value.includes("/") || value.endsWith(".workers.dev")) {
+    return false;
+  }
+  try {
+    const url = new URL(`https://${value}`);
+    return url.hostname.length > 0;
+  } catch {
+    return false;
+  }
+};
+
+const value = (name: string, context: Context): string | undefined =>
+  envValue(name, context);
+
+const ready = (details = "ready"): Pick<Row, "details" | "status"> => ({
+  details,
+  status: "ready",
+});
+
+const missing = (details: string): Pick<Row, "details" | "status"> => ({
+  details,
+  status: "missing",
+});
+
+const partial = (details: string): Pick<Row, "details" | "status"> => ({
+  details,
+  status: "partial",
+});
+
+const row = (
+  provider: string,
+  command: string,
+  result: Pick<Row, "details" | "status">
+): Row => ({
+  command,
+  details: result.details,
+  provider,
+  status: result.status,
+});
 
 const complete = (
   provider: string,
   command: string,
   requirements: readonly string[],
-  ready: boolean
-): Row => ({
-  command,
-  details: ready ? "ready" : requirements.join(" or "),
-  provider,
-  status: ready ? "ready" : "missing",
-});
+  ok: boolean
+): Row =>
+  row(
+    provider,
+    command,
+    ok
+      ? { details: "ready", status: "ready" }
+      : missing(requirements.join(" or "))
+  );
 
-const blaxelRow = (): Row => {
+const blaxelRow = (context: Context): Row => {
   const explicit =
-    has("BL_WORKSPACE") && any(["BL_API_KEY", "BL_CLIENT_CREDENTIALS"]);
-  const config = blaxelConfig();
-  const partial = any(["BL_WORKSPACE", "BL_API_KEY", "BL_CLIENT_CREDENTIALS"]);
+    has("BL_WORKSPACE", context) &&
+    any(["BL_API_KEY", "BL_CLIENT_CREDENTIALS"], context);
+  const config = blaxelConfig(context);
+  const partialConfig = any(
+    ["BL_WORKSPACE", "BL_API_KEY", "BL_CLIENT_CREDENTIALS"],
+    context
+  );
   if (explicit) {
-    return {
-      command: "bun run verify:blaxel",
-      details: "ready",
-      provider: "blaxel",
-      status: "ready",
-    };
+    return row("blaxel", "bun run verify:blaxel", ready());
   }
   if (config) {
-    return {
-      command: "bun run verify:blaxel",
-      details: "ready from blaxel cli config",
-      provider: "blaxel",
-      status: "ready",
-    };
+    return row(
+      "blaxel",
+      "bun run verify:blaxel",
+      ready("ready from blaxel cli config")
+    );
   }
-  return {
-    command: "bun run verify:blaxel",
-    details: "BL_WORKSPACE with BL_API_KEY or BL_CLIENT_CREDENTIALS",
-    provider: "blaxel",
-    status: partial ? "partial" : "missing",
-  };
+  return row(
+    "blaxel",
+    "bun run verify:blaxel",
+    partialConfig
+      ? partial("BL_WORKSPACE with BL_API_KEY or BL_CLIENT_CREDENTIALS")
+      : missing("BL_WORKSPACE with BL_API_KEY or BL_CLIENT_CREDENTIALS")
+  );
 };
 
-const cloudflareRow = (): Row => {
-  const cloudflareWorkflow = all([
-    "CLOUDFLARE_SANDBOX_WORKER_URL",
-    "CLOUDFLARE_SANDBOX_TOKEN",
-  ]);
-  const cloudflarePorts = has("CLOUDFLARE_SANDBOX_PREVIEW_HOST");
-  if (cloudflareWorkflow && cloudflarePorts) {
-    return {
-      command: "bun run verify:cloudflare",
-      details: "ready",
-      provider: "cloudflare",
-      status: "ready",
-    };
+const cloudflareRow = (context: Context): Row => {
+  const worker = value("CLOUDFLARE_SANDBOX_WORKER_URL", context);
+  const token = has("CLOUDFLARE_SANDBOX_TOKEN", context);
+  const host = value("CLOUDFLARE_SANDBOX_PREVIEW_HOST", context);
+  const workflow = worker !== undefined && token;
+  const workflowPartial = worker !== undefined || token;
+
+  if (worker !== undefined && !validUrl(worker)) {
+    return row(
+      "cloudflare",
+      "bun run verify:cloudflare",
+      missing("CLOUDFLARE_SANDBOX_WORKER_URL must be an http or https URL")
+    );
   }
-  if (cloudflareWorkflow) {
-    return {
-      command: "bun run verify:cloudflare",
-      details: "workflow ready, add CLOUDFLARE_SANDBOX_PREVIEW_HOST for ports",
-      provider: "cloudflare",
-      status: "partial",
-    };
+  if (!workflow) {
+    return row(
+      "cloudflare",
+      "bun run verify:cloudflare",
+      workflowPartial
+        ? partial("CLOUDFLARE_SANDBOX_WORKER_URL with CLOUDFLARE_SANDBOX_TOKEN")
+        : missing("CLOUDFLARE_SANDBOX_WORKER_URL and CLOUDFLARE_SANDBOX_TOKEN")
+    );
   }
-  return {
-    command: "bun run verify:cloudflare",
-    details: "CLOUDFLARE_SANDBOX_WORKER_URL and CLOUDFLARE_SANDBOX_TOKEN",
-    provider: "cloudflare",
-    status: "missing",
-  };
+  if (host !== undefined && !validHost(host)) {
+    return row(
+      "cloudflare",
+      "bun run verify:cloudflare",
+      partial(
+        "workflow ready, CLOUDFLARE_SANDBOX_PREVIEW_HOST must be a custom hostname without protocol"
+      )
+    );
+  }
+  if (host !== undefined) {
+    return row("cloudflare", "bun run verify:cloudflare", ready());
+  }
+  return row(
+    "cloudflare",
+    "bun run verify:cloudflare",
+    partial("workflow ready, add CLOUDFLARE_SANDBOX_PREVIEW_HOST for ports")
+  );
 };
 
-const daytonaRow = (): Row => {
-  if (has("DAYTONA_API_KEY")) {
-    return {
-      command: "bun run verify:daytona",
-      details: "ready",
-      provider: "daytona",
-      status: "ready",
-    };
-  }
-  return {
-    command: "bun run verify:daytona",
-    details: "DAYTONA_API_KEY",
-    provider: "daytona",
-    status: "missing",
-  };
-};
+const daytonaRow = (context: Context): Row =>
+  row(
+    "daytona",
+    "bun run verify:daytona",
+    has("DAYTONA_API_KEY", context) ? ready() : missing("DAYTONA_API_KEY")
+  );
 
-const modalRow = (): Row => {
-  const modalTokens = all(["MODAL_TOKEN_ID", "MODAL_TOKEN_SECRET"]);
-  const modalPartial = any(["MODAL_TOKEN_ID", "MODAL_TOKEN_SECRET"]);
-  const config = modalConfig();
+const modalRow = (context: Context): Row => {
+  const modalTokens = all(["MODAL_TOKEN_ID", "MODAL_TOKEN_SECRET"], context);
+  const modalPartial = any(["MODAL_TOKEN_ID", "MODAL_TOKEN_SECRET"], context);
+  const config = modalConfig(context);
   if (modalTokens) {
-    return {
-      command: "bun run verify:modal",
-      details: "ready",
-      provider: "modal",
-      status: "ready",
-    };
+    return row("modal", "bun run verify:modal", ready());
   }
   if (config) {
-    return {
-      command: "bun run verify:modal",
-      details: "ready from modal cli config",
-      provider: "modal",
-      status: "ready",
-    };
+    return row(
+      "modal",
+      "bun run verify:modal",
+      ready("ready from modal cli config")
+    );
   }
-  return {
-    command: "bun run verify:modal",
-    details: "MODAL_TOKEN_ID with MODAL_TOKEN_SECRET or modal cli config",
-    provider: "modal",
-    status: modalPartial ? "partial" : "missing",
-  };
+  return row(
+    "modal",
+    "bun run verify:modal",
+    modalPartial
+      ? partial("MODAL_TOKEN_ID with MODAL_TOKEN_SECRET or modal cli config")
+      : missing("MODAL_TOKEN_ID with MODAL_TOKEN_SECRET or modal cli config")
+  );
 };
 
-const vercelRow = (): Row => {
-  const oidc = has("VERCEL_OIDC_TOKEN");
-  const token = all(["VERCEL_TOKEN", "VERCEL_TEAM_ID", "VERCEL_PROJECT_ID"]);
-  const partial = any(["VERCEL_TOKEN", "VERCEL_TEAM_ID", "VERCEL_PROJECT_ID"]);
-  if (oidc || token) {
-    return {
-      command: "bun run verify:vercel",
-      details: "ready",
-      provider: "vercel",
-      status: "ready",
-    };
+const vercelRow = (context: Context): Row => {
+  const token = all(
+    ["VERCEL_TOKEN", "VERCEL_TEAM_ID", "VERCEL_PROJECT_ID"],
+    context
+  );
+  const tokenPartial = any(
+    ["VERCEL_TOKEN", "VERCEL_TEAM_ID", "VERCEL_PROJECT_ID"],
+    context
+  );
+  if (token) {
+    return row("vercel", "bun run verify:vercel", ready());
   }
-  return {
-    command: "bun run verify:vercel",
-    details:
-      "VERCEL_OIDC_TOKEN or VERCEL_TOKEN with VERCEL_TEAM_ID and VERCEL_PROJECT_ID",
-    provider: "vercel",
-    status: partial ? "partial" : "missing",
-  };
+  if (tokenPartial) {
+    return row(
+      "vercel",
+      "bun run verify:vercel",
+      partial("VERCEL_TOKEN with VERCEL_TEAM_ID and VERCEL_PROJECT_ID")
+    );
+  }
+  const oidcToken = value("VERCEL_OIDC_TOKEN", context);
+  if (oidcToken !== undefined) {
+    return row(
+      "vercel",
+      "bun run verify:vercel",
+      oidc(oidcToken, current(context).now)
+    );
+  }
+  return row(
+    "vercel",
+    "bun run verify:vercel",
+    missing(
+      "VERCEL_OIDC_TOKEN or VERCEL_TOKEN with VERCEL_TEAM_ID and VERCEL_PROJECT_ID"
+    )
+  );
 };
 
-const credentialRows = (): readonly Row[] => [
-  blaxelRow(),
-  cloudflareRow(),
+export const credentialRows = (context: Context = {}): readonly Row[] => [
+  blaxelRow(context),
+  cloudflareRow(context),
   complete(
     "codesandbox",
     "bun run verify:codesandbox",
     ["CSB_API_KEY"],
-    has("CSB_API_KEY")
+    has("CSB_API_KEY", context)
   ),
-  daytonaRow(),
+  daytonaRow(context),
   complete(
     "e2b",
     "bun run verify:e2b",
     ["E2B_API_KEY", "E2B_ACCESS_TOKEN"],
-    any(["E2B_API_KEY", "E2B_ACCESS_TOKEN"])
+    any(["E2B_API_KEY", "E2B_ACCESS_TOKEN"], context)
   ),
-  modalRow(),
-  vercelRow(),
+  modalRow(context),
+  vercelRow(context),
 ];
 
 const pad = (input: string, size: number): string => input.padEnd(size, " ");
 
-const rows = credentialRows();
-const widths = {
-  command: Math.max("command".length, ...rows.map((row) => row.command.length)),
-  provider: Math.max(
-    "provider".length,
-    ...rows.map((row) => row.provider.length)
-  ),
-  status: Math.max("status".length, ...rows.map((row) => row.status.length)),
+export const formatRows = (rows: readonly Row[]): string => {
+  const widths = {
+    command: Math.max(
+      "command".length,
+      ...rows.map((entry) => entry.command.length)
+    ),
+    provider: Math.max(
+      "provider".length,
+      ...rows.map((entry) => entry.provider.length)
+    ),
+    status: Math.max(
+      "status".length,
+      ...rows.map((entry) => entry.status.length)
+    ),
+  };
+  const lines = [
+    `${pad("provider", widths.provider)}  ${pad("status", widths.status)}  ${pad("command", widths.command)}  details`,
+  ];
+  for (const entry of rows) {
+    lines.push(
+      `${pad(entry.provider, widths.provider)}  ${pad(entry.status, widths.status)}  ${pad(entry.command, widths.command)}  ${entry.details}`
+    );
+  }
+
+  const readyCount = rows.filter((entry) => entry.status === "ready").length;
+  const partialCount = rows.filter(
+    (entry) => entry.status === "partial"
+  ).length;
+  const missingCount = rows.filter(
+    (entry) => entry.status === "missing"
+  ).length;
+
+  lines.push("");
+  lines.push(
+    `${readyCount} ready, ${partialCount} partial, ${missingCount} missing`
+  );
+  lines.push("no secret values were printed");
+  return lines.join("\n");
 };
 
-console.log(
-  `${pad("provider", widths.provider)}  ${pad("status", widths.status)}  ${pad("command", widths.command)}  details`
-);
-
-for (const row of rows) {
-  console.log(
-    `${pad(row.provider, widths.provider)}  ${pad(row.status, widths.status)}  ${pad(row.command, widths.command)}  ${row.details}`
-  );
+if (import.meta.main) {
+  console.log(formatRows(credentialRows()));
 }
-
-const ready = rows.filter((row) => row.status === "ready").length;
-const partial = rows.filter((row) => row.status === "partial").length;
-const missing = rows.filter((row) => row.status === "missing").length;
-
-console.log("");
-console.log(`${ready} ready, ${partial} partial, ${missing} missing`);
-console.log("no secret values were printed");
