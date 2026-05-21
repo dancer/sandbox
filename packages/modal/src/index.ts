@@ -7,7 +7,6 @@ import {
   abort,
   sandboxError,
   port,
-  quote,
   result,
   unsupported,
 } from "@sandbox-sdk/core";
@@ -353,67 +352,36 @@ const writeChunks = async (
   }
 };
 
-const writeInput = async (
-  file: ModalSdk.SandboxFile,
-  input: Input
-): Promise<void> => {
+const write = async (raw: Raw, path: string, input: Input) => {
   if (typeof input === "string") {
-    await file.write(new TextEncoder().encode(input));
+    await raw.filesystem.writeText(input, path);
     return;
   }
-  if (input instanceof Uint8Array) {
-    await file.write(input);
+  if (input instanceof Uint8Array || input instanceof ArrayBuffer) {
+    await raw.filesystem.writeBytes(input, path);
     return;
   }
-  if (input instanceof ArrayBuffer) {
-    await file.write(new Uint8Array(input));
-    return;
-  }
-  await writeChunks(file, input);
-};
-
-const write = async (raw: Raw, cwd: string, path: string, input: Input) => {
-  await shell(raw, cwd, `mkdir -p ${quote(dirname(path))}`, {});
+  await raw.filesystem.makeDirectory(dirname(path), { createParents: true });
   const file = await raw.open(path, "w");
   try {
-    await writeInput(file, input);
+    await writeChunks(file, input);
     await file.flush();
   } finally {
     await file.close();
   }
 };
 
-const read = async (raw: Raw, path: string): Promise<Uint8Array> => {
-  const file = await raw.open(path, "r");
-  try {
-    return await file.read();
-  } finally {
-    await file.close();
-  }
-};
-
-const list = async (raw: Raw, cwd: string, path: string): Promise<Entry[]> => {
-  const base = path.replace(/\/$/u, "");
-  const script = [
-    `for item in ${quote(base)}/* ${quote(base)}/.[!.]* ${quote(base)}/..?*; do`,
-    `  [ -e "$item" ] || continue`,
-    `  if [ -d "$item" ]; then kind=directory; else kind=file; fi`,
-    `  size=$(wc -c < "$item" 2>/dev/null || echo 0)`,
-    `  printf '%s\\t%s\\t%s\\n' "$kind" "$size" "$item"`,
-    `done`,
-  ].join("\n");
-  const output = await shell(raw, cwd, script, {});
-  return output.stdout
-    .split("\n")
-    .filter(Boolean)
-    .map((line): Entry => {
-      const [kind, size, entry] = line.split("\t");
-      return {
-        kind: kind === "directory" ? "directory" : "file",
-        path: entry ?? "",
-        size: Number(size) || 0,
-      };
-    })
+const list = async (raw: Raw, path: string): Promise<Entry[]> => {
+  const entries = await raw.filesystem.listFiles(path);
+  return entries
+    .map(
+      (entry): Entry => ({
+        kind: entry.type === "directory" ? "directory" : "file",
+        modified: new Date(entry.modifiedTime * 1000),
+        path: entry.path,
+        size: entry.size,
+      })
+    )
     .toSorted((left, right) => left.path.localeCompare(right.path));
 };
 
@@ -445,25 +413,34 @@ const createSandbox = (
   cwd,
   files: {
     exists: async (path) => {
-      const output = await wrap(
-        () => shell(raw, cwd, `test -e ${quote(path)}`, {}),
-        "exists"
-      );
-      return output.ok;
+      try {
+        await raw.filesystem.stat(path);
+        return true;
+      } catch (error) {
+        if (error instanceof ModalSdk.SandboxFilesystemNotFoundError) {
+          return false;
+        }
+        throw sandboxError(provider, "exists failed", "provider", error);
+      }
     },
-    list: (path = cwd) => wrap(() => list(raw, cwd, path), "list"),
+    list: (path = cwd) => wrap(() => list(raw, path), "list"),
     mkdir: async (path) => {
-      await wrap(() => shell(raw, cwd, `mkdir -p ${quote(path)}`, {}), "mkdir");
+      await wrap(
+        () => raw.filesystem.makeDirectory(path, { createParents: true }),
+        "mkdir"
+      );
     },
-    read: (path) => wrap(() => read(raw, path), "read"),
+    read: (path) => wrap(() => raw.filesystem.readBytes(path), "read"),
     remove: async (path) => {
-      await wrap(() => shell(raw, cwd, `rm -rf ${quote(path)}`, {}), "remove");
+      await wrap(
+        () => raw.filesystem.remove(path, { recursive: true }),
+        "remove"
+      );
     },
     stream: async (path) =>
-      readable(await wrap(() => read(raw, path), "stream")),
-    text: async (path) =>
-      new TextDecoder().decode(await wrap(() => read(raw, path), "text")),
-    write: (path, input) => wrap(() => write(raw, cwd, path, input), "write"),
+      readable(await wrap(() => raw.filesystem.readBytes(path), "stream")),
+    text: (path) => wrap(() => raw.filesystem.readText(path), "text"),
+    write: (path, input) => wrap(() => write(raw, path, input), "write"),
   },
   id: raw.sandboxId,
   ports: {
@@ -528,7 +505,7 @@ export const modal = (options: Modal = {}): Adapter<Raw> => ({
         : await modalClient.sandboxes.fromId(input.id);
 
     if (input.id === undefined) {
-      await shell(raw, "/", `mkdir -p ${quote(cwd)}`, {});
+      await raw.filesystem.makeDirectory(cwd, { createParents: true });
       const tags = { ...options.tags, ...input.metadata };
       if (Object.keys(tags).length > 0) {
         await raw.setTags(tags);

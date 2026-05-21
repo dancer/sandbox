@@ -110,6 +110,7 @@ test("modal maps create options, tags, commands, and ports", async () => {
   let appSeen: unknown;
   let createSeen: unknown;
   let imageSeen: unknown;
+  const directories: unknown[] = [];
   let snapshotted = false;
   let tagsSeen: unknown;
   const bucket = {} as ModalSdk.CloudBucketMount;
@@ -121,6 +122,12 @@ test("modal maps create options, tags, commands, and ports", async () => {
     exec: (command: string[], options: unknown) => {
       execSeen.push({ command, options });
       return Promise.resolve(processOutput());
+    },
+    filesystem: {
+      makeDirectory: (path: string, options: unknown) => {
+        directories.push({ options, path });
+        return Promise.resolve();
+      },
     },
     sandboxId: "sandbox",
     setTags: (tags: unknown) => {
@@ -247,13 +254,9 @@ test("modal maps create options, tags, commands, and ports", async () => {
     },
   });
   expect(tagsSeen).toEqual({ owner: "sdk", task: "test" });
-  expect(execSeen[0]).toEqual({
-    command: ["sh", "-lc", "mkdir -p /work"],
-    options: {
-      stderr: "pipe",
-      stdout: "pipe",
-      workdir: "/",
-    },
+  expect(directories).toContainEqual({
+    options: { createParents: true },
+    path: "/work",
   });
 
   await expect(sandbox.ports.expose(3000)).rejects.toMatchObject({
@@ -322,15 +325,17 @@ test("modal maps create options, tags, commands, and ports", async () => {
 
 test("modal writes readable streams in chunks", async () => {
   const decoder = new TextDecoder();
-  const execSeen: unknown[] = [];
+  const directories: unknown[] = [];
   const writes: string[] = [];
   let closed = false;
   let flushed = false;
   let openSeen: unknown;
   const raw = {
-    exec: (command: string[], options: unknown) => {
-      execSeen.push({ command, options });
-      return Promise.resolve(processOutput());
+    filesystem: {
+      makeDirectory: (path: string, options: unknown) => {
+        directories.push({ options, path });
+        return Promise.resolve();
+      },
     },
     open: (path: string, mode: string) => {
       openSeen = { mode, path };
@@ -381,15 +386,11 @@ test("modal writes readable streams in chunks", async () => {
   await sandbox.files.write("/work/stream.txt", input);
 
   expect(openSeen).toEqual({ mode: "w", path: "/work/stream.txt" });
+  expect(directories).toEqual([
+    { options: { createParents: true }, path: "/work" },
+    { options: { createParents: true }, path: "/work" },
+  ]);
   expect(writes).toEqual(["chunk-1", "chunk-2"]);
   expect(flushed).toBe(true);
   expect(closed).toBe(true);
-  expect(execSeen.at(-1)).toEqual({
-    command: ["sh", "-lc", "mkdir -p /work"],
-    options: {
-      stderr: "pipe",
-      stdout: "pipe",
-      workdir: "/work",
-    },
-  });
 });
