@@ -106,8 +106,8 @@ const ROWS: { capability: string; cells: Record<ColumnKey, Cell> }[] = [
       cloudflare: no(
         "Cloudflare Sandbox backups and hibernation are provider-specific today. The adapter keeps them behind raw until the normalized snapshot contract is right."
       ),
-      codesandbox: no(
-        "CodeSandbox hibernation is provider-specific today and stays behind raw until the normalized snapshot contract is right."
+      codesandbox: warn(
+        "CodeSandbox snapshot creation hibernates the current VM and returns its sandbox id for create-time snapshot sources."
       ),
       daytona: no(
         "Daytona snapshot and fork APIs are still experimental in the current adapter surface. Use raw for provider-specific snapshot workflows."
@@ -135,9 +135,7 @@ const ROWS: { capability: string; cells: Record<ColumnKey, Cell> }[] = [
       cloudflare: no(
         "Cloudflare backup and restore is provider-specific today and stays behind raw until the normalized contract is right."
       ),
-      codesandbox: no(
-        "CodeSandbox resume and hibernation are provider-specific in this adapter today."
-      ),
+      codesandbox: no("CodeSandbox has no normalized in-place restore."),
       daytona: no(
         "Daytona restore and fork flows are provider-specific in this adapter today."
       ),

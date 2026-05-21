@@ -24,8 +24,9 @@ export const CodeSandbox = () => (
       commands, background commands, and opened ports.
     </p>
     <p>
-      Use <code>template</code> or the shared <code>template</code> create
-      option to fork from a template sandbox. Use <code>id</code> on{" "}
+      Use <code>template</code> to fork from a template sandbox, or{" "}
+      <code>snapshot</code> to fork from a snapshot created with{" "}
+      <code>snapshots.create()</code>. Use <code>id</code> on{" "}
       <code>create()</code> to resume an existing sandbox.
     </p>
     <CodeBlock code={CODESANDBOX_EXAMPLE} lang="ts" />
