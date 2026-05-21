@@ -41,7 +41,7 @@ const iconList = iconOrder.map((name) => [name, icons[name]] as const);
 
 const stats = [
   { label: "providers", value: "8" },
-  { label: "capabilities", value: "18" },
+  { label: "capabilities", value: "gated" },
   { label: "license", value: "MIT" },
 ] as const;
 

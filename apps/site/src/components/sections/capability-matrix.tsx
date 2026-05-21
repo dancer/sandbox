@@ -162,8 +162,8 @@ const ROWS: { capability: string; cells: Record<ColumnKey, Cell> }[] = [
       cloudflare: no(
         "Cloudflare backup and hibernation flows stay behind raw until the normalized create-from-snapshot contract is right."
       ),
-      codesandbox: no(
-        "CodeSandbox templates use the shared template option, not the snapshot source option."
+      codesandbox: warn(
+        "CodeSandbox can create a fresh sandbox from a hibernated sandbox id through the shared snapshot source option."
       ),
       daytona: warn(
         "Daytona can create a new sandbox from a snapshot id at create time."
@@ -214,7 +214,7 @@ const ROWS: { capability: string; cells: Record<ColumnKey, Cell> }[] = [
         "Secrets are not normalized in this adapter. Pass environment values explicitly or use E2B-native features through raw."
       ),
       local: no(
-        "No secret store. Local sandboxes inherit the host environment. Manage secrets at the OS level."
+        "No secret store. Local sandboxes do not inherit arbitrary host environment by default. Pass explicit environment values when needed."
       ),
       modal: no(
         "Secrets are not normalized in this adapter. Pass environment values explicitly or use Modal-native secrets through raw."
