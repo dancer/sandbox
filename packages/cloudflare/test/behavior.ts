@@ -1,7 +1,7 @@
 import { expect } from "bun:test";
 
-import type { Coverage, PortResult, Result } from "./fixture";
-import { portsCoverage, workflowCoverage } from "./fixture";
+import type { Coverage, PortResult, Result, TunnelResult } from "./fixture";
+import { portsCoverage, tunnelsCoverage, workflowCoverage } from "./fixture";
 
 export const coverage = (payload: Coverage): void => {
   expect(payload.provider).toBe("cloudflare");
@@ -17,6 +17,13 @@ export const portCoverage = (payload: Coverage): void => {
   expect(payload.uncovered).toEqual(portsCoverage.uncovered);
 };
 
+export const tunnelCoverage = (payload: Coverage): void => {
+  expect(payload.provider).toBe("cloudflare");
+  expect(payload.fixture).toBe("tunnels");
+  expect(payload.features).toEqual(tunnelsCoverage.features);
+  expect(payload.uncovered).toEqual(tunnelsCoverage.uncovered);
+};
+
 export const workflow = ({ body, response }: Result): void => {
   expect(response.ok).toBe(true);
   expect(body.error).toBeUndefined();
@@ -25,6 +32,9 @@ export const workflow = ({ body, response }: Result): void => {
   expect(body.capabilities.files).toBe(true);
   expect(body.capabilities.processExec).toBe(true);
   expect(body.capabilities.processSpawn).toBe("separate");
+  expect(body.capabilities.raw).toMatchObject({
+    tunnels: "dynamic",
+  });
   expect(body.capabilities.snapshotCreate).toBe(false);
   expect(body.file).toEqual({
     exists: true,
@@ -79,4 +89,17 @@ export const ports = ({ body, response }: PortResult): void => {
     status: 200,
   });
   expect(body.response.text).toContain("hello from cloudflare port");
+};
+
+export const tunnels = ({ body, response }: TunnelResult): void => {
+  expect(response.ok).toBe(true);
+  expect(body.error).toBeUndefined();
+  expect(body.ok).toBe(true);
+  expect(body.provider).toBe("cloudflare");
+  expect(body.capabilities.raw).toMatchObject({
+    tunnels: "dynamic",
+  });
+  expect(body.tunnel.port).toBe(8080);
+  expect(body.tunnel.url).toMatch(/^https:\/\/.+\.trycloudflare\.com$/u);
+  expect(body.tunnel.hostname).toMatch(/^[a-z0-9-]+\.trycloudflare\.com$/u);
 };

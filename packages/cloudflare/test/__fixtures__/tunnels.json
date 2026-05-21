@@ -31,30 +31,27 @@
       "stdout": "hello from cloudflare port"
     },
     "ok": true,
-    "port": {
-      "port": 8080,
-      "url": "https://8080-sandbox-fixture-preview.example.com"
-    },
     "provider": "cloudflare",
-    "response": {
-      "ok": true,
-      "status": 200,
-      "text": "hello from cloudflare port"
+    "tunnel": {
+      "hostname": "sandbox-fixture.trycloudflare.com",
+      "port": 8080,
+      "url": "https://sandbox-fixture.trycloudflare.com"
     }
   },
   "coverage": {
     "features": [
       "capabilities",
       "process.spawnShell",
-      "ports.expose",
-      "preview.fetch",
+      "raw.tunnels.get",
+      "tunnel.url",
       "process.kill",
       "sandbox.stop"
     ],
-    "fixture": "ports",
+    "fixture": "tunnels",
     "provider": "cloudflare",
     "uncovered": [
       "files.list",
+      "ports.expose",
       "process.exec",
       "snapshots.create",
       "snapshots.restore"

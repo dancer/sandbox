@@ -38,6 +38,7 @@ type RawCapability =
   | "secrets"
   | "sessions"
   | "system"
+  | "tunnels"
   | "volumes";
 
 type Mode =

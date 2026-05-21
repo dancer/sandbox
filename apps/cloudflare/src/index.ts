@@ -14,6 +14,7 @@ type Env = Readonly<{
 
 const liveRoute = "/sandbox-sdk/live";
 const portsRoute = "/sandbox-sdk/ports";
+const tunnelsRoute = "/sandbox-sdk/tunnels";
 const cleanupRoute = "/sandbox-sdk/cleanup";
 const message = "hello from cloudflare";
 const port = 8080;
@@ -27,6 +28,7 @@ const options = {
     portReadyTimeoutMS: 120_000,
   },
   sleepAfter: "30s",
+  transport: "rpc",
 } as const;
 const server = `const http = require("http");
 const fs = require("fs");
@@ -190,6 +192,51 @@ const handlePorts = async (
   }
 };
 
+const handleTunnels = async (env: Env): Promise<Response> => {
+  const id = crypto.randomUUID();
+  const cwd = `/workspace/${id}`;
+  const file = `${cwd}/index.html`;
+  const serverPath = `${cwd}/${serverFile}`;
+  let sandbox: CoreSandbox | undefined;
+  let local: Result | undefined;
+
+  try {
+    sandbox = await instance(env, cwd, id);
+    await sandbox.files.write(file, portMessage);
+    await sandbox.files.write(serverPath, server);
+    await sandbox.process.spawnShell(`node ${serverFile}`, { cwd });
+    local = await waitLocal(sandbox, cwd);
+    const raw = sandbox.raw as CloudflareSandbox<unknown>;
+    const tunnel = await raw.tunnels.get(port);
+
+    return json({
+      capabilities: sandbox.capabilities,
+      id,
+      local,
+      ok:
+        local.ok &&
+        tunnel.port === port &&
+        tunnel.url.startsWith("https://") &&
+        tunnel.hostname.endsWith(".trycloudflare.com"),
+      provider: sandbox.provider,
+      tunnel: {
+        hostname: tunnel.hostname,
+        port: tunnel.port,
+        url: tunnel.url,
+      },
+    });
+  } catch (error) {
+    return json(
+      {
+        error: error instanceof Error ? error.message : "unknown",
+        local,
+        ok: false,
+      },
+      500
+    );
+  }
+};
+
 const handleCleanup = async (request: Request, env: Env): Promise<Response> => {
   const input = (await request.json()) as { id?: string };
   if (!input.id) {
@@ -331,6 +378,7 @@ const guard = (request: Request, env: Env, url: URL): Response | undefined => {
   if (
     url.pathname !== liveRoute &&
     url.pathname !== portsRoute &&
+    url.pathname !== tunnelsRoute &&
     url.pathname !== cleanupRoute
   ) {
     return json({ error: "not_found", ok: false }, 404);
@@ -361,6 +409,10 @@ export default {
 
     if (url.pathname === portsRoute) {
       return handlePorts(request, env, url);
+    }
+
+    if (url.pathname === tunnelsRoute) {
+      return handleTunnels(env);
     }
 
     if (url.pathname === cleanupRoute) {

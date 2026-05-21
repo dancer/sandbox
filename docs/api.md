@@ -50,6 +50,7 @@ export type RawCapability =
   | "secrets"
   | "sessions"
   | "system"
+  | "tunnels"
   | "volumes";
 ```
 

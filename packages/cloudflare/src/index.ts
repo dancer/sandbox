@@ -80,6 +80,7 @@ const capabilities: Capabilities = {
     interpreter: true,
     network: true,
     sessions: true,
+    tunnels: "dynamic",
     volumes: "volume",
   },
   snapshotCreate: false,

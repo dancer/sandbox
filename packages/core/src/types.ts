@@ -29,6 +29,7 @@ export type RawCapability =
   | "secrets"
   | "sessions"
   | "system"
+  | "tunnels"
   | "volumes";
 
 /** capability mode details when a feature exists but has provider-specific shape */

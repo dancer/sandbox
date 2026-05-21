@@ -337,6 +337,7 @@ const description = (
       "secrets",
       "sessions",
       "system",
+      "tunnels",
       "volumes",
     ] as const
   ).filter((capability: RawCapability) => supportsRaw(sandbox, capability));

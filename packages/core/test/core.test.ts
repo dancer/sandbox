@@ -448,6 +448,7 @@ test("capability helpers handle boolean and mode capabilities", () => {
       desktop: true,
       git: true,
       lifecycle: "dynamic",
+      tunnels: "dynamic",
     },
     snapshotCreate: "disk",
     snapshotRestore: false,
@@ -472,6 +473,7 @@ test("capability helpers handle boolean and mode capabilities", () => {
   expect(supportsRaw(current, "git")).toBe(true);
   expect(supportsRaw(current, "backup")).toBe(true);
   expect(rawCapabilityMode(current, "lifecycle")).toBe("dynamic");
+  expect(rawCapabilityMode(current, "tunnels")).toBe("dynamic");
   expect(supportsRaw(current, "pty")).toBe(false);
   expect(() => requireRawCapability(current, "pty")).toThrow(SandboxError);
 });

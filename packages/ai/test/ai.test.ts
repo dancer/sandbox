@@ -378,6 +378,26 @@ test("tools omit preview when ports are unsupported", async () => {
   await sandbox.stop();
 });
 
+test("tools describe provider raw capabilities", async () => {
+  const sandbox = await create({ adapter: local() });
+  const kit = tools({
+    ...sandbox,
+    capabilities: {
+      ...sandbox.capabilities,
+      raw: {
+        tunnels: "dynamic",
+      },
+    },
+    provider: "cloudflare",
+  });
+
+  expect(kit.description).toContain(
+    "Provider-specific raw capabilities: tunnels"
+  );
+
+  await sandbox.stop();
+});
+
 test("tools trim command output for agent payloads", async () => {
   const sandbox = await create({ adapter: local() });
   const kit = tools(sandbox, {

@@ -56,6 +56,20 @@ export type PortPayload = Readonly<{
   }>;
 }>;
 
+export type TunnelPayload = Readonly<{
+  capabilities: Record<string, unknown>;
+  error?: string;
+  id: string;
+  local: Command;
+  ok: boolean;
+  provider: string;
+  tunnel: Readonly<{
+    hostname: string;
+    port: number;
+    url: string;
+  }>;
+}>;
+
 export type Result = Readonly<{
   body: Payload;
   response: Response;
@@ -63,6 +77,11 @@ export type Result = Readonly<{
 
 export type PortResult = Readonly<{
   body: PortPayload;
+  response: Response;
+}>;
+
+export type TunnelResult = Readonly<{
+  body: TunnelPayload;
   response: Response;
 }>;
 
@@ -127,8 +146,29 @@ export const portsCoverage: Coverage = {
   ],
 };
 
+export const tunnelsCoverage: Coverage = {
+  features: [
+    "capabilities",
+    "process.spawnShell",
+    "raw.tunnels.get",
+    "tunnel.url",
+    "process.kill",
+    "sandbox.stop",
+  ],
+  fixture: "tunnels",
+  provider: "cloudflare",
+  uncovered: [
+    "files.list",
+    "ports.expose",
+    "process.exec",
+    "snapshots.create",
+    "snapshots.restore",
+  ],
+};
+
 const liveRoute = "/sandbox-sdk/live";
 const portsRoute = "/sandbox-sdk/ports";
+const tunnelsRoute = "/sandbox-sdk/tunnels";
 const cleanupRoute = "/sandbox-sdk/cleanup";
 const attempts = 2;
 const timeout = 90_000;
@@ -176,6 +216,29 @@ const request = async (
   });
 };
 
+const preview = async (url: string): Promise<Response> => {
+  let failure: unknown;
+
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    try {
+      const response = await fetch(url, {
+        signal: AbortSignal.timeout(timeout),
+      });
+      if (response.ok || attempt === 19) {
+        return response;
+      }
+      await response.body?.cancel();
+    } catch (error) {
+      failure = error;
+    }
+    await Bun.sleep(1500);
+  }
+
+  throw new Error("cloudflare preview fetch failed", {
+    cause: failure,
+  });
+};
+
 export const enabled = (): boolean =>
   env("CLOUDFLARE_SANDBOX_WORKER_URL") !== undefined &&
   env("CLOUDFLARE_SANDBOX_TOKEN") !== undefined;
@@ -218,16 +281,14 @@ export const executePorts = async (): Promise<PortResult> => {
     }
 
     try {
-      const preview = await fetch(body.port.url, {
-        signal: AbortSignal.timeout(timeout),
-      });
+      const previewResponse = await preview(body.port.url);
       return {
         body: {
           ...body,
           response: {
-            ok: preview.ok,
-            status: preview.status,
-            text: await preview.text(),
+            ok: previewResponse.ok,
+            status: previewResponse.status,
+            text: await previewResponse.text(),
           },
         },
         response,
@@ -243,6 +304,39 @@ export const executePorts = async (): Promise<PortResult> => {
     if (error instanceof Error && error.message.includes("json")) {
       throw new Error(
         `cloudflare port verification returned non-json response with status ${response.status}`,
+        { cause: error }
+      );
+    }
+
+    throw error;
+  }
+};
+
+export const executeTunnels = async (): Promise<TunnelResult> => {
+  const response = await request(tunnelsRoute, {
+    headers: headers(),
+    method: "POST",
+  });
+
+  try {
+    const body = (await response.json()) as TunnelPayload;
+    if (!response.ok) {
+      return { body, response };
+    }
+
+    try {
+      return { body, response };
+    } finally {
+      await request(cleanupRoute, {
+        body: JSON.stringify({ id: body.id }),
+        headers: headers(),
+        method: "POST",
+      });
+    }
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("json")) {
+      throw new Error(
+        `cloudflare tunnel verification returned non-json response with status ${response.status}`,
         { cause: error }
       );
     }
@@ -273,6 +367,22 @@ export const portsFixture = (input: PortResult): Fixture<PortPayload> => ({
     },
   },
   coverage: portsCoverage,
+  status: input.response.status,
+});
+
+export const tunnelsFixture = (
+  input: TunnelResult
+): Fixture<TunnelPayload> => ({
+  body: {
+    ...input.body,
+    id: "sandbox",
+    tunnel: {
+      ...input.body.tunnel,
+      hostname: "sandbox-fixture.trycloudflare.com",
+      url: "https://sandbox-fixture.trycloudflare.com",
+    },
+  },
+  coverage: tunnelsCoverage,
   status: input.response.status,
 });
 

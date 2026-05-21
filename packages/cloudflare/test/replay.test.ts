@@ -1,7 +1,14 @@
 import { test } from "bun:test";
 
-import { coverage, portCoverage, ports, workflow } from "./behavior";
-import type { Coverage, Payload, PortPayload } from "./fixture";
+import {
+  coverage,
+  portCoverage,
+  ports,
+  tunnelCoverage,
+  tunnels,
+  workflow,
+} from "./behavior";
+import type { Coverage, Payload, PortPayload, TunnelPayload } from "./fixture";
 
 type Fixture<Body> = Readonly<{
   body: Body;
@@ -29,6 +36,16 @@ test("cloudflare replays the sanitized ports fixture", async () => {
 
   portCoverage(fixture.coverage);
   ports({
+    body: fixture.body,
+    response: new Response(null, { status: fixture.status }),
+  });
+});
+
+test("cloudflare replays the sanitized tunnels fixture", async () => {
+  const fixture = await load<TunnelPayload>("tunnels");
+
+  tunnelCoverage(fixture.coverage);
+  tunnels({
     body: fixture.body,
     response: new Response(null, { status: fixture.status }),
   });

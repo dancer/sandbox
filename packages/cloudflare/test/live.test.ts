@@ -1,13 +1,15 @@
 import { test } from "bun:test";
 
-import { ports, workflow } from "./behavior";
+import { ports, tunnels, workflow } from "./behavior";
 import {
   enabled,
   execute,
   executePorts,
+  executeTunnels,
   portsEnabled,
   portsFixture,
   record,
+  tunnelsFixture,
   workflowFixture,
 } from "./fixture";
 
@@ -24,4 +26,10 @@ livePorts("cloudflare exposes a live preview port", async () => {
   const result = await executePorts();
   ports(result);
   await record("ports", portsFixture(result));
+});
+
+live("cloudflare exposes a live quick tunnel through raw", async () => {
+  const result = await executeTunnels();
+  tunnels(result);
+  await record("tunnels", tunnelsFixture(result));
 });
