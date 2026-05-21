@@ -30,6 +30,7 @@ const workflow: Workflow = {
       sessions: true,
       system: true,
       volumes: "create-time",
+      watching: true,
     },
     snapshotCreate: false,
     snapshotRestore: false,

@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 
 import { create } from "@sandbox-sdk/core";
 
@@ -30,6 +31,22 @@ const adapter = () =>
     ttl: "10m",
     workspace: process.env.BL_WORKSPACE,
   });
+
+const waitFor = async (
+  predicate: () => boolean,
+  label: string,
+  milliseconds = 10_000
+): Promise<void> => {
+  const started = Date.now();
+
+  while (!predicate()) {
+    if (Date.now() - started > milliseconds) {
+      throw new Error(`${label} timed out`);
+    }
+
+    await delay(100);
+  }
+};
 
 live("blaxel runs a live sandbox workflow", async () => {
   const cwd = "/app";
@@ -60,12 +77,32 @@ live("blaxel runs a live sandbox workflow", async () => {
 });
 
 live("blaxel exposes advertised raw capabilities", async () => {
+  const cwd = `/app/sandbox-sdk-raw-${randomUUID()}`;
+  let watched = false;
   const sandbox = await create({
     adapter: adapter(),
-    cwd: "/app",
+    cwd,
   });
 
   try {
+    const handle = sandbox.raw.fs.watch(
+      cwd,
+      (event) => {
+        if (event.name === "watched.txt") {
+          watched = true;
+        }
+      },
+      { withContent: true }
+    );
+
+    try {
+      await sandbox.files.write(`${cwd}/watched.txt`, "watch");
+      await waitFor(() => watched, "blaxel file watch");
+    } finally {
+      handle.close();
+    }
+    await sandbox.files.remove(`${cwd}/watched.txt`);
+
     const session = await sandbox.raw.sessions.create({
       expiresAt: new Date(Date.now() + 300_000),
     });
