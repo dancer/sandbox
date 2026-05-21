@@ -14,9 +14,10 @@
         "git": true,
         "interpreter": true,
         "network": true,
+        "pty": true,
         "sessions": true,
         "tunnels": "dynamic",
-        "volumes": "volume"
+        "watching": true
       },
       "snapshotCreate": false,
       "snapshotRestore": false,

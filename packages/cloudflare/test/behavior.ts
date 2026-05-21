@@ -33,7 +33,9 @@ export const workflow = ({ body, response }: Result): void => {
   expect(body.capabilities.processExec).toBe(true);
   expect(body.capabilities.processSpawn).toBe("separate");
   expect(body.capabilities.raw).toMatchObject({
+    pty: true,
     tunnels: "dynamic",
+    watching: true,
   });
   expect(body.capabilities.snapshotCreate).toBe(false);
   expect(body.file).toEqual({
@@ -97,7 +99,9 @@ export const tunnels = ({ body, response }: TunnelResult): void => {
   expect(body.ok).toBe(true);
   expect(body.provider).toBe("cloudflare");
   expect(body.capabilities.raw).toMatchObject({
+    pty: true,
     tunnels: "dynamic",
+    watching: true,
   });
   expect(body.tunnel.port).toBe(8080);
   expect(body.tunnel.url).toMatch(/^https:\/\/.+\.trycloudflare\.com$/u);
