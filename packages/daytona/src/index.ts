@@ -1,4 +1,5 @@
 import { Buffer } from "node:buffer";
+import { randomUUID } from "node:crypto";
 
 import { Daytona as DaytonaClient, DaytonaNotFoundError } from "@daytona/sdk";
 import type {
@@ -18,6 +19,7 @@ import {
   duration,
   sandboxError,
   port,
+  quote,
   result,
   unsupported,
 } from "@sandbox-sdk/core";
@@ -28,6 +30,8 @@ import type {
   Exec,
   Input,
   Result,
+  Running,
+  Spawn,
   Sandbox,
 } from "@sandbox-sdk/core";
 
@@ -87,7 +91,7 @@ const capabilities: Capabilities = {
   ports: "dynamic",
   process: true,
   processExec: true,
-  processSpawn: false,
+  processSpawn: "combined",
   snapshotCreate: false,
   snapshotRestore: false,
   snapshotSource: "create-time",
@@ -107,6 +111,36 @@ const readable = (value: Uint8Array): ReadableStream<Uint8Array> =>
       controller.close();
     },
   });
+
+const stream = (): {
+  append(chunk: string): void;
+  close(): void;
+  output: ReadableStream<Uint8Array>;
+} => {
+  const encoder = new TextEncoder();
+  let close: (() => void) | undefined;
+  let closed = false;
+  let send: ((chunk: Uint8Array) => void) | undefined;
+  return {
+    append(chunk) {
+      if (!closed) {
+        send?.(encoder.encode(chunk));
+      }
+    },
+    close() {
+      if (!closed) {
+        closed = true;
+        close?.();
+      }
+    },
+    output: new ReadableStream({
+      start(controller) {
+        close = () => controller.close();
+        send = (chunk) => controller.enqueue(chunk);
+      },
+    }),
+  };
+};
 
 const validate = (options: Daytona): void => {
   const apiKey = options.apiKey ?? env("DAYTONA_API_KEY");
@@ -268,6 +302,95 @@ const execute = (
   options: Exec
 ): Promise<Result> => executeLine(raw, cwd, command(executable, args), options);
 
+const runLine = (
+  cwd: string,
+  line: string,
+  options: Exec | Spawn
+): string => {
+  const values = Object.entries(options.env ?? {}).map(([name, value]) =>
+    quote(`${name}=${value}`)
+  );
+  const prefix = values.length === 0 ? "" : `env ${values.join(" ")} `;
+  return `cd ${quote(options.cwd ?? cwd)} && ${prefix}${line}`;
+};
+
+const spawnLine = async (
+  raw: Raw,
+  cwd: string,
+  line: string,
+  options: Spawn
+): Promise<Running> => {
+  check(options.signal);
+  const timeout = seconds(options.timeout);
+  const session = `sandbox-sdk-${randomUUID()}`;
+  const logs = stream();
+  try {
+    await raw.process.createSession(session);
+    const command = await raw.process.executeSessionCommand(
+      session,
+      {
+        command: runLine(cwd, line, options),
+        runAsync: true,
+        suppressInputEcho: true,
+      },
+      timeout
+    );
+    const id = command.cmdId;
+    const output = raw.process
+      .getSessionCommandLogs(
+        session,
+        id,
+        (chunk) => logs.append(chunk),
+        (chunk) => logs.append(chunk)
+      )
+      .finally(() => logs.close());
+    const final = (async (): Promise<Result> => {
+      await output;
+      const [state, value] = await Promise.all([
+        raw.process.getSessionCommand(session, id),
+        raw.process.getSessionCommandLogs(session, id),
+      ]);
+      return result(
+        state.exitCode ?? 0,
+        value.stdout ?? value.output ?? "",
+        value.stderr ?? ""
+      );
+    })();
+
+    options.signal?.addEventListener(
+      "abort",
+      () => {
+        void raw.process.deleteSession(session).finally(() => logs.close());
+      },
+      { once: true }
+    );
+
+    return {
+      id,
+      kill: async () => {
+        await raw.process.deleteSession(session);
+        logs.close();
+      },
+      output: logs.output,
+      result: final,
+    };
+  } catch (error) {
+    logs.close();
+    if (options.signal?.aborted) {
+      abort(provider, error);
+    }
+    throw sandboxError(provider, "Command failed", "process", error);
+  }
+};
+
+const spawn = (
+  raw: Raw,
+  cwd: string,
+  executable: string,
+  args: readonly string[],
+  options: Spawn
+): Promise<Running> => spawnLine(raw, cwd, command(executable, args), options);
+
 const rejectUnsupported = (feature: string): Promise<never> => {
   try {
     unsupported(provider, feature);
@@ -348,8 +471,9 @@ const createSandbox = (
     exec: (executable, args = [], run = {}) =>
       execute(raw, cwd, executable, args, run),
     shell: (script, run = {}) => executeLine(raw, cwd, script, run),
-    spawn: () => rejectUnsupported("background process spawn"),
-    spawnShell: () => rejectUnsupported("background shell process spawn"),
+    spawn: (executable, args = [], run = {}) =>
+      spawn(raw, cwd, executable, args, run),
+    spawnShell: (script, run = {}) => spawnLine(raw, cwd, script, run),
   },
   provider,
   raw,

@@ -23,7 +23,7 @@ const workflow: Workflow = {
     ports: "dynamic",
     process: true,
     processExec: true,
-    processSpawn: false,
+    processSpawn: "combined",
     snapshotCreate: false,
     snapshotRestore: false,
     snapshotSource: "create-time",
@@ -31,10 +31,10 @@ const workflow: Workflow = {
     volumes: true,
   },
   content: "hello from daytona",
-  features: workflowFeatures(false, true),
+  features: workflowFeatures(true, true),
   port: 3000,
   provider: "daytona",
-  spawn: false,
+  spawn: true,
   uncovered: ["snapshots.create", "snapshotSource"],
 };
 

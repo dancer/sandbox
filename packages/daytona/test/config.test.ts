@@ -237,18 +237,36 @@ test("daytona rejects invalid command timeouts before provider calls", async () 
   }
 });
 
-test("daytona rejects unsupported background process APIs", async () => {
+test("daytona maps background process APIs", async () => {
   type Client = InstanceType<typeof DaytonaClient>;
   type Create = Client["create"];
 
   const client = DaytonaClient.prototype as Client;
   const original = client.create;
+  let sessionDeleted = false;
   const raw = {
     fs: {
       createFolder: () => Promise.resolve(),
     },
     getWorkDir: () => Promise.resolve("/workspace"),
     id: "sandbox",
+    process: {
+      createSession: () => Promise.resolve(),
+      deleteSession: () => {
+        sessionDeleted = true;
+        return Promise.resolve();
+      },
+      executeSessionCommand: () => Promise.resolve({ cmdId: "command" }),
+      getSessionCommand: () => Promise.resolve({ exitCode: 0 }),
+      getSessionCommandLogs: (
+        _session: string,
+        _command: string,
+        onStdout?: (chunk: string) => void
+      ) => {
+        onStdout?.("hello");
+        return Promise.resolve({ stdout: "hello", stderr: "" });
+      },
+    },
     stop: () => Promise.resolve(),
   };
 
@@ -261,14 +279,15 @@ test("daytona rejects unsupported background process APIs", async () => {
       }),
     });
 
-    await expect(sandbox.process.spawn("sleep")).rejects.toMatchObject({
-      code: "unsupported",
-      provider: "daytona",
+    const running = await sandbox.process.spawn("echo", ["hello"]);
+    await expect(new Response(running.output).text()).resolves.toBe("hello");
+    await expect(running.result).resolves.toMatchObject({
+      code: 0,
+      ok: true,
+      stdout: "hello",
     });
-    await expect(sandbox.process.spawnShell("sleep 1")).rejects.toMatchObject({
-      code: "unsupported",
-      provider: "daytona",
-    });
+    await running.kill();
+    expect(sessionDeleted).toBe(true);
   } finally {
     client.create = original;
   }

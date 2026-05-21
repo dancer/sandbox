@@ -16,14 +16,17 @@
       "files.remove",
       "process.exec",
       "process.shell",
-      "process.spawn.unsupported",
+      "process.spawnShell",
       "process.failure",
       "ports.expose",
       "sandbox.stop"
     ],
     "fixture": "workflow",
     "provider": "daytona",
-    "uncovered": ["snapshots.create", "snapshotSource"]
+    "uncovered": [
+      "snapshots.create",
+      "snapshotSource"
+    ]
   },
   "payload": {
     "capabilities": {
@@ -35,7 +38,7 @@
       "ports": "dynamic",
       "process": true,
       "processExec": true,
-      "processSpawn": false,
+      "processSpawn": "combined",
       "snapshotCreate": false,
       "snapshotRestore": false,
       "snapshotSource": "create-time",
@@ -79,9 +82,16 @@
       "stderr": "",
       "stdout": "hello from daytona"
     },
+    "spawn": {
+      "code": 0,
+      "ok": true,
+      "stderr": "",
+      "stdout": "hello from daytona\n",
+      "output": "hello from daytona\n"
+    },
     "unsupported": {
-      "spawn": true,
-      "spawnShell": true
+      "spawn": false,
+      "spawnShell": false
     }
   }
 }
