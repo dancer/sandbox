@@ -8,6 +8,7 @@ credentials.
 
 - `local.ts`
 - `core.ts`
+- `entrypoints.ts`
 - `advanced.ts`
 - `blaxel.ts`
 - `codesandbox.ts`
