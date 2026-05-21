@@ -93,14 +93,50 @@ test("codesandbox maps create options and normalized operations", async () => {
         Promise.resolve([{ name: "file.txt", type: "file" as const }]),
       remove: () => Promise.resolve(),
       stat: () => Promise.resolve({ mtime: 1_767_225_600_000, size: 2 }),
+      watch: () =>
+        Promise.resolve({
+          dispose: () => {},
+          onEvent: () => ({ dispose: () => {} }),
+        }),
       writeFile: () => Promise.resolve(),
       writeTextFile: () => Promise.resolve(),
     },
+    interpreters: {
+      javascript: () => Promise.resolve("javascript"),
+      python: () => Promise.resolve("python"),
+    },
     ports: {
+      get: () => Promise.resolve(),
+      getAll: () => Promise.resolve([]),
       waitForPort: (port: number) => {
         portSeen = port;
         return Promise.resolve({ host: "https://preview.csb.app", port });
       },
+    },
+    setup: {
+      currentStepIndex: 0,
+      getSteps: () => [],
+      run: () => Promise.resolve(),
+      status: "IDLE",
+      waitUntilComplete: () => Promise.resolve(),
+    },
+    tasks: {
+      get: () => Promise.resolve(),
+      getAll: () => Promise.resolve([]),
+    },
+    terminals: {
+      create: () =>
+        Promise.resolve({
+          id: "terminal",
+          kill: () => Promise.resolve(),
+          name: "terminal",
+          onOutput: () => ({ dispose: () => {} }),
+          open: () => Promise.resolve(""),
+          run: () => Promise.resolve(),
+          write: () => Promise.resolve(),
+        }),
+      get: () => Promise.resolve(),
+      getAll: () => Promise.resolve([]),
     },
     workspacePath: "/project/sandbox",
   };

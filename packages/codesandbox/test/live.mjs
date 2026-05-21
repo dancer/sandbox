@@ -72,9 +72,12 @@ const coverage = {
     "snapshots.create",
     "snapshotSource",
     "sandbox.raw.delete",
+    "sandbox.raw.interpreter",
     "sandbox.raw.lifecycle",
     "sandbox.raw.previews",
+    "sandbox.raw.pty",
     "sandbox.raw.sessions",
+    "sandbox.raw.watching",
   ],
   fixture: "workflow",
   provider: "codesandbox",
@@ -295,12 +298,34 @@ const source = async (sandbox) => {
   }
 };
 
+const event = async (subscribe, action, label) => {
+  let listener;
+  const pending = Promise.withResolvers();
+  try {
+    listener = subscribe(pending.resolve);
+    const [, value] = await limit(
+      Promise.all([action(), pending.promise]),
+      label,
+      60_000
+    );
+    return value;
+  } finally {
+    listener?.dispose?.();
+  }
+};
+
 const raw = async (sandbox) => {
   assert.equal(sandbox.raw.sandbox.id, sandbox.id);
   assert.equal(typeof sandbox.raw.sandbox.bootupType, "string");
   assert.equal(typeof sandbox.raw.sandbox.createSession, "function");
   assert.equal(typeof sandbox.raw.sandbox.updateHibernationTimeout, "function");
   assert.equal(typeof sandbox.raw.sdk.hosts?.createToken, "function");
+  assert.equal(typeof sandbox.raw.client.fs.watch, "function");
+  assert.equal(typeof sandbox.raw.client.interpreters.javascript, "function");
+  assert.equal(typeof sandbox.raw.client.interpreters.python, "function");
+  assert.equal(typeof sandbox.raw.client.terminals.create, "function");
+  assert.equal(typeof sandbox.raw.client.tasks.getAll, "function");
+  assert.equal(typeof sandbox.raw.client.setup.status, "string");
 
   await sandbox.raw.sandbox.updateHibernationTimeout(300);
 
@@ -334,6 +359,74 @@ const raw = async (sandbox) => {
   } finally {
     await sandbox.raw.sdk.hosts.revokeToken(sandbox.id, previewToken.tokenId);
   }
+
+  const root = path(sandbox.cwd, `sandbox-sdk-raw-${randomUUID()}`);
+  const watchedFile = path(root, "watched.txt");
+  await sandbox.files.mkdir(root);
+
+  const watcher = await sandbox.raw.client.fs.watch(root, { recursive: true });
+  try {
+    const watched = await event(
+      (resolve) => watcher.onEvent(resolve),
+      () => sandbox.files.write(watchedFile, "watch"),
+      "codesandbox file watcher"
+    );
+    assert.ok(watched.paths.some((current) => current.includes("watched.txt")));
+  } finally {
+    watcher.dispose();
+  }
+
+  const terminal = await sandbox.raw.client.terminals.create("bash", {
+    cwd: root,
+  });
+  let terminalOutput = "";
+  const terminalEvent = await event(
+    (resolve) =>
+      terminal.onOutput((value) => {
+        terminalOutput += value;
+        if (terminalOutput.includes("raw terminal")) {
+          resolve(terminalOutput);
+        }
+      }),
+    async () => {
+      await terminal.open();
+      await terminal.run("printf 'raw terminal\\n'");
+    },
+    "codesandbox terminal output"
+  );
+  await terminal.kill();
+  assert.match(terminalEvent, /raw terminal/u);
+
+  const javascript =
+    await sandbox.raw.client.interpreters.javascript("'raw javascript'");
+  const python = await sandbox.raw.client.interpreters.python("'raw python'");
+  const tasks = await sandbox.raw.client.tasks.getAll();
+  const { setup } = sandbox.raw.client;
+
+  assert.match(javascript, /raw javascript/u);
+  assert.match(python, /raw python/u);
+  assert.ok(Array.isArray(tasks));
+
+  return {
+    interpreter: {
+      javascript: javascript.trim(),
+      python: python.trim(),
+    },
+    setup: {
+      currentStepIndex: setup.currentStepIndex,
+      status: setup.status,
+      steps: setup.getSteps().length,
+    },
+    tasks: {
+      count: tasks.length,
+    },
+    terminal: {
+      output: "raw terminal",
+    },
+    watching: {
+      observed: true,
+    },
+  };
 };
 
 const sandbox = await create({
@@ -347,12 +440,15 @@ const sandbox = await create({
 
 try {
   const payload = await limit(workflow(sandbox), "codesandbox workflow");
-  await limit(raw(sandbox), "codesandbox raw features");
+  const rawPayload = await limit(raw(sandbox), "codesandbox raw features");
   const sourcePayload = await limit(
     source(sandbox),
     "codesandbox snapshot source"
   );
-  const fixture = { coverage, payload: sanitize(payload) };
+  const fixture = {
+    coverage,
+    payload: { ...sanitize(payload), raw: rawPayload },
+  };
   const sourceFixture = {
     coverage: sourceCoverage,
     payload: sanitizeSource(sourcePayload),

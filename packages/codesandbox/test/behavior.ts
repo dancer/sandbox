@@ -44,6 +44,26 @@ export type Workflow = Readonly<{
     url: string;
   }>;
   provider: string;
+  raw: Readonly<{
+    interpreter: Readonly<{
+      javascript: string;
+      python: string;
+    }>;
+    setup: Readonly<{
+      currentStepIndex: number;
+      status: string;
+      steps: number;
+    }>;
+    tasks: Readonly<{
+      count: number;
+    }>;
+    terminal: Readonly<{
+      output: string;
+    }>;
+    watching: Readonly<{
+      observed: boolean;
+    }>;
+  }>;
   shell: Command;
   spawn: Command & Readonly<{ output: string }>;
 }>;
@@ -90,9 +110,12 @@ export const expectCoverage = (payload: Coverage): void => {
     "snapshots.create",
     "snapshotSource",
     "sandbox.raw.delete",
+    "sandbox.raw.interpreter",
     "sandbox.raw.lifecycle",
     "sandbox.raw.previews",
+    "sandbox.raw.pty",
     "sandbox.raw.sessions",
+    "sandbox.raw.watching",
   ]);
   expect(payload.uncovered).toEqual(["snapshots.restore"]);
 };
@@ -160,6 +183,13 @@ export const expectWorkflow = (payload: Workflow): void => {
   expect(payload.spawn.output).toContain("hello from codesandbox");
   expect(payload.port.port).toBe(3000);
   expect(payload.port.url).toMatch(/^https:\/\//u);
+  expect(payload.raw.interpreter.javascript).toBe("raw javascript");
+  expect(payload.raw.interpreter.python).toBe("raw python");
+  expect(payload.raw.setup.status).toBeTruthy();
+  expect(payload.raw.setup.steps).toBeGreaterThanOrEqual(0);
+  expect(payload.raw.tasks.count).toBeGreaterThanOrEqual(0);
+  expect(payload.raw.terminal.output).toBe("raw terminal");
+  expect(payload.raw.watching.observed).toBe(true);
 };
 
 export const expectSource = (payload: Source): void => {

@@ -25,9 +25,12 @@
       "snapshots.create",
       "snapshotSource",
       "sandbox.raw.delete",
+      "sandbox.raw.interpreter",
       "sandbox.raw.lifecycle",
       "sandbox.raw.previews",
-      "sandbox.raw.sessions"
+      "sandbox.raw.pty",
+      "sandbox.raw.sessions",
+      "sandbox.raw.watching"
     ],
     "fixture": "workflow",
     "provider": "codesandbox",
@@ -42,10 +45,12 @@
       "processExec": true,
       "processSpawn": true,
       "raw": {
-        "git": true,
+        "interpreter": true,
         "lifecycle": true,
         "previews": true,
-        "sessions": true
+        "pty": true,
+        "sessions": true,
+        "watching": true
       },
       "snapshotCreate": "memory",
       "snapshotRestore": false,
@@ -101,6 +106,26 @@
       "stderr": "",
       "stdout": "hello from codesandbox",
       "output": "hello from codesandbox"
+    },
+    "raw": {
+      "interpreter": {
+        "javascript": "raw javascript",
+        "python": "raw python"
+      },
+      "setup": {
+        "currentStepIndex": 0,
+        "status": "FINISHED",
+        "steps": 1
+      },
+      "tasks": {
+        "count": 0
+      },
+      "terminal": {
+        "output": "raw terminal"
+      },
+      "watching": {
+        "observed": true
+      }
     }
   }
 }

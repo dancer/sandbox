@@ -84,10 +84,12 @@ const capabilities: Capabilities = {
   processExec: true,
   processSpawn: true,
   raw: {
-    git: true,
+    interpreter: true,
     lifecycle: true,
     previews: true,
+    pty: true,
     sessions: true,
+    watching: true,
   },
   snapshotCreate: "memory",
   snapshotRestore: false,

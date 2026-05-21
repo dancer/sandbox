@@ -99,8 +99,49 @@ export type FileStat = Readonly<{
   size: number;
 }>;
 
+export type WatchEvent = Readonly<{
+  paths: readonly string[];
+  type: "add" | "change" | "remove";
+}>;
+
+export type Watcher = Readonly<{
+  dispose(): void;
+  onEvent(listener: (event: WatchEvent) => void): { dispose(): void };
+}>;
+
+export type Terminal = Readonly<{
+  id: string;
+  kill(): Promise<void>;
+  name: string;
+  onOutput(listener: (value: string) => void): { dispose(): void };
+  open(options?: unknown): Promise<string>;
+  run(input: string, options?: unknown): Promise<void>;
+  write(input: string, options?: unknown): Promise<void>;
+}>;
+
+export type Task = Readonly<{
+  command: string;
+  id: string;
+  name: string;
+  open(options?: unknown): Promise<string>;
+  restart(): Promise<void>;
+  run(): Promise<void>;
+  status: string;
+  stop(): Promise<void>;
+  waitForPort(timeout?: number): Promise<{ host: string; port: number }>;
+}>;
+
+export type SetupStep = Readonly<{
+  command: string;
+  name: string;
+  open(options?: unknown): Promise<string>;
+  status: string;
+  waitUntilComplete(): Promise<void>;
+}>;
+
 export type SandboxClient = Readonly<{
   commands: Readonly<{
+    getAll?(): Promise<readonly Background[]>;
     run(
       command: string,
       options?: Readonly<{ cwd?: string; env?: Record<string, string> }>
@@ -118,12 +159,41 @@ export type SandboxClient = Readonly<{
     readdir(path: string): Promise<readonly FileEntry[]>;
     remove(path: string, recursive?: boolean): Promise<void>;
     stat(path: string): Promise<FileStat>;
+    watch(
+      path: string,
+      options?: Readonly<{ excludes?: readonly string[]; recursive?: boolean }>
+    ): Promise<Watcher>;
     writeFile(path: string, content: Uint8Array): Promise<void>;
     writeTextFile(path: string, content: string): Promise<void>;
   }>;
   hosts?: Hosts;
+  interpreters: Readonly<{
+    javascript(code: string): Promise<string>;
+    python(code: string): Promise<string>;
+  }>;
   ports: Readonly<{
+    get?(port: number): Promise<unknown>;
+    getAll?(): Promise<readonly unknown[]>;
     waitForPort(port: number): Promise<{ host: string; port: number }>;
+  }>;
+  setup: Readonly<{
+    currentStepIndex: number;
+    getSteps(): SetupStep[];
+    run(): Promise<void>;
+    status: string;
+    waitUntilComplete(): Promise<void>;
+  }>;
+  tasks: Readonly<{
+    get(taskId: string): Promise<Task | undefined>;
+    getAll(): Promise<readonly Task[]>;
+  }>;
+  terminals: Readonly<{
+    create(
+      command?: "bash" | "dash" | "fish" | "ksh" | "zsh",
+      options?: Readonly<{ cwd?: string; env?: Record<string, string> }>
+    ): Promise<Terminal>;
+    get(shellId: string): Promise<Terminal | undefined>;
+    getAll(): Promise<readonly Terminal[]>;
   }>;
   workspacePath: string;
 }>;
