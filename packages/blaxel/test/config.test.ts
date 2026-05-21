@@ -167,6 +167,7 @@ test("blaxel maps create options and normalized operations", async () => {
         name: "named",
         ports: [3000],
         safe: true,
+        volumes: [{ mountPath: "/cache", name: "cache", readOnly: true }],
         workspace: "workspace",
       }),
       cwd: "/work",
@@ -190,6 +191,7 @@ test("blaxel maps create options and normalized operations", async () => {
       name: "named",
       ports: [{ protocol: "HTTP", target: 8080 }],
       ttl: "5s",
+      volumes: [{ mountPath: "/cache", name: "cache", readOnly: true }],
     });
     expect(safeSeen).toEqual({ safe: true });
     expect(mkdirSeen).toContain("/work");

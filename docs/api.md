@@ -39,6 +39,7 @@ export type RawCapability =
   | "buckets"
   | "codegen"
   | "desktop"
+  | "drives"
   | "git"
   | "gpu"
   | "interpreter"
@@ -1347,6 +1348,7 @@ export type Blaxel = Readonly<
       | "ports"
       | "region"
       | "ttl"
+      | "volumes"
     >;
     /** ports declared at create time and later exposed through previews */
     ports?: readonly number[];
@@ -1358,6 +1360,8 @@ export type Blaxel = Readonly<
     snapshotEnabled?: boolean;
     /** sandbox ttl string forwarded to blaxel, such as `24h` */
     ttl?: string;
+    /** blaxel volumes mounted into the sandbox at creation time */
+    volumes?: SandboxCreateConfiguration["volumes"];
   }
 >;
 ```

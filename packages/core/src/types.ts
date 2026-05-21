@@ -18,6 +18,7 @@ export type RawCapability =
   | "buckets"
   | "codegen"
   | "desktop"
+  | "drives"
   | "git"
   | "gpu"
   | "interpreter"

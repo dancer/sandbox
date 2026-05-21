@@ -326,6 +326,7 @@ const description = (
       "buckets",
       "codegen",
       "desktop",
+      "drives",
       "git",
       "gpu",
       "interpreter",

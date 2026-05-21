@@ -50,12 +50,13 @@ const capabilities: Capabilities = {
   processSpawn: true,
   raw: {
     codegen: true,
+    drives: true,
     lifecycle: true,
     network: "create-time",
     previews: true,
     sessions: true,
     system: true,
-    volumes: true,
+    volumes: "create-time",
   },
   snapshotCreate: false,
   snapshotRestore: false,
@@ -395,6 +396,7 @@ const createOptions = (
     ...(options.snapshotEnabled === undefined
       ? {}
       : { snapshotEnabled: options.snapshotEnabled }),
+    ...(options.volumes === undefined ? {} : { volumes: [...options.volumes] }),
   };
 };
 

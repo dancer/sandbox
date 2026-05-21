@@ -133,8 +133,9 @@ mounts; Vercel network policy and timeout extension; E2B Git, MCP, PTY,
 create-time network settings, and mounted volumes; Daytona SSH, PTY, LSP,
 create-time network settings, tier-gated network updates, and resize; Modal
 create-time volumes, secrets, tags, connect tokens, GPUs, and directory or
-memory snapshots; Blaxel drives, previews, sessions, system upgrades, and
-codegen; and CodeSandbox VM lifecycle, preview tokens, or session internals.
+memory snapshots; Blaxel create-time volumes, drives, previews, sessions,
+system upgrades, and codegen; and CodeSandbox VM lifecycle, preview tokens, or
+session internals.
 
 ## AI Tools
 
