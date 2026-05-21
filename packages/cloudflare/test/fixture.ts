@@ -32,6 +32,8 @@ export type Payload = Readonly<{
 export type PortPayload = Readonly<{
   capabilities: Record<string, unknown>;
   error?: string;
+  id: string;
+  local: Command;
   ok: boolean;
   port: Readonly<{
     port: number;
@@ -64,6 +66,7 @@ export type Coverage = Readonly<{
 
 const liveRoute = "/sandbox-sdk/live";
 const portsRoute = "/sandbox-sdk/ports";
+const cleanupRoute = "/sandbox-sdk/cleanup";
 const attempts = 2;
 const timeout = 90_000;
 
@@ -146,14 +149,41 @@ export const executePorts = async (): Promise<PortResult> => {
   });
 
   try {
-    return {
-      body: (await response.json()) as PortPayload,
-      response,
-    };
+    const body = (await response.json()) as PortPayload;
+    if (!response.ok) {
+      return { body, response };
+    }
+
+    try {
+      const preview = await fetch(body.port.url, {
+        signal: AbortSignal.timeout(timeout),
+      });
+      return {
+        body: {
+          ...body,
+          response: {
+            ok: preview.ok,
+            status: preview.status,
+            text: await preview.text(),
+          },
+        },
+        response,
+      };
+    } finally {
+      await request(cleanupRoute, {
+        body: JSON.stringify({ id: body.id }),
+        headers: headers(),
+        method: "POST",
+      });
+    }
   } catch (error) {
-    throw new Error(
-      `cloudflare port verification returned non-json response with status ${response.status}`,
-      { cause: error }
-    );
+    if (error instanceof Error && error.message.includes("json")) {
+      throw new Error(
+        `cloudflare port verification returned non-json response with status ${response.status}`,
+        { cause: error }
+      );
+    }
+
+    throw error;
   }
 };

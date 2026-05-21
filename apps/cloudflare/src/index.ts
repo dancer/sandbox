@@ -2,7 +2,7 @@ import type { Sandbox as CloudflareSandbox } from "@cloudflare/sandbox";
 import { proxyToSandbox } from "@cloudflare/sandbox";
 import { cloudflare } from "@sandbox-sdk/cloudflare";
 import { create } from "@sandbox-sdk/core";
-import type { Sandbox as CoreSandbox } from "@sandbox-sdk/core";
+import type { Result, Sandbox as CoreSandbox } from "@sandbox-sdk/core";
 
 export { Sandbox } from "@cloudflare/sandbox";
 
@@ -14,20 +14,28 @@ type Env = Readonly<{
 
 const liveRoute = "/sandbox-sdk/live";
 const portsRoute = "/sandbox-sdk/ports";
+const cleanupRoute = "/sandbox-sdk/cleanup";
 const message = "hello from cloudflare";
 const port = 8080;
 const portMessage = "hello from cloudflare port";
-const ready = `import time
-import urllib.request
+const portToken = "verify";
+const waitMs = 500;
+const serverFile = "server.js";
+const options = {
+  containerTimeouts: {
+    instanceGetTimeoutMS: 120_000,
+    portReadyTimeoutMS: 120_000,
+  },
+  sleepAfter: "30s",
+} as const;
+const server = `const http = require("http");
+const fs = require("fs");
 
-for _ in range(10):
-    try:
-        urllib.request.urlopen("http://127.0.0.1:8080", timeout=1).read()
-        raise SystemExit(0)
-    except Exception:
-        time.sleep(0.5)
-
-raise SystemExit(1)
+http
+  .createServer((_, response) => {
+    response.end(fs.readFileSync("index.html"));
+  })
+  .listen(8080, "0.0.0.0");
 `;
 
 const json = (body: unknown, status = 200): Response =>
@@ -45,6 +53,9 @@ const authorized = (request: Request, env: Env): boolean =>
 
 const text = (stream: ReadableStream<Uint8Array>): Promise<string> =>
   new Response(stream).text();
+
+const sleep = (milliseconds: number): Promise<void> =>
+  scheduler.wait(milliseconds);
 
 const bytes = (value: string): Uint8Array => new TextEncoder().encode(value);
 
@@ -96,11 +107,23 @@ const failure = (error: unknown): Response =>
     500
   );
 
-const wait = async (sandbox: CoreSandbox, cwd: string): Promise<void> => {
-  const result = await sandbox.process.exec("python", ["-c", ready], { cwd });
-  if (!result.ok) {
-    throw new Error("port server did not become ready");
+const waitLocal = async (
+  sandbox: CoreSandbox,
+  cwd: string
+): Promise<Result> => {
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    const response = await sandbox.process.exec(
+      "curl",
+      ["-fsS", `http://127.0.0.1:${port}`],
+      { cwd }
+    );
+    if (response.ok) {
+      return response;
+    }
+    await sleep(waitMs);
   }
+
+  throw new Error("port server did not become ready");
 };
 
 const instance = (
@@ -114,6 +137,7 @@ const instance = (
       binding: env.Sandbox,
       ...(host === undefined ? {} : { hostname: host }),
       id,
+      options,
     }),
     cwd,
   });
@@ -131,43 +155,53 @@ const handlePorts = async (
   const id = crypto.randomUUID();
   const cwd = `/workspace/${id}`;
   const file = `${cwd}/index.html`;
-  const sandbox = await instance(env, cwd, id, host);
-  let running:
-    | Awaited<ReturnType<CoreSandbox["process"]["spawnShell"]>>
-    | undefined;
+  const serverPath = `${cwd}/${serverFile}`;
+  let sandbox: CoreSandbox | undefined;
+  let preview: Awaited<ReturnType<CoreSandbox["ports"]["expose"]>> | undefined;
+  let local: Result | undefined;
 
   try {
+    sandbox = await instance(env, cwd, id, host);
     await sandbox.files.write(file, portMessage);
-    running = await sandbox.process.spawnShell(
-      `python -m http.server ${port} --bind 0.0.0.0`,
-      { cwd }
-    );
-    await wait(sandbox, cwd);
-    const preview = await sandbox.ports.expose(port);
-    const response = await fetch(preview.url);
-    const content = await response.text();
-    const ok =
-      response.ok &&
-      content.includes(portMessage) &&
-      preview.port === port &&
-      preview.url.startsWith("https://");
+    await sandbox.files.write(serverPath, server);
+    await sandbox.process.spawnShell(`node ${serverFile}`, { cwd });
+    local = await waitLocal(sandbox, cwd);
+    preview = await sandbox.ports.expose(port, { token: portToken });
 
     return json({
       capabilities: sandbox.capabilities,
-      ok,
+      id,
+      local,
+      ok:
+        local.ok && preview.port === port && preview.url.startsWith("https://"),
       port: preview,
       provider: sandbox.provider,
-      response: {
-        ok: response.ok,
-        status: response.status,
-        text: content,
-      },
     });
   } catch (error) {
-    return failure(error);
-  } finally {
-    await running?.kill().catch(ignore);
+    return json(
+      {
+        error: error instanceof Error ? error.message : "unknown",
+        local,
+        ok: false,
+        port: preview,
+      },
+      500
+    );
+  }
+};
+
+const handleCleanup = async (request: Request, env: Env): Promise<Response> => {
+  const input = (await request.json()) as { id?: string };
+  if (!input.id) {
+    return json({ error: "missing_id", ok: false }, 422);
+  }
+
+  try {
+    const sandbox = await instance(env, "/workspace", input.id);
     await sandbox.stop();
+    return json({ ok: true });
+  } catch (error) {
+    return failure(error);
   }
 };
 
@@ -180,16 +214,18 @@ const handleLive = async (env: Env, url: URL): Promise<Response> => {
   const blobFile = `${cwd}/blob.txt`;
   const streamFile = `${cwd}/stream.txt`;
   const removeFile = `${cwd}/remove.txt`;
-  const sandbox = await create({
-    adapter: cloudflare({
-      binding: env.Sandbox,
-      hostname: url.hostname,
-      id,
-    }),
-    cwd,
-  });
+  let sandbox: CoreSandbox | undefined;
 
   try {
+    sandbox = await create({
+      adapter: cloudflare({
+        binding: env.Sandbox,
+        hostname: url.hostname,
+        id,
+        options,
+      }),
+      cwd,
+    });
     await sandbox.files.mkdir(cwd);
     await sandbox.files.write(file, message);
     await sandbox.files.write(bytesFile, bytes("bytes"));
@@ -221,26 +257,27 @@ const handleLive = async (env: Env, url: URL): Promise<Response> => {
     const running = await sandbox.process.spawnShell(`cat ${file}`);
     const output = await text(running.output);
     const spawn = await running.result;
-    const ok =
-      exists &&
-      listed &&
-      content === message &&
-      read === message &&
-      stream === message &&
-      inputs.blob === "blob" &&
-      inputs.buffer === "buffer" &&
-      inputs.bytes === "bytes" &&
-      inputs.stream === "stream" &&
-      removed &&
-      exec.ok &&
-      exec.stdout === message &&
-      shell.ok &&
-      shell.stdout === message &&
-      !failed.ok &&
-      failed.code === 7 &&
-      failed.stderr.includes("failed") &&
-      spawn.ok &&
-      output.includes(message);
+    const ok = [
+      exists,
+      listed,
+      content === message,
+      read === message,
+      stream === message,
+      inputs.blob === "blob",
+      inputs.buffer === "buffer",
+      inputs.bytes === "bytes",
+      inputs.stream === "stream",
+      removed,
+      exec.ok,
+      exec.stdout === message,
+      shell.ok,
+      shell.stdout === message,
+      !failed.ok,
+      failed.code === 7,
+      failed.stderr.includes("failed"),
+      spawn.ok,
+      output.includes(message),
+    ].every(Boolean);
 
     return json({
       capabilities: sandbox.capabilities,
@@ -256,12 +293,16 @@ const handleLive = async (env: Env, url: URL): Promise<Response> => {
   } catch (error) {
     return failure(error);
   } finally {
-    await sandbox.stop();
+    await sandbox?.stop().catch(ignore);
   }
 };
 
 const guard = (request: Request, env: Env, url: URL): Response | undefined => {
-  if (url.pathname !== liveRoute && url.pathname !== portsRoute) {
+  if (
+    url.pathname !== liveRoute &&
+    url.pathname !== portsRoute &&
+    url.pathname !== cleanupRoute
+  ) {
     return json({ error: "not_found", ok: false }, 404);
   }
   if (request.method !== "POST") {
@@ -290,6 +331,10 @@ export default {
 
     if (url.pathname === portsRoute) {
       return handlePorts(request, env, url);
+    }
+
+    if (url.pathname === cleanupRoute) {
+      return handleCleanup(request, env);
     }
 
     return handleLive(env, url);

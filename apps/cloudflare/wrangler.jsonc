@@ -4,6 +4,12 @@
   "main": "src/index.ts",
   "workers_dev": true,
   "preview_urls": true,
+  "routes": [
+    {
+      "pattern": "*.sandbox-sdk.sh/*",
+      "zone_name": "sandbox-sdk.sh",
+    },
+  ],
   "compatibility_date": "2026-05-13",
   "compatibility_flags": ["nodejs_compat"],
   "containers": [
@@ -11,7 +17,7 @@
       "class_name": "Sandbox",
       "image": "./Dockerfile",
       "instance_type": "lite",
-      "max_instances": 1,
+      "max_instances": 4,
     },
   ],
   "durable_objects": {

@@ -65,7 +65,7 @@ does not support the wildcard subdomains required by `exposePort()`.
 Set the custom preview host locally before running the port verification:
 
 ```bash
-export CLOUDFLARE_SANDBOX_PREVIEW_HOST="preview.example.com"
+export CLOUDFLARE_SANDBOX_PREVIEW_HOST="example.com"
 bun run verify:cloudflare
 ```
 
@@ -76,3 +76,9 @@ same deployed Worker can validate multiple preview host setups.
 If you test ports locally with `wrangler dev`, add `EXPOSE` directives for
 every port you plan to expose in `Dockerfile`. Cloudflare accepts ports
 1024-65535 and reserves port `3000` for the Sandbox runtime.
+
+For easiest TLS setup, use the zone apex as the preview host so generated
+preview URLs are one label under the zone, such as
+`8080-sandbox-token.example.com`. A subdomain preview host such as
+`preview.example.com` generates deeper hostnames and needs matching wildcard TLS
+coverage for that subdomain.

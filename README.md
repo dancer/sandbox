@@ -213,6 +213,9 @@ Preview ports must follow Cloudflare's provider rules: integers from 1 to
 65535, excluding system ports below 1024 and reserved port 3000.
 Set `CLOUDFLARE_SANDBOX_PREVIEW_HOST` to run the optional Cloudflare port
 verification test against a custom preview host.
+Use the zone apex as the preview host when possible so generated preview
+subdomains are covered by the normal wildcard certificate. Subdomain preview
+hosts need matching wildcard TLS coverage.
 
 ## API Reference
 
