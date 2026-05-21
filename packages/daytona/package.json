@@ -41,7 +41,7 @@
     "test": "bun test test"
   },
   "dependencies": {
-    "@daytona/sdk": "^0.175.0",
+    "@daytona/sdk": "^0.178.0",
     "@sandbox-sdk/core": "workspace:*"
   },
   "devDependencies": {

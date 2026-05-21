@@ -31,7 +31,7 @@
   },
   "devDependencies": {
     "@cloudflare/sandbox": "^0.10.1",
-    "@cloudflare/workers-types": "^4.20260520.1",
+    "@cloudflare/workers-types": "^4.20260521.1",
     "@sandbox-sdk/ai": "workspace:*",
     "@sandbox-sdk/blaxel": "workspace:*",
     "@sandbox-sdk/cloudflare": "workspace:*",
