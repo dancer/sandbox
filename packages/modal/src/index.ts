@@ -26,32 +26,82 @@ import * as ModalSdk from "modal";
 /** native Modal sandbox object exposed as `sandbox.raw` */
 export type ModalRaw = ModalSdk.Sandbox;
 
+type CreateParams = ModalSdk.SandboxCreateParams;
+
 /** modal adapter configuration */
 export type Modal = Readonly<
   ModalSdk.ModalClientParams & {
     /** modal app name used for new sandboxes */
     app?: string;
+    /** block all sandbox network access */
+    blockNetwork?: CreateParams["blockNetwork"];
+    /** cloud provider placement forwarded to Modal */
+    cloud?: CreateParams["cloud"];
+    /** cloud bucket mounts attached to the sandbox */
+    cloudBucketMounts?: CreateParams["cloudBucketMounts"];
+    /** entrypoint command for the sandbox main process */
+    command?: CreateParams["command"];
     /** existing modal client for custom transport, tests, or advanced auth */
     client?: ModalSdk.ModalClient;
     /** create the modal app if it does not exist */
     createAppIfMissing?: boolean;
+    /** modal sandbox cpu reservation */
+    cpu?: CreateParams["cpu"];
+    /** modal sandbox cpu hard limit */
+    cpuLimit?: CreateParams["cpuLimit"];
+    /** custom domain for Modal sandbox connections */
+    customDomain?: CreateParams["customDomain"];
     /** default working directory for normalized file and process operations */
     cwd?: string;
     /** default environment variables applied when creating a sandbox */
     env?: Readonly<Record<string, string>>;
+    /** Modal GPU reservation such as `T4` or `A100-80GB:4` */
+    gpu?: CreateParams["gpu"];
+    /** extra encrypted HTTP/2 tunnel ports forwarded to Modal */
+    h2Ports?: CreateParams["h2Ports"];
+    /** include Modal OIDC identity token inside the sandbox */
+    includeOidcIdentityToken?: CreateParams["includeOidcIdentityToken"];
+    /** inbound CIDR allowlist for Modal tunnels and connect tokens */
+    inboundCidrAllowlist?: CreateParams["inboundCidrAllowlist"];
+    /** idle termination timeout in milliseconds */
+    idleTimeout?: number;
     /** modal image object or registry tag used for new sandboxes */
     image?: ModalSdk.Image | string;
+    /** modal sandbox memory reservation in mib */
+    memoryMiB?: CreateParams["memoryMiB"];
+    /** modal sandbox memory hard limit in mib */
+    memoryLimitMiB?: CreateParams["memoryLimitMiB"];
+    /** optional Modal sandbox name */
+    name?: CreateParams["name"];
     /** modal sandbox create options forwarded to the native sdk */
     options?: Omit<
       ModalSdk.SandboxCreateParams,
       "encryptedPorts" | "env" | "timeoutMs" | "workdir"
     >;
+    /** outbound CIDR allowlist for sandbox network access */
+    outboundCidrAllowlist?: CreateParams["outboundCidrAllowlist"];
     /** encrypted ports declared at create time and later exposed with ports.expose */
     ports?: readonly number[];
+    /** enable a pty for the Modal sandbox entrypoint */
+    pty?: CreateParams["pty"];
+    /** Modal proxy used in front of the sandbox */
+    proxy?: CreateParams["proxy"];
+    /** readiness probe used before Modal marks the sandbox ready */
+    readinessProbe?: CreateParams["readinessProbe"];
+    /** Modal regions used for sandbox placement */
+    regions?: CreateParams["regions"];
+    /** Modal secrets injected as sandbox environment variables */
+    secrets?: CreateParams["secrets"];
     /** default tags attached to new sandboxes */
     tags?: Readonly<Record<string, string>>;
     /** sandbox lifetime timeout in milliseconds */
     timeout?: number;
+    /** unencrypted tunnel ports forwarded to Modal */
+    unencryptedPorts?: CreateParams["unencryptedPorts"];
+    /** enable verbose Modal sandbox logging */
+    verbose?: CreateParams["verbose"];
+    /** Modal volumes mounted into the sandbox */
+    volumes?: CreateParams["volumes"];
   }
 >;
 
@@ -188,6 +238,16 @@ const duration = (value: number | undefined): number | undefined => {
   return Math.ceil(value / 1000) * 1000;
 };
 
+const set = <Key extends keyof ModalSdk.SandboxCreateParams>(
+  output: ModalSdk.SandboxCreateParams,
+  key: Key,
+  value: ModalSdk.SandboxCreateParams[Key] | undefined
+): void => {
+  if (value !== undefined) {
+    output[key] = value;
+  }
+};
+
 const createOptions = (
   options: Modal,
   input: Parameters<Adapter<Raw>["create"]>[0],
@@ -195,13 +255,39 @@ const createOptions = (
   ports: readonly number[]
 ): ModalSdk.SandboxCreateParams => {
   const value = duration(input?.timeout ?? options.timeout);
-  return {
+  const idle = duration(options.idleTimeout);
+  const output: ModalSdk.SandboxCreateParams = {
     ...options.options,
     encryptedPorts: [...ports],
     env: { ...options.env, ...input?.env },
-    ...(value === undefined ? {} : { timeoutMs: value }),
     workdir: cwd,
   };
+  set(output, "blockNetwork", options.blockNetwork);
+  set(output, "cloud", options.cloud);
+  set(output, "cloudBucketMounts", options.cloudBucketMounts);
+  set(output, "command", options.command);
+  set(output, "cpu", options.cpu);
+  set(output, "cpuLimit", options.cpuLimit);
+  set(output, "customDomain", options.customDomain);
+  set(output, "gpu", options.gpu);
+  set(output, "h2Ports", options.h2Ports);
+  set(output, "idleTimeoutMs", idle);
+  set(output, "includeOidcIdentityToken", options.includeOidcIdentityToken);
+  set(output, "inboundCidrAllowlist", options.inboundCidrAllowlist);
+  set(output, "memoryLimitMiB", options.memoryLimitMiB);
+  set(output, "memoryMiB", options.memoryMiB);
+  set(output, "name", options.name);
+  set(output, "outboundCidrAllowlist", options.outboundCidrAllowlist);
+  set(output, "proxy", options.proxy);
+  set(output, "pty", options.pty);
+  set(output, "readinessProbe", options.readinessProbe);
+  set(output, "regions", options.regions);
+  set(output, "secrets", options.secrets);
+  set(output, "timeoutMs", value);
+  set(output, "unencryptedPorts", options.unencryptedPorts);
+  set(output, "verbose", options.verbose);
+  set(output, "volumes", options.volumes);
+  return output;
 };
 
 const check = (signal?: AbortSignal): void => {

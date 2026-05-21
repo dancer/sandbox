@@ -1688,27 +1688,75 @@ export type Modal = Readonly<
   ModalSdk.ModalClientParams & {
     /** modal app name used for new sandboxes */
     app?: string;
+    /** block all sandbox network access */
+    blockNetwork?: CreateParams["blockNetwork"];
+    /** cloud provider placement forwarded to Modal */
+    cloud?: CreateParams["cloud"];
+    /** cloud bucket mounts attached to the sandbox */
+    cloudBucketMounts?: CreateParams["cloudBucketMounts"];
+    /** entrypoint command for the sandbox main process */
+    command?: CreateParams["command"];
     /** existing modal client for custom transport, tests, or advanced auth */
     client?: ModalSdk.ModalClient;
     /** create the modal app if it does not exist */
     createAppIfMissing?: boolean;
+    /** modal sandbox cpu reservation */
+    cpu?: CreateParams["cpu"];
+    /** modal sandbox cpu hard limit */
+    cpuLimit?: CreateParams["cpuLimit"];
+    /** custom domain for Modal sandbox connections */
+    customDomain?: CreateParams["customDomain"];
     /** default working directory for normalized file and process operations */
     cwd?: string;
     /** default environment variables applied when creating a sandbox */
     env?: Readonly<Record<string, string>>;
+    /** Modal GPU reservation such as `T4` or `A100-80GB:4` */
+    gpu?: CreateParams["gpu"];
+    /** extra encrypted HTTP/2 tunnel ports forwarded to Modal */
+    h2Ports?: CreateParams["h2Ports"];
+    /** include Modal OIDC identity token inside the sandbox */
+    includeOidcIdentityToken?: CreateParams["includeOidcIdentityToken"];
+    /** inbound CIDR allowlist for Modal tunnels and connect tokens */
+    inboundCidrAllowlist?: CreateParams["inboundCidrAllowlist"];
+    /** idle termination timeout in milliseconds */
+    idleTimeout?: number;
     /** modal image object or registry tag used for new sandboxes */
     image?: ModalSdk.Image | string;
+    /** modal sandbox memory reservation in mib */
+    memoryMiB?: CreateParams["memoryMiB"];
+    /** modal sandbox memory hard limit in mib */
+    memoryLimitMiB?: CreateParams["memoryLimitMiB"];
+    /** optional Modal sandbox name */
+    name?: CreateParams["name"];
     /** modal sandbox create options forwarded to the native sdk */
     options?: Omit<
       ModalSdk.SandboxCreateParams,
       "encryptedPorts" | "env" | "timeoutMs" | "workdir"
     >;
+    /** outbound CIDR allowlist for sandbox network access */
+    outboundCidrAllowlist?: CreateParams["outboundCidrAllowlist"];
     /** encrypted ports declared at create time and later exposed with ports.expose */
     ports?: readonly number[];
+    /** enable a pty for the Modal sandbox entrypoint */
+    pty?: CreateParams["pty"];
+    /** Modal proxy used in front of the sandbox */
+    proxy?: CreateParams["proxy"];
+    /** readiness probe used before Modal marks the sandbox ready */
+    readinessProbe?: CreateParams["readinessProbe"];
+    /** Modal regions used for sandbox placement */
+    regions?: CreateParams["regions"];
+    /** Modal secrets injected as sandbox environment variables */
+    secrets?: CreateParams["secrets"];
     /** default tags attached to new sandboxes */
     tags?: Readonly<Record<string, string>>;
     /** sandbox lifetime timeout in milliseconds */
     timeout?: number;
+    /** unencrypted tunnel ports forwarded to Modal */
+    unencryptedPorts?: CreateParams["unencryptedPorts"];
+    /** enable verbose Modal sandbox logging */
+    verbose?: CreateParams["verbose"];
+    /** Modal volumes mounted into the sandbox */
+    volumes?: CreateParams["volumes"];
   }
 >;
 ```

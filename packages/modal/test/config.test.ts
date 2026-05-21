@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 
 import { create } from "@sandbox-sdk/core";
-import type { ModalClient, Sandbox as ModalSandbox } from "modal";
+import type * as ModalSdk from "modal";
 
 import { modal } from "../src/index";
 
@@ -58,7 +58,7 @@ test("modal rejects invalid declared ports before provider calls", async () => {
         return Promise.reject(new Error("provider called"));
       },
     },
-  } as unknown as ModalClient;
+  } as unknown as ModalSdk.ModalClient;
 
   await expect(
     create({
@@ -89,7 +89,7 @@ test("modal rejects invalid create timeouts before provider calls", async () => 
         return Promise.reject(new Error("provider called"));
       },
     },
-  } as unknown as ModalClient;
+  } as unknown as ModalSdk.ModalClient;
 
   await expect(
     create({
@@ -112,6 +112,11 @@ test("modal maps create options, tags, commands, and ports", async () => {
   let imageSeen: unknown;
   let snapshotted = false;
   let tagsSeen: unknown;
+  const bucket = {} as ModalSdk.CloudBucketMount;
+  const probe = {} as ModalSdk.Probe;
+  const proxy = {} as ModalSdk.Proxy;
+  const secret = {} as ModalSdk.Secret;
+  const volume = {} as ModalSdk.Volume;
   const raw = {
     exec: (command: string[], options: unknown) => {
       execSeen.push({ command, options });
@@ -133,7 +138,7 @@ test("modal maps create options, tags, commands, and ports", async () => {
           url: "https://preview.example.com",
         },
       }),
-  } as unknown as ModalSandbox;
+  } as unknown as ModalSdk.Sandbox;
   const client = {
     apps: {
       fromName: (name: string, options: unknown) => {
@@ -157,18 +162,42 @@ test("modal maps create options, tags, commands, and ports", async () => {
         return Promise.resolve(raw);
       },
     },
-  } as unknown as ModalClient;
+  } as unknown as ModalSdk.ModalClient;
 
   const sandbox = await create({
     adapter: modal({
       app: "sdk-app",
+      blockNetwork: false,
       client,
+      cloud: "aws",
+      cloudBucketMounts: { "/bucket": bucket },
+      command: ["sleep", "60"],
+      cpu: 0.25,
+      cpuLimit: 1,
       createAppIfMissing: false,
+      customDomain: "preview.example.com",
       env: { A: "1" },
+      gpu: "T4",
+      h2Ports: [9090],
+      idleTimeout: 1200,
+      inboundCidrAllowlist: ["10.0.0.0/8"],
+      includeOidcIdentityToken: true,
+      memoryLimitMiB: 1024,
+      memoryMiB: 512,
+      name: "sdk-sandbox",
       options: { cpu: 0.5 },
+      outboundCidrAllowlist: ["0.0.0.0/0"],
       ports: [3000],
+      proxy,
+      pty: true,
+      readinessProbe: probe,
+      regions: ["us-east"],
+      secrets: [secret],
       tags: { owner: "sdk" },
       timeout: 123,
+      unencryptedPorts: [7070],
+      verbose: true,
+      volumes: { "/data": volume },
     }),
     cwd: "/work",
     env: { B: "2" },
@@ -187,10 +216,33 @@ test("modal maps create options, tags, commands, and ports", async () => {
   expect(imageSeen).toBe("im-snapshot");
   expect(createSeen).toMatchObject({
     options: {
-      cpu: 0.5,
+      blockNetwork: false,
+      cloud: "aws",
+      cloudBucketMounts: { "/bucket": bucket },
+      command: ["sleep", "60"],
+      cpu: 0.25,
+      cpuLimit: 1,
+      customDomain: "preview.example.com",
       encryptedPorts: [8080],
       env: { A: "1", B: "2" },
+      gpu: "T4",
+      h2Ports: [9090],
+      idleTimeoutMs: 2000,
+      inboundCidrAllowlist: ["10.0.0.0/8"],
+      includeOidcIdentityToken: true,
+      memoryLimitMiB: 1024,
+      memoryMiB: 512,
+      name: "sdk-sandbox",
+      outboundCidrAllowlist: ["0.0.0.0/0"],
+      proxy,
+      pty: true,
+      readinessProbe: probe,
+      regions: ["us-east"],
+      secrets: [secret],
       timeoutMs: 1000,
+      unencryptedPorts: [7070],
+      verbose: true,
+      volumes: { "/data": volume },
       workdir: "/work",
     },
   });
