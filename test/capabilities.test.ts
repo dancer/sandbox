@@ -27,8 +27,10 @@ test("adapters expose capability-honest feature modes", () => {
     processSpawn: "combined",
     raw: {
       git: true,
+      mcp: "create-time",
       network: true,
       pty: true,
+      volumes: "create-time",
     },
     snapshotCreate: "disk",
     snapshotRestore: false,
@@ -41,6 +43,7 @@ test("adapters expose capability-honest feature modes", () => {
     processExec: true,
     processSpawn: "separate",
     raw: {
+      lifecycle: "dynamic",
       network: "dynamic",
     },
     snapshotCreate: "disk",
@@ -58,9 +61,13 @@ test("adapters expose capability-honest feature modes", () => {
     processExec: true,
     processSpawn: "separate",
     raw: {
+      backup: true,
+      buckets: true,
       desktop: true,
       git: true,
+      interpreter: true,
       network: true,
+      sessions: true,
       volumes: "volume",
     },
     snapshotCreate: false,
@@ -89,7 +96,10 @@ test("adapters expose capability-honest feature modes", () => {
     processExec: true,
     processSpawn: false,
     raw: {
+      gpu: "create-time",
+      lifecycle: true,
       network: "create-time",
+      secrets: "create-time",
       volumes: true,
     },
     snapshotCreate: "filesystem",
@@ -103,7 +113,12 @@ test("adapters expose capability-honest feature modes", () => {
     processExec: true,
     processSpawn: true,
     raw: {
+      codegen: true,
+      lifecycle: true,
       network: "create-time",
+      previews: true,
+      sessions: true,
+      system: true,
       volumes: true,
     },
     snapshotCreate: false,
@@ -118,7 +133,9 @@ test("adapters expose capability-honest feature modes", () => {
     processSpawn: true,
     raw: {
       git: true,
+      lifecycle: true,
       network: true,
+      sessions: true,
     },
     snapshotCreate: "memory",
     snapshotRestore: false,
@@ -134,4 +151,7 @@ test("raw capabilities are separate from normalized capabilities", () => {
   expect(supports(current, "ports")).toBe(true);
   expect(supportsRaw(current, "desktop")).toBe(true);
   expect(supportsRaw(current, "git")).toBe(true);
+  expect(supportsRaw(current, "backup")).toBe(true);
+  expect(supportsRaw(current, "interpreter")).toBe(true);
+  expect(supportsRaw(current, "sessions")).toBe(true);
 });

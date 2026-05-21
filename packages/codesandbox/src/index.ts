@@ -85,7 +85,9 @@ const capabilities: Capabilities = {
   processSpawn: true,
   raw: {
     git: true,
+    lifecycle: true,
     network: true,
+    sessions: true,
   },
   snapshotCreate: "memory",
   snapshotRestore: false,

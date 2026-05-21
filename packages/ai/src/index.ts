@@ -321,7 +321,24 @@ const description = (
 ): string => {
   const labels = allowed.length === 0 ? "none" : allowed.join(", ");
   const raw = (
-    ["desktop", "git", "network", "pty", "secrets", "volumes"] as const
+    [
+      "backup",
+      "buckets",
+      "codegen",
+      "desktop",
+      "git",
+      "gpu",
+      "interpreter",
+      "lifecycle",
+      "mcp",
+      "network",
+      "previews",
+      "pty",
+      "secrets",
+      "sessions",
+      "system",
+      "volumes",
+    ] as const
   ).filter((capability: RawCapability) => supportsRaw(sandbox, capability));
   const unavailable = [
     supports(sandbox, "ports") ? undefined : "ports",

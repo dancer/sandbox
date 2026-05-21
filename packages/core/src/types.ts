@@ -14,11 +14,21 @@ export type Capability =
 
 /** provider-specific capabilities available through `sandbox.raw` */
 export type RawCapability =
+  | "backup"
+  | "buckets"
+  | "codegen"
   | "desktop"
   | "git"
+  | "gpu"
+  | "interpreter"
+  | "lifecycle"
+  | "mcp"
   | "network"
+  | "previews"
   | "pty"
   | "secrets"
+  | "sessions"
+  | "system"
   | "volumes";
 
 /** capability mode details when a feature exists but has provider-specific shape */

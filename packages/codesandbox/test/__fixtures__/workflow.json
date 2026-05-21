@@ -40,7 +40,9 @@
       "processSpawn": true,
       "raw": {
         "git": true,
-        "network": true
+        "lifecycle": true,
+        "network": true,
+        "sessions": true
       },
       "snapshotCreate": "memory",
       "snapshotRestore": false,

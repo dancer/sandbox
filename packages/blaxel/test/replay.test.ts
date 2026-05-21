@@ -22,7 +22,12 @@ const workflow: Workflow = {
     processExec: true,
     processSpawn: true,
     raw: {
+      codegen: true,
+      lifecycle: true,
       network: "create-time",
+      previews: true,
+      sessions: true,
+      system: true,
       volumes: true,
     },
     snapshotCreate: false,

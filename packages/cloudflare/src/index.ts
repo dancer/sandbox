@@ -73,9 +73,13 @@ const capabilities: Capabilities = {
   processExec: true,
   processSpawn: "separate",
   raw: {
+    backup: true,
+    buckets: true,
     desktop: true,
     git: true,
+    interpreter: true,
     network: true,
+    sessions: true,
     volumes: "volume",
   },
   snapshotCreate: false,

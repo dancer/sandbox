@@ -29,7 +29,10 @@ const capabilities = {
   processExec: true,
   processSpawn: false,
   raw: {
+    gpu: "create-time",
+    lifecycle: true,
     network: "create-time",
+    secrets: "create-time",
     volumes: true,
   },
   snapshotCreate: "filesystem",

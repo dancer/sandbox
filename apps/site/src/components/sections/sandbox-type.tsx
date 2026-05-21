@@ -23,11 +23,21 @@ type Capability =
   | "streaming";
 
 type RawCapability =
+  | "backup"
+  | "buckets"
+  | "codegen"
   | "desktop"
   | "git"
+  | "gpu"
+  | "interpreter"
+  | "lifecycle"
+  | "mcp"
   | "network"
+  | "previews"
   | "pty"
   | "secrets"
+  | "sessions"
+  | "system"
   | "volumes";
 
 type Mode =

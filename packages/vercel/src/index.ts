@@ -109,6 +109,7 @@ const capabilities: Capabilities = {
   processExec: true,
   processSpawn: "separate",
   raw: {
+    lifecycle: "dynamic",
     network: "dynamic",
   },
   snapshotCreate: "disk",

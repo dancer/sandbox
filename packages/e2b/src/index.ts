@@ -89,8 +89,10 @@ const capabilities: Capabilities = {
   processSpawn: "combined",
   raw: {
     git: true,
+    mcp: "create-time",
     network: true,
     pty: true,
+    volumes: "create-time",
   },
   snapshotCreate: "disk",
   snapshotRestore: false,
