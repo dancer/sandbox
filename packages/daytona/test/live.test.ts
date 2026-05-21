@@ -115,6 +115,38 @@ live("daytona exposes advertised raw capabilities", async () => {
 
     await sandbox.raw.setAutostopInterval(15);
 
+    const sessionId = `sandbox-sdk-session-${randomUUID()}`;
+    await sandbox.raw.process.createSession(sessionId);
+    try {
+      const sessionCommand = await sandbox.raw.process.executeSessionCommand(
+        sessionId,
+        {
+          command: "printf raw-session",
+          suppressInputEcho: true,
+        }
+      );
+      const sessionLogs = await sandbox.raw.process.getSessionCommandLogs(
+        sessionId,
+        sessionCommand.cmdId
+      );
+      const sessions = await sandbox.raw.process.listSessions();
+      expect(
+        sessions.some(
+          (currentSession) => currentSession.sessionId === sessionId
+        )
+      ).toBe(true);
+      expect(sessionLogs.stdout ?? sessionLogs.output ?? "").toContain(
+        "raw-session"
+      );
+    } finally {
+      await sandbox.raw.process.deleteSession(sessionId);
+    }
+
+    const signed = await sandbox.raw.getSignedPreviewUrl(3001, 60);
+    expect(signed.url).toMatch(/^https:\/\//u);
+    expect(signed.token).toBeTruthy();
+    await sandbox.raw.expireSignedPreviewUrl(3001, signed.token);
+
     const context = await sandbox.raw.codeInterpreter.createContext(cwd);
     try {
       const interpreter = await sandbox.raw.codeInterpreter.runCode(

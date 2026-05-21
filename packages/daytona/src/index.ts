@@ -1,5 +1,6 @@
 import { Buffer } from "node:buffer";
 import { randomUUID } from "node:crypto";
+import { Readable } from "node:stream";
 
 import { Daytona as DaytonaClient, DaytonaNotFoundError } from "@daytona/sdk";
 import type {
@@ -105,27 +106,22 @@ const capabilities: Capabilities = {
     interpreter: true,
     lifecycle: "dynamic",
     network: "create-time",
+    previews: true,
     pty: true,
+    sessions: true,
     volumes: "create-time",
   },
   snapshotCreate: false,
   snapshotRestore: false,
   snapshotSource: "create-time",
   snapshots: false,
+  streaming: "combined",
 };
 
 const present = (value: string | undefined): value is string =>
   value !== undefined && value.length > 0;
 
 const env = (name: string): string | undefined => globalThis.process?.env[name];
-
-const readable = (value: Uint8Array): ReadableStream<Uint8Array> =>
-  new ReadableStream({
-    start: (controller) => {
-      controller.enqueue(value);
-      controller.close();
-    },
-  });
 
 const stream = (): {
   append(chunk: string): void;
@@ -304,6 +300,21 @@ const content = async (input: Input): Promise<Buffer> => {
   const value = await bytes(input);
   return typeof value === "string" ? Buffer.from(value) : Buffer.from(value);
 };
+
+const upload = async (
+  input: Input
+): Promise<Buffer | ReadableStream<Uint8Array> | Uint8Array> => {
+  if (input instanceof ReadableStream || input instanceof Uint8Array) {
+    return input;
+  }
+  if (input instanceof ArrayBuffer) {
+    return new Uint8Array(input);
+  }
+  return await content(input);
+};
+
+const web = (input: Readable): ReadableStream<Uint8Array> =>
+  Readable.toWeb(input) as ReadableStream<Uint8Array>;
 
 const check = (signal?: AbortSignal): void => {
   if (signal?.aborted) {
@@ -501,16 +512,14 @@ const createSandbox = (
       await wrap(() => raw.fs.deleteFile(path, true), "remove");
     },
     stream: async (path) =>
-      readable(
-        new Uint8Array(await wrap(() => raw.fs.downloadFile(path), "stream"))
-      ),
+      web(await wrap(() => raw.fs.downloadFileStream(path), "stream")),
     text: async (path) => {
       const output = await wrap(() => raw.fs.downloadFile(path), "text");
       return output.toString("utf-8");
     },
     write: async (path, input) => {
       await wrap(
-        async () => raw.fs.uploadFile(await content(input), path),
+        async () => raw.fs.uploadFileStream(await upload(input), path),
         "write"
       );
     },

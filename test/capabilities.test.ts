@@ -89,12 +89,15 @@ test("adapters expose capability-honest feature modes", () => {
       interpreter: true,
       lifecycle: "dynamic",
       network: "create-time",
+      previews: true,
       pty: true,
+      sessions: true,
       volumes: "create-time",
     },
     snapshotCreate: false,
     snapshotRestore: false,
     snapshotSource: "create-time",
+    streaming: "combined",
   });
 
   expect(modal().capabilities).toMatchObject({

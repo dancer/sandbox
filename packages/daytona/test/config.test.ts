@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { Readable } from "node:stream";
 
 import { Daytona as DaytonaClient } from "@daytona/sdk";
 import { create } from "@sandbox-sdk/core";
@@ -298,6 +299,61 @@ test("daytona maps background process APIs", async () => {
     });
     await running.kill();
     expect(sessionDeleted).toBe(true);
+  } finally {
+    client.create = original;
+  }
+});
+
+test("daytona uses provider streaming file APIs", async () => {
+  type Client = InstanceType<typeof DaytonaClient>;
+  type Create = Client["create"];
+
+  const client = DaytonaClient.prototype as Client;
+  const original = client.create;
+  const input = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(new TextEncoder().encode("stream"));
+      controller.close();
+    },
+  });
+  let uploadSeen: unknown;
+  let downloaded = false;
+  const raw = {
+    fs: {
+      createFolder: () => Promise.resolve(),
+      downloadFileStream: () => {
+        downloaded = true;
+        return Promise.resolve(Readable.from(["stream"]));
+      },
+      uploadFileStream: (source: unknown, path: string) => {
+        uploadSeen = { path, source };
+        return Promise.resolve();
+      },
+    },
+    getWorkDir: () => Promise.resolve("/workspace"),
+    id: "sandbox",
+    stop: () => Promise.resolve(),
+  };
+
+  client.create = (() => Promise.resolve(raw)) as Create;
+
+  try {
+    const sandbox = await create({
+      adapter: daytona({
+        apiKey: "key",
+      }),
+    });
+
+    await sandbox.files.write("/workspace/stream.txt", input);
+    await expect(
+      new Response(await sandbox.files.stream("/workspace/stream.txt")).text()
+    ).resolves.toBe("stream");
+
+    expect(uploadSeen).toEqual({
+      path: "/workspace/stream.txt",
+      source: input,
+    });
+    expect(downloaded).toBe(true);
   } finally {
     client.create = original;
   }
