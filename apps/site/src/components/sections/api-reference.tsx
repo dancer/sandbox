@@ -186,10 +186,12 @@ export const ApiReference = () => (
           </PropAccordionItem>
           <PropAccordionItem name="signal" status="optional" value="signal">
             <p>
-              <code>AbortSignal</code> for caller-driven cancellation. The local
-              and Vercel adapters cancel in flight; other providers fail fast
-              when already aborted and keep provider-specific cancellation
-              behind <code>raw</code>.
+              <code>AbortSignal</code> for caller-driven cancellation. Local,
+              Vercel, and CodeSandbox exec paths cancel in flight. Background
+              handles for Local, Vercel, Blaxel, CodeSandbox, and Daytona attach
+              provider cleanup where available. Other providers fail fast when
+              already aborted and keep provider-specific cancellation behind{" "}
+              <code>raw</code>.
             </p>
           </PropAccordionItem>
         </Accordion>
