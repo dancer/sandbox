@@ -22,15 +22,31 @@ export const useCloudflareRaw = async (sandbox: Sandbox<CloudflareRaw>) => {
 };
 
 export const useE2BRaw = async (sandbox: Sandbox<E2BRaw>) => {
+  await sandbox.files.write(`${sandbox.cwd}/artifact.txt`, "artifact");
   const status = await sandbox.raw.git.status(sandbox.cwd);
   const download = await sandbox.raw.downloadUrl(`${sandbox.cwd}/artifact.txt`);
   return { download, status };
 };
 
 export const useDaytonaRaw = async (sandbox: Sandbox<DaytonaRaw>) => {
-  const access = await sandbox.raw.createSshAccess(15);
-  await sandbox.raw.updateNetworkSettings({ networkBlockAll: false });
-  return access;
+  const session = `advanced-${Date.now()}`;
+  await sandbox.raw.process.createSession(session);
+
+  try {
+    const command = await sandbox.raw.process.executeSessionCommand(session, {
+      command: "printf raw-session",
+      suppressInputEcho: true,
+    });
+    const logs = await sandbox.raw.process.getSessionCommandLogs(
+      session,
+      command.cmdId
+    );
+    const preview = await sandbox.raw.getSignedPreviewUrl(3000, 60);
+    await sandbox.raw.expireSignedPreviewUrl(3000, preview.token);
+    return { logs, preview: preview.url };
+  } finally {
+    await sandbox.raw.process.deleteSession(session);
+  }
 };
 
 export const useModalRaw = async (sandbox: Sandbox<ModalRaw>) => {
@@ -49,10 +65,23 @@ export const useBlaxelRaw = async (sandbox: Sandbox<BlaxelRaw>) => {
 };
 
 export const useCodeSandboxRaw = async (sandbox: Sandbox<CodeSandboxRaw>) => {
-  const port = await sandbox.raw.client.ports.waitForPort(3000);
-  const command = await sandbox.raw.client.commands.runBackground("sleep 1", {
+  const watcher = await sandbox.raw.client.fs.watch(sandbox.cwd, {
+    recursive: true,
+  });
+  const terminal = await sandbox.raw.client.terminals.create("bash", {
     cwd: sandbox.cwd,
   });
-  await command.kill();
-  return port;
+
+  try {
+    const javascript =
+      await sandbox.raw.client.interpreters.javascript("'raw javascript'");
+    await terminal.open();
+    await terminal.run("printf 'raw terminal\\n'");
+    const ports = (await sandbox.raw.client.ports.getAll?.()) ?? [];
+    const tasks = await sandbox.raw.client.tasks.getAll();
+    return { javascript, ports, tasks };
+  } finally {
+    watcher.dispose();
+    await terminal.kill();
+  }
 };
