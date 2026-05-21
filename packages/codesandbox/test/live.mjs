@@ -72,6 +72,9 @@ const coverage = {
     "snapshots.create",
     "snapshotSource",
     "sandbox.raw.delete",
+    "sandbox.raw.lifecycle",
+    "sandbox.raw.previews",
+    "sandbox.raw.sessions",
   ],
   fixture: "workflow",
   provider: "codesandbox",
@@ -292,6 +295,47 @@ const source = async (sandbox) => {
   }
 };
 
+const raw = async (sandbox) => {
+  assert.equal(sandbox.raw.sandbox.id, sandbox.id);
+  assert.equal(typeof sandbox.raw.sandbox.bootupType, "string");
+  assert.equal(typeof sandbox.raw.sandbox.createSession, "function");
+  assert.equal(typeof sandbox.raw.sandbox.updateHibernationTimeout, "function");
+  assert.equal(typeof sandbox.raw.sdk.hosts?.createToken, "function");
+
+  await sandbox.raw.sandbox.updateHibernationTimeout(300);
+
+  const sessionId = `sdk${randomUUID().replaceAll("-", "").slice(0, 16)}`;
+  const session = await sandbox.raw.sandbox.createSession({
+    env: { SANDBOX_SDK_RAW: "raw" },
+    id: sessionId,
+    permission: "write",
+  });
+  assert.equal(session.sandboxId, sandbox.id);
+
+  const previewToken = await sandbox.raw.sdk.hosts.createToken(sandbox.id, {
+    expiresAt: new Date(Date.now() + 300_000),
+  });
+  try {
+    assert.equal(previewToken.sandboxId, sandbox.id);
+    assert.ok(previewToken.tokenId);
+    assert.ok(previewToken.token);
+    assert.match(
+      sandbox.raw.sdk.hosts.getUrl(previewToken, 3000),
+      /preview_token=/u
+    );
+    assert.ok(
+      sandbox.raw.sdk.hosts.getHeaders(previewToken)["csb-preview-token"]
+    );
+    assert.ok(sandbox.raw.sdk.hosts.getCookies(previewToken).csb_preview_token);
+    const tokens = await sandbox.raw.sdk.hosts.listTokens(sandbox.id);
+    assert.ok(
+      tokens.some((current) => current.tokenId === previewToken.tokenId)
+    );
+  } finally {
+    await sandbox.raw.sdk.hosts.revokeToken(sandbox.id, previewToken.tokenId);
+  }
+};
+
 const sandbox = await create({
   adapter: codesandbox({
     stop: "delete",
@@ -303,6 +347,7 @@ const sandbox = await create({
 
 try {
   const payload = await limit(workflow(sandbox), "codesandbox workflow");
+  await limit(raw(sandbox), "codesandbox raw features");
   const sourcePayload = await limit(
     source(sandbox),
     "codesandbox snapshot source"
