@@ -223,8 +223,9 @@ Node-based tooling, but creating a Cloudflare sandbox loads
 
 `apps/cloudflare` is a deployable Worker fixture for the Cloudflare live test.
 It exports the Sandbox Durable Object class, binds it in `wrangler.jsonc`, and
-validates file operations, command execution, shell execution, and background
-process spawning through the shared adapter.
+validates file operations, command execution, shell execution, background
+process spawning, preview ports, and raw quick tunnels through the shared
+adapter.
 
 Cloudflare's native stream write path currently requires the provider SDK's RPC
 transport. `@sandbox-sdk/cloudflare` normalizes non-string writes through base64
@@ -238,6 +239,9 @@ Preview ports must follow Cloudflare's provider rules: integers from 1 to
 65535, excluding system ports below 1024 and reserved port 3000.
 Set `CLOUDFLARE_SANDBOX_PREVIEW_HOST` to run the optional Cloudflare port
 verification test against a custom preview host.
+
+The verifier uses `SANDBOX_TRANSPORT=rpc` because Cloudflare quick tunnels live
+on the native `sandbox.raw.tunnels` API and require RPC transport upstream.
 Use the zone apex as the preview host when possible so generated preview
 subdomains are covered by the normal wildcard certificate. Subdomain preview
 hosts need matching wildcard TLS coverage.
