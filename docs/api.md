@@ -1862,6 +1862,8 @@ export type Vercel = Readonly<{
   source?: Source;
   /** run commands with sudo when supported by Vercel Sandbox */
   sudo?: boolean;
+  /** expiration in milliseconds for snapshots created through the normalized api */
+  snapshotExpiration?: number;
   /** Vercel team id; falls back to VERCEL_TEAM_ID when using access-token auth */
   teamId?: string;
   /** sandbox lifetime timeout in milliseconds */

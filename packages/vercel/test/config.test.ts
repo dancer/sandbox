@@ -131,6 +131,58 @@ test("vercel reports expired oidc credentials before provider calls", async () =
   }
 });
 
+test("vercel prefers explicit access credentials over local oidc", async () => {
+  const oidc = process.env.VERCEL_OIDC_TOKEN;
+  const access = process.env.VERCEL_TOKEN;
+  const teamId = process.env.VERCEL_TEAM_ID;
+  const projectId = process.env.VERCEL_PROJECT_ID;
+  const original = VercelSandbox.create;
+  const raw = {
+    fs: {
+      mkdir: () => Promise.resolve(),
+    },
+    sandboxId: "sandbox",
+    stop: () => Promise.resolve(),
+  } as unknown as VercelSandbox;
+  let seen: unknown;
+
+  process.env.VERCEL_OIDC_TOKEN = jwt({
+    exp: Math.floor(Date.now() / 1000) - 60,
+    owner_id: "expired-team",
+    project_id: "expired-project",
+  });
+  process.env.VERCEL_TOKEN = "";
+  process.env.VERCEL_TEAM_ID = "";
+  process.env.VERCEL_PROJECT_ID = "";
+  VercelSandbox.create = ((input?: unknown) => {
+    seen = input;
+    return Promise.resolve(raw);
+  }) as typeof VercelSandbox.create;
+
+  try {
+    const sandbox = await create({
+      adapter: vercel({
+        projectId: "project",
+        teamId: "team",
+        token: "token",
+      }),
+    });
+
+    expect(sandbox.id).toBe("sandbox");
+    expect(seen).toMatchObject({
+      projectId: "project",
+      teamId: "team",
+      token: "token",
+    });
+  } finally {
+    VercelSandbox.create = original;
+    restore("VERCEL_OIDC_TOKEN", oidc);
+    restore("VERCEL_TOKEN", access);
+    restore("VERCEL_TEAM_ID", teamId);
+    restore("VERCEL_PROJECT_ID", projectId);
+  }
+});
+
 test("vercel reports incomplete access token config", async () => {
   await expect(
     create({ adapter: vercel({ projectId: "", teamId: "", token: "token" }) })
@@ -291,6 +343,7 @@ test("vercel maps create options and gates undeclared ports", async () => {
   let createSeen: unknown;
   let domainSeen: unknown;
   let mkdirSeen: unknown;
+  let snapshotSeen: unknown;
   let snapshotted = false;
   const raw = {
     domain: (port: number) => {
@@ -304,7 +357,8 @@ test("vercel maps create options and gates undeclared ports", async () => {
       },
     },
     sandboxId: "sandbox",
-    snapshot: () => {
+    snapshot: (input?: unknown) => {
+      snapshotSeen = input;
       snapshotted = true;
       return Promise.resolve({ snapshotId: "snapshot-id" });
     },
@@ -324,6 +378,7 @@ test("vercel maps create options and gates undeclared ports", async () => {
         projectId: "project",
         resources: { vcpus: 2 },
         runtime: "node24",
+        snapshotExpiration: 86_400_000,
         source: { type: "tarball", url: "https://example.com/app.tgz" },
         teamId: "team",
         timeout: 123,
@@ -375,6 +430,7 @@ test("vercel maps create options and gates undeclared ports", async () => {
       id: "snapshot-id",
     });
     expect(snapshotted).toBe(true);
+    expect(snapshotSeen).toEqual({ expiration: 86_400_000 });
     await expect(
       sandbox.snapshots.restore("snapshot-id")
     ).rejects.toMatchObject({

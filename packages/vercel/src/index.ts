@@ -83,6 +83,8 @@ export type Vercel = Readonly<{
   source?: Source;
   /** run commands with sudo when supported by Vercel Sandbox */
   sudo?: boolean;
+  /** expiration in milliseconds for snapshots created through the normalized api */
+  snapshotExpiration?: number;
   /** Vercel team id; falls back to VERCEL_TEAM_ID when using access-token auth */
   teamId?: string;
   /** sandbox lifetime timeout in milliseconds */
@@ -197,7 +199,6 @@ const credentials = (
   const projectId = options.projectId ?? env("VERCEL_PROJECT_ID");
   const teamId = options.teamId ?? env("VERCEL_TEAM_ID");
   const token = options.token ?? env("VERCEL_TOKEN");
-  const fallback = oidc(env("VERCEL_OIDC_TOKEN"));
   if (present(token) || present(teamId) || present(projectId)) {
     return {
       ...(present(projectId) ? { projectId } : {}),
@@ -205,6 +206,7 @@ const credentials = (
       ...(present(token) ? { token } : {}),
     };
   }
+  const fallback = oidc(env("VERCEL_OIDC_TOKEN"));
   if (fallback !== undefined) {
     return fallback;
   }
@@ -446,7 +448,8 @@ const createSandbox = (
   raw: Raw,
   cwd: string,
   sudo: boolean | undefined,
-  ports: readonly number[]
+  ports: readonly number[],
+  snapshotExpiration: number | undefined
 ): Sandbox<Raw> => ({
   capabilities,
   cwd,
@@ -522,7 +525,16 @@ const createSandbox = (
   raw,
   snapshots: {
     create: async () => {
-      const snapshot = await wrap(() => raw.snapshot(), "snapshot");
+      const expiration = duration(
+        snapshotExpiration,
+        provider,
+        "snapshotExpiration"
+      );
+      const snapshot = await wrap(
+        () =>
+          raw.snapshot(expiration === undefined ? undefined : { expiration }),
+        "snapshot"
+      );
       return { id: snapshot.snapshotId };
     },
     restore: () => rejectUnsupported("in-place snapshot restore"),
@@ -550,7 +562,13 @@ export const vercel = (options: Vercel = {}): Adapter<Raw> => ({
       await raw.fs.mkdir(cwd, { recursive: true });
     }
 
-    return createSandbox(raw, cwd, options.sudo, ports);
+    return createSandbox(
+      raw,
+      cwd,
+      options.sudo,
+      ports,
+      options.snapshotExpiration
+    );
   },
   provider,
 });
