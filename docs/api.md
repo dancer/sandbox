@@ -35,11 +35,21 @@ provider-specific capabilities available through `sandbox.raw`
 
 ```ts
 export type RawCapability =
+  | "backup"
+  | "buckets"
+  | "codegen"
   | "desktop"
   | "git"
+  | "gpu"
+  | "interpreter"
+  | "lifecycle"
+  | "mcp"
   | "network"
+  | "previews"
   | "pty"
   | "secrets"
+  | "sessions"
+  | "system"
   | "volumes";
 ```
 
