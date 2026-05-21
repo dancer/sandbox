@@ -68,6 +68,7 @@ test("adapters expose capability-honest feature modes", () => {
       interpreter: true,
       network: true,
       sessions: true,
+      tunnels: "dynamic",
       volumes: "volume",
     },
     snapshotCreate: false,
@@ -154,4 +155,5 @@ test("raw capabilities are separate from normalized capabilities", () => {
   expect(supportsRaw(current, "backup")).toBe(true);
   expect(supportsRaw(current, "interpreter")).toBe(true);
   expect(supportsRaw(current, "sessions")).toBe(true);
+  expect(supportsRaw(current, "tunnels")).toBe(true);
 });
