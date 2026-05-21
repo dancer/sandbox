@@ -25,6 +25,9 @@ export const Daytona = () => (
     <p>
       Use the shared <code>snapshot</code> create option, or the adapter{" "}
       <code>snapshot</code> default, to start from a Daytona snapshot id.
+      Network limits are configured at creation time in the normalized adapter.
+      Daytona's native <code>raw.updateNetworkSettings()</code> is still
+      available when the account tier supports runtime network changes.
     </p>
     <CodeBlock code={DAYTONA_EXAMPLE} lang="ts" />
     <div className="flex flex-col gap-2">
@@ -48,6 +51,26 @@ export const Daytona = () => (
           <p>
             Daytona target for workspace placement. Falls back to the native SDK
             default when omitted.
+          </p>
+        </PropAccordionItem>
+        <PropAccordionItem
+          name="networkBlockAll"
+          status="optional"
+          value="boolean"
+        >
+          <p>
+            Blocks outbound network access at creation time when supported by
+            Daytona.
+          </p>
+        </PropAccordionItem>
+        <PropAccordionItem
+          name="networkAllowList"
+          status="optional"
+          value="cidr list"
+        >
+          <p>
+            Comma-separated IPv4 CIDR allow list passed to Daytona at creation
+            time.
           </p>
         </PropAccordionItem>
       </Accordion>

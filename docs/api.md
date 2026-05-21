@@ -1558,9 +1558,9 @@ export type Daytona = DaytonaConfig &
     language?: CodeLanguage | string;
     /** stable Daytona sandbox name used when create input omits id */
     name?: string;
-    /** outbound network allow list passed to Daytona */
+    /** outbound network allow list passed to Daytona at sandbox creation */
     networkAllowList?: string;
-    /** block outbound network access when supported by Daytona */
+    /** block outbound network access at sandbox creation when supported by Daytona */
     networkBlockAll?: boolean;
     /** signed preview url expiration in seconds */
     previewExpires?: number;

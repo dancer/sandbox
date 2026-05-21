@@ -85,7 +85,7 @@ test("adapters expose capability-honest feature modes", () => {
       git: true,
       interpreter: true,
       lifecycle: "dynamic",
-      network: "dynamic",
+      network: "create-time",
       pty: true,
       volumes: "create-time",
     },

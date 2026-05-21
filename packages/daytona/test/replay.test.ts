@@ -26,7 +26,7 @@ const workflow: Workflow = {
       git: true,
       interpreter: true,
       lifecycle: "dynamic",
-      network: "dynamic",
+      network: "create-time",
       pty: true,
       volumes: "create-time",
     },
