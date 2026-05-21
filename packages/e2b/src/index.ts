@@ -89,10 +89,12 @@ const capabilities: Capabilities = {
   processSpawn: "combined",
   raw: {
     git: true,
+    lifecycle: "dynamic",
     mcp: "create-time",
     network: "create-time",
     pty: true,
     volumes: "create-time",
+    watching: true,
   },
   snapshotCreate: "disk",
   snapshotRestore: false,
@@ -262,14 +264,6 @@ const stream = (): {
   };
 };
 
-const readable = (value: Uint8Array): ReadableStream<Uint8Array> =>
-  new ReadableStream({
-    start: (controller) => {
-      controller.enqueue(value);
-      controller.close();
-    },
-  });
-
 const wait = async (handle: CommandHandle): Promise<Result> => {
   try {
     return output(await handle.wait());
@@ -330,14 +324,26 @@ const spawn = (
 ): Promise<Running> =>
   spawnLine(raw, cwd, user, command(executable, args), options);
 
-const content = async (input: Input): Promise<ArrayBuffer | string> => {
-  const value = await bytes(input);
-  if (typeof value === "string") {
-    return value;
+const buffer = (input: Uint8Array): ArrayBuffer => {
+  const value = new ArrayBuffer(input.byteLength);
+  new Uint8Array(value).set(input);
+  return value;
+};
+
+const content = async (
+  input: Input
+): Promise<ArrayBuffer | Blob | ReadableStream<Uint8Array> | string> => {
+  if (
+    typeof input === "string" ||
+    input instanceof ArrayBuffer ||
+    input instanceof Blob ||
+    input instanceof ReadableStream
+  ) {
+    return input;
   }
-  const buffer = new ArrayBuffer(value.byteLength);
-  new Uint8Array(buffer).set(value);
-  return buffer;
+
+  const value = await bytes(input);
+  return typeof value === "string" ? value : buffer(value);
 };
 
 const createSandbox = (
@@ -385,16 +391,14 @@ const createSandbox = (
         "remove"
       );
     },
-    stream: async (path) =>
-      readable(
-        await wrap(
-          () =>
-            raw.files.read(path, {
-              format: "bytes",
-              ...(user === undefined ? {} : { user }),
-            }),
-          "stream"
-        )
+    stream: (path) =>
+      wrap(
+        () =>
+          raw.files.read(path, {
+            format: "stream",
+            ...(user === undefined ? {} : { user }),
+          }),
+        "stream"
       ),
     text: (path) =>
       wrap(

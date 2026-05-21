@@ -60,8 +60,10 @@ test("e2b maps create and command options without running a real provider", asyn
   let commandSeen: unknown;
   let createSeen: unknown;
   let mkdirSeen: unknown;
+  let readSeen: unknown;
   let snapshotSeen: unknown;
   let snapshotted = false;
+  let writeSeen: unknown;
   const raw = {
     commands: {
       run: (line: string, options: unknown) => {
@@ -83,7 +85,21 @@ test("e2b maps create and command options without running a real provider", asyn
         mkdirSeen = { options, path };
         return Promise.resolve();
       },
-      stream: () => Promise.resolve(new ReadableStream()),
+      read: (path: string, options: unknown) => {
+        readSeen = { options, path };
+        return Promise.resolve(
+          new ReadableStream<Uint8Array>({
+            start(controller) {
+              controller.enqueue(new TextEncoder().encode("streamed"));
+              controller.close();
+            },
+          })
+        );
+      },
+      write: (path: string, input: unknown, options: unknown) => {
+        writeSeen = { input, options, path };
+        return Promise.resolve();
+      },
     },
     kill: () => Promise.resolve(),
     sandboxId: "sandbox",
@@ -191,6 +207,27 @@ test("e2b maps create and command options without running a real provider", asyn
         timeoutMs: 321,
         user: "runner",
       },
+    });
+
+    const input = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new Uint8Array([1, 2, 3]));
+        controller.close();
+      },
+    });
+    await sandbox.files.write("/work/data.bin", input);
+    expect(writeSeen).toEqual({
+      input,
+      options: { user: "runner" },
+      path: "/work/data.bin",
+    });
+
+    await expect(
+      new Response(await sandbox.files.stream("/work/data.bin")).text()
+    ).resolves.toBe("streamed");
+    expect(readSeen).toEqual({
+      options: { format: "stream", user: "runner" },
+      path: "/work/data.bin",
     });
 
     await expect(sandbox.snapshots.create("ready")).resolves.toEqual({

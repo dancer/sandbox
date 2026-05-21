@@ -76,6 +76,7 @@ live("e2b runs a live sandbox workflow", async () => {
 live("e2b exposes advertised raw capabilities", async () => {
   const cwd = `/tmp/sandbox-sdk-raw-${randomUUID()}`;
   let output = "";
+  let watched = false;
   const sandbox = await create({
     adapter: e2b({
       network: { allowPublicTraffic: false },
@@ -85,8 +86,27 @@ live("e2b exposes advertised raw capabilities", async () => {
   });
 
   try {
+    expect(await sandbox.raw.isRunning()).toBe(true);
+    await sandbox.raw.setTimeout(300_000);
+
     const info = await sandbox.raw.getInfo();
     expect(info.network?.allowPublicTraffic).toBe(false);
+
+    const watcher = await sandbox.raw.files.watchDir(
+      cwd,
+      () => {
+        watched = true;
+      },
+      { timeoutMs: 10_000 }
+    );
+
+    try {
+      await sandbox.files.write(`${cwd}/watched.txt`, "watch");
+      await waitFor(() => watched, "e2b file watch");
+    } finally {
+      await watcher.stop();
+    }
+    await sandbox.files.remove(`${cwd}/watched.txt`);
 
     await sandbox.raw.git.init(cwd, { initialBranch: "main" });
     await sandbox.files.write(`${cwd}/raw.txt`, "raw");

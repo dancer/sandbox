@@ -31,10 +31,12 @@ const workflow: Workflow = {
     processSpawn: "combined",
     raw: {
       git: true,
+      lifecycle: "dynamic",
       mcp: "create-time",
       network: "create-time",
       pty: true,
       volumes: "create-time",
+      watching: true,
     },
     snapshotCreate: "disk",
     snapshotRestore: false,
