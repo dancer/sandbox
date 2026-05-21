@@ -34,6 +34,8 @@ import type {
   SessionOptions,
 } from "./types.js";
 
+export type { CodeSandboxRaw } from "./types.js";
+
 /** codesandbox adapter configuration */
 export type CodeSandbox = Readonly<{
   /** existing codesandbox sdk client for tests or custom transport */

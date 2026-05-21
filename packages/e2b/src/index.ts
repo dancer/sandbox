@@ -21,6 +21,9 @@ import type {
 import { CommandExitError, FileType, Sandbox as E2BSandbox } from "e2b";
 import type { CommandHandle, SandboxConnectOpts, SandboxOpts } from "e2b";
 
+/** native e2b sandbox object exposed as `sandbox.raw` */
+export type E2BRaw = E2BSandbox;
+
 /** e2b adapter configuration */
 export type E2B = Readonly<{
   /** e2b access token, usually used for template and account operations */
@@ -57,7 +60,7 @@ export type E2B = Readonly<{
   user?: string;
 }>;
 
-type Raw = E2BSandbox;
+type Raw = E2BRaw;
 
 const provider = "e2b";
 

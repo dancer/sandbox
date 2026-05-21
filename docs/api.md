@@ -262,6 +262,8 @@ export type Port = Readonly<{
   host?: string;
   /** preview protocol preference when the provider supports it */
   protocol?: "http" | "https" | "tcp";
+  /** stable preview token when the provider supports custom preview URLs */
+  token?: string;
 }>;
 ```
 
@@ -1226,6 +1228,14 @@ Blaxel adapter for Sandbox SDK
 
 ### types
 
+#### `BlaxelRaw`
+
+native Blaxel sandbox object exposed as `sandbox.raw`
+
+```ts
+export type BlaxelRaw = SandboxInstance;
+```
+
 #### `Blaxel`
 
 blaxel adapter configuration
@@ -1304,6 +1314,14 @@ Cloudflare Sandbox adapter for Sandbox SDK
 
 ### types
 
+#### `CloudflareRaw`
+
+native Cloudflare Sandbox object exposed as `sandbox.raw`
+
+```ts
+export type CloudflareRaw = Native;
+```
+
 #### `CloudflareBinding`
 
 structural Durable Object namespace binding accepted by the adapter
@@ -1372,6 +1390,14 @@ CodeSandbox adapter for Sandbox SDK
 
 ### types
 
+#### `CodeSandboxRaw`
+
+native CodeSandbox raw object exposed as `sandbox.raw`
+
+```ts
+export type CodeSandboxRaw = Raw;
+```
+
 #### `CodeSandbox`
 
 codesandbox adapter configuration
@@ -1426,6 +1452,14 @@ export declare const codesandbox: (options?: CodeSandbox) => Adapter<Raw>;
 Daytona adapter for Sandbox SDK
 
 ### types
+
+#### `DaytonaRaw`
+
+native Daytona sandbox object exposed as `sandbox.raw`
+
+```ts
+export type DaytonaRaw = DaytonaSandbox;
+```
 
 #### `Daytona`
 
@@ -1491,6 +1525,14 @@ E2B adapter for Sandbox SDK
 
 ### types
 
+#### `E2BRaw`
+
+native e2b sandbox object exposed as `sandbox.raw`
+
+```ts
+export type E2BRaw = E2BSandbox;
+```
+
 #### `E2B`
 
 e2b adapter configuration
@@ -1548,6 +1590,14 @@ Modal Sandbox adapter for Sandbox SDK
 
 ### types
 
+#### `ModalRaw`
+
+native Modal sandbox object exposed as `sandbox.raw`
+
+```ts
+export type ModalRaw = ModalSdk.Sandbox;
+```
+
 #### `Modal`
 
 modal adapter configuration
@@ -1597,6 +1647,14 @@ export declare const modal: (options?: Modal) => Adapter<Raw>;
 Vercel Sandbox adapter for Sandbox SDK
 
 ### types
+
+#### `VercelRaw`
+
+native Vercel Sandbox object exposed as `sandbox.raw`
+
+```ts
+export type VercelRaw = VercelSandbox;
+```
 
 #### `Source`
 

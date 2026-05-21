@@ -35,6 +35,9 @@ import type {
   Sandbox,
 } from "@sandbox-sdk/core";
 
+/** native Daytona sandbox object exposed as `sandbox.raw` */
+export type DaytonaRaw = DaytonaSandbox;
+
 /** Daytona adapter configuration */
 export type Daytona = DaytonaConfig &
   Readonly<{

@@ -28,6 +28,9 @@ export type { Sandbox as CloudflareSandbox } from "@cloudflare/sandbox";
 
 type Native = CloudflareSandbox<unknown>;
 
+/** native Cloudflare Sandbox object exposed as `sandbox.raw` */
+export type CloudflareRaw = Native;
+
 /** structural Durable Object namespace binding accepted by the adapter */
 export type CloudflareBinding = Readonly<{
   /** return a Durable Object stub for a resolved id */

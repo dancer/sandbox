@@ -35,7 +35,7 @@ import type {
 import { rejectUnsupported } from "./errors.js";
 import type { Blaxel } from "./types.js";
 
-export type { Blaxel } from "./types.js";
+export type { Blaxel, BlaxelRaw } from "./types.js";
 
 type Raw = SandboxInstance;
 

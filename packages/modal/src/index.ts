@@ -23,6 +23,9 @@ import type {
 } from "@sandbox-sdk/core";
 import * as ModalSdk from "modal";
 
+/** native Modal sandbox object exposed as `sandbox.raw` */
+export type ModalRaw = ModalSdk.Sandbox;
+
 /** modal adapter configuration */
 export type Modal = Readonly<
   ModalSdk.ModalClientParams & {
@@ -52,7 +55,7 @@ export type Modal = Readonly<
   }
 >;
 
-type Raw = ModalSdk.Sandbox;
+type Raw = ModalRaw;
 
 const provider = "modal";
 

@@ -22,6 +22,9 @@ import type {
 import { Sandbox as VercelSandbox } from "@vercel/sandbox";
 import type { Command as VercelCommand, NetworkPolicy } from "@vercel/sandbox";
 
+/** native Vercel Sandbox object exposed as `sandbox.raw` */
+export type VercelRaw = VercelSandbox;
+
 /** source used to seed a new Vercel sandbox */
 export type Source =
   | Readonly<{
@@ -88,7 +91,7 @@ export type Vercel = Readonly<{
   token?: string;
 }>;
 
-type Raw = VercelSandbox;
+type Raw = VercelRaw;
 
 type VercelCreate = NonNullable<Parameters<typeof VercelSandbox.create>[0]>;
 

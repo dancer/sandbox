@@ -1,7 +1,11 @@
 import type {
   Config as BlaxelConfig,
+  SandboxInstance,
   SandboxCreateConfiguration,
 } from "@blaxel/core";
+
+/** native Blaxel sandbox object exposed as `sandbox.raw` */
+export type BlaxelRaw = SandboxInstance;
 
 /** blaxel adapter configuration */
 export type Blaxel = Readonly<

@@ -95,8 +95,12 @@ export type Sdk = Readonly<{
   }>;
 }>;
 
+/** native CodeSandbox sdk, sandbox, and connected session exposed as `sandbox.raw` */
 export type Raw = Readonly<{
   client: SandboxClient;
   sandbox: ProviderSandbox;
   sdk: Sdk;
 }>;
+
+/** native CodeSandbox raw object exposed as `sandbox.raw` */
+export type CodeSandboxRaw = Raw;
