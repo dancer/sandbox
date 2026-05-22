@@ -1,4 +1,4 @@
-import { dirname } from "node:path/posix";
+import { dirname, isAbsolute, join } from "node:path/posix";
 
 import {
   SandboxError,
@@ -523,6 +523,9 @@ const parent = (path: string): string | undefined => {
   return directory === "." || directory === "/" ? undefined : directory;
 };
 
+const absolute = (path: string, cwd: string): string =>
+  isAbsolute(path) ? path : join(cwd, path);
+
 const execute = async (
   raw: Raw,
   cwd: string,
@@ -641,28 +644,34 @@ const createSandbox = (
     capabilities,
     cwd,
     files: {
-      exists: (path) => wrap(() => raw.fs.exists(path), "exists"),
+      exists: (path) =>
+        wrap(() => raw.fs.exists(absolute(path, cwd)), "exists"),
       list: async (path = cwd) => {
+        const target = absolute(path, cwd);
         const entries = await wrap(
-          () => raw.fs.readdir(path, { withFileTypes: true }),
+          () => raw.fs.readdir(target, { withFileTypes: true }),
           "list"
         );
         return entries
           .map(
             (entry): Entry => ({
               kind: entry.isDirectory() ? "directory" : "file",
-              path: `${path.replace(/\/$/u, "")}/${entry.name}`,
+              path: `${target.replace(/\/$/u, "")}/${entry.name}`,
             })
           )
           .toSorted((left, right) => left.path.localeCompare(right.path));
       },
       mkdir: async (path) => {
-        await wrap(() => raw.fs.mkdir(path, { recursive: true }), "mkdir");
+        await wrap(
+          () => raw.fs.mkdir(absolute(path, cwd), { recursive: true }),
+          "mkdir"
+        );
       },
       read: (path) => wrap(() => read(raw, path, cwd), "read"),
       remove: async (path) => {
         await wrap(
-          () => raw.fs.rm(path, { force: true, recursive: true }),
+          () =>
+            raw.fs.rm(absolute(path, cwd), { force: true, recursive: true }),
           "remove"
         );
       },
@@ -673,11 +682,12 @@ const createSandbox = (
         ),
       write: async (path: string, input: Input) => {
         await wrap(async () => {
-          const directory = parent(path);
+          const target = absolute(path, cwd);
+          const directory = parent(target);
           if (directory !== undefined) {
             await raw.fs.mkdir(directory, { recursive: true });
           }
-          await raw.writeFiles([{ content: await bytes(input), path }]);
+          await raw.writeFiles([{ content: await bytes(input), path: target }]);
         }, "write");
       },
     },

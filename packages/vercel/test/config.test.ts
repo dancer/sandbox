@@ -606,6 +606,69 @@ test("vercel creates parent directories before file writes", async () => {
   }
 });
 
+test("vercel resolves relative file paths against cwd", async () => {
+  const original = VercelSandbox.create;
+  const seen: unknown[] = [];
+  const raw = {
+    fs: {
+      exists: (path: string) => {
+        seen.push(["exists", path]);
+        return Promise.resolve(true);
+      },
+      mkdir: (path: string, options: unknown) => {
+        seen.push(["mkdir", path, options]);
+        return Promise.resolve();
+      },
+      readdir: (path: string, options: unknown) => {
+        seen.push(["readdir", path, options]);
+        return Promise.resolve([]);
+      },
+      rm: (path: string, options: unknown) => {
+        seen.push(["rm", path, options]);
+        return Promise.resolve();
+      },
+    },
+    name: "sandbox",
+    stop: () => Promise.resolve(),
+    writeFiles: (input: unknown) => {
+      seen.push(["writeFiles", input]);
+      return Promise.resolve();
+    },
+  } as unknown as VercelSandbox;
+
+  VercelSandbox.create = (() =>
+    Promise.resolve(raw)) as typeof VercelSandbox.create;
+
+  try {
+    const sandbox = await create({
+      adapter: vercel({
+        projectId: "project",
+        teamId: "team",
+        token: "token",
+      }),
+      cwd: "/work",
+    });
+
+    await sandbox.files.exists("src/index.ts");
+    await sandbox.files.list("src");
+    await sandbox.files.mkdir("cache");
+    await sandbox.files.remove("old.txt");
+    await sandbox.files.write("src/index.ts", "content");
+
+    expect(seen).toEqual([
+      ["mkdir", "/work", { recursive: true }],
+      ["exists", "/work/src/index.ts"],
+      ["readdir", "/work/src", { withFileTypes: true }],
+      ["mkdir", "/work/cache", { recursive: true }],
+      ["rm", "/work/old.txt", { force: true, recursive: true }],
+      ["mkdir", "/work/src", { recursive: true }],
+      ["writeFiles", [{ content: "content", path: "/work/src/index.ts" }]],
+    ]);
+  } finally {
+    VercelSandbox.create = original;
+  }
+});
+
 test("vercel normalizes provider command errors", async () => {
   const original = VercelSandbox.create;
   const raw = {
