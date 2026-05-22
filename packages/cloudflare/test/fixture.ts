@@ -35,7 +35,8 @@ export type Payload = Readonly<{
   ok: boolean;
   provider: string;
   shell: Command;
-  spawn: Command & Readonly<{ output: string }>;
+  spawn: Command &
+    Readonly<{ output: string; stderrStream: string; stdoutStream: string }>;
 }>;
 
 export type PortPayload = Readonly<{
@@ -153,6 +154,8 @@ export const workflowCoverage: Coverage = {
     "process.shell",
     "process.shell.options",
     "process.spawnShell",
+    "process.spawnShell.stderr",
+    "process.spawnShell.stdout",
     "process.failure",
     "sandbox.stop",
   ],
@@ -436,6 +439,8 @@ export const workflowFixture = (input: Result): Fixture<Payload> => ({
     spawn: {
       ...input.body.spawn,
       output: "hello from cloudflare",
+      stderrStream: "",
+      stdoutStream: "hello from cloudflare",
     },
   },
   coverage: workflowCoverage,

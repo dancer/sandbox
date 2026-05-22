@@ -260,6 +260,70 @@ const wait = async (
   return result(output.exitCode, logs.stdout, logs.stderr);
 };
 
+type Channel = "output" | "stderr" | "stdout";
+
+type Log = Readonly<{
+  channel: Exclude<Channel, "output">;
+  value: Uint8Array;
+}>;
+
+type Event = Readonly<{
+  data: string;
+  event?: string;
+}>;
+
+type Payload = Readonly<{
+  data?: unknown;
+  type?: unknown;
+}>;
+
+const encoder = new TextEncoder();
+
+const parseEvent = (block: string): Event | undefined => {
+  let event: string | undefined;
+  const data: string[] = [];
+  for (const line of block.split("\n")) {
+    if (line.startsWith("event:")) {
+      event = line.slice(6).trim();
+    }
+    if (line.startsWith("data:")) {
+      data.push(line.slice(5).trimStart());
+    }
+  }
+  if (data.length === 0) {
+    return;
+  }
+  return event === undefined
+    ? { data: data.join("\n") }
+    : { data: data.join("\n"), event };
+};
+
+const parseLog = (block: string): Log | undefined => {
+  const event = parseEvent(block);
+  if (event === undefined) {
+    return;
+  }
+  try {
+    const payload = JSON.parse(event.data) as Payload;
+    if (
+      (payload.type === "stdout" || payload.type === "stderr") &&
+      typeof payload.data === "string"
+    ) {
+      return {
+        channel: payload.type,
+        value: encoder.encode(payload.data),
+      };
+    }
+  } catch {
+    if (event.event === "stdout" || event.event === "stderr") {
+      return {
+        channel: event.event,
+        value: encoder.encode(event.data),
+      };
+    }
+  }
+};
+
 const lazy = <Output>(factory: () => Promise<Output>): Promise<Output> => {
   let promise: Promise<Output> | undefined;
   const get = (): Promise<Output> => {
@@ -278,32 +342,127 @@ const lazy = <Output>(factory: () => Promise<Output>): Promise<Output> => {
   } as Promise<Output>;
 };
 
+const include = (channel: Channel, log: Log): boolean =>
+  channel === "output" || channel === log.channel;
+
 const logs = (
   raw: Native,
   process: Awaited<ReturnType<Native["startProcess"]>>
-): ReadableStream<Uint8Array> => {
-  let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+): Readonly<Record<Channel, ReadableStream<Uint8Array>>> => {
+  const chunks: Log[] = [];
+  const controllers: Record<
+    Channel,
+    Set<ReadableStreamDefaultController<Uint8Array>>
+  > = {
+    output: new Set(),
+    stderr: new Set(),
+    stdout: new Set(),
+  };
+  let closed = false;
+  let failed: unknown;
+  let pump: Promise<void> | undefined;
 
-  return new ReadableStream<Uint8Array>(
-    {
-      async cancel(reason) {
-        await reader?.cancel(reason);
-      },
-      async pull(controller) {
-        if (reader === undefined) {
-          const output = await raw.streamProcessLogs(process.id);
-          reader = output.getReader();
+  const emit = (log: Log): void => {
+    chunks.push(log);
+    for (const channel of ["output", log.channel] as const) {
+      for (const controller of controllers[channel]) {
+        controller.enqueue(log.value);
+      }
+    }
+  };
+
+  const close = (): void => {
+    closed = true;
+    for (const group of Object.values(controllers)) {
+      for (const controller of group) {
+        controller.close();
+      }
+      group.clear();
+    }
+  };
+
+  const fail = (value: unknown): void => {
+    failed = value;
+    for (const group of Object.values(controllers)) {
+      for (const controller of group) {
+        controller.error(value);
+      }
+      group.clear();
+    }
+  };
+
+  const start = (): void => {
+    pump ??= (async () => {
+      const output = await raw.streamProcessLogs(process.id);
+      const reader = output.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      try {
+        while (true) {
+          const next = await reader.read();
+          if (next.done) {
+            break;
+          }
+          buffer += decoder.decode(next.value, { stream: true });
+          const blocks = buffer.split(/\r?\n\r?\n/u);
+          buffer = blocks.pop() ?? "";
+          for (const block of blocks) {
+            const log = parseLog(block);
+            if (log !== undefined) {
+              emit(log);
+            }
+          }
         }
-        const chunk = await reader.read();
-        if (chunk.done) {
+        buffer += decoder.decode();
+        if (buffer.trim().length > 0) {
+          const log = parseLog(buffer);
+          if (log !== undefined) {
+            emit(log);
+          }
+        }
+        close();
+      } catch (error) {
+        fail(error);
+      } finally {
+        reader.releaseLock();
+      }
+    })();
+  };
+
+  const create = (channel: Channel): ReadableStream<Uint8Array> => {
+    let active: ReadableStreamDefaultController<Uint8Array> | undefined;
+    return new ReadableStream<Uint8Array>({
+      cancel() {
+        if (active !== undefined) {
+          controllers[channel].delete(active);
+        }
+      },
+      start(controller) {
+        active = controller;
+        for (const log of chunks) {
+          if (include(channel, log)) {
+            controller.enqueue(log.value);
+          }
+        }
+        if (failed !== undefined) {
+          controller.error(failed);
+          return;
+        }
+        if (closed) {
           controller.close();
           return;
         }
-        controller.enqueue(chunk.value);
+        controllers[channel].add(controller);
+        start();
       },
-    },
-    { highWaterMark: 0 }
-  );
+    });
+  };
+
+  return {
+    output: create("output"),
+    stderr: create("stderr"),
+    stdout: create("stdout"),
+  };
 };
 
 const spawnLine = async (
@@ -320,12 +479,13 @@ const spawnLine = async (
       ...(options.env === undefined ? {} : { env: { ...options.env } }),
       ...(timeout === undefined ? {} : { timeout }),
     });
+    const output = logs(raw, process);
     return {
       id: process.id,
       kill: async (signal = "SIGTERM") => {
         await process.kill(signal);
       },
-      output: logs(raw, process),
+      ...output,
       result: lazy(() => wait(raw, process)),
     };
   } catch (error) {

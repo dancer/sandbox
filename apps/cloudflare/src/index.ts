@@ -284,8 +284,12 @@ const handleLive = async (env: Env, url: URL): Promise<Response> => {
       "echo failed >&2; exit 7",
     ]);
     const running = await sandbox.process.spawnShell(`cat ${file}`);
-    const output = await text(running.output);
-    const spawn = await running.result;
+    const [output, stdoutStream, stderrStream, spawn] = await Promise.all([
+      text(running.output),
+      running.stdout === undefined ? Promise.resolve("") : text(running.stdout),
+      running.stderr === undefined ? Promise.resolve("") : text(running.stderr),
+      running.result,
+    ]);
     const ok = [
       exists,
       listed,
@@ -312,6 +316,8 @@ const handleLive = async (env: Env, url: URL): Promise<Response> => {
       failed.stderr.includes("failed"),
       spawn.ok,
       output.includes(message),
+      stdoutStream.includes(message),
+      stderrStream === "",
     ].every(Boolean);
 
     return json({
@@ -324,7 +330,7 @@ const handleLive = async (env: Env, url: URL): Promise<Response> => {
       ok,
       provider: sandbox.provider,
       shell,
-      spawn: { ...spawn, output },
+      spawn: { ...spawn, output, stderrStream, stdoutStream },
     });
   } catch (error) {
     return failure(error);

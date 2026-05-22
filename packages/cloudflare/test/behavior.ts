@@ -98,6 +98,8 @@ export const workflow = ({ body, response }: Result): void => {
     ok: true,
   });
   expect(body.spawn.output).toContain("hello from cloudflare");
+  expect(body.spawn.stdoutStream).toContain("hello from cloudflare");
+  expect(body.spawn.stderrStream).toBe("");
 };
 
 export const ports = ({ body, response }: PortResult): void => {

@@ -12,7 +12,24 @@ let getSeen: unknown;
 let mkdirSeen: unknown;
 let readSeen: unknown;
 let setEnvSeen: unknown;
+let startProcessSeen: unknown;
 let writeSeen: unknown;
+
+const sse = (
+  ...events: readonly [string, string][]
+): ReadableStream<Uint8Array> =>
+  new ReadableStream({
+    start(controller) {
+      for (const [type, data] of events) {
+        controller.enqueue(
+          new TextEncoder().encode(
+            `data: ${JSON.stringify({ data, type })}\n\n`
+          )
+        );
+      }
+      controller.close();
+    },
+  });
 
 const raw = {
   destroy: () => Promise.resolve(),
@@ -29,6 +46,11 @@ const raw = {
     exposeSeen = { options, port };
     return Promise.resolve({ url: "https://preview.example.com" });
   },
+  getProcessLogs: () =>
+    Promise.resolve({
+      stderr: "err",
+      stdout: "out",
+    }),
   mkdir: (path: string, options: unknown) => {
     mkdirSeen = { options, path };
     return Promise.resolve();
@@ -51,6 +73,16 @@ const raw = {
     setEnvSeen = input;
     return Promise.resolve();
   },
+  startProcess: (line: string, options: unknown) => {
+    startProcessSeen = { line, options };
+    return Promise.resolve({
+      id: "process",
+      kill: () => Promise.resolve(),
+      waitForExit: () => Promise.resolve({ exitCode: 0 }),
+    });
+  },
+  streamProcessLogs: () =>
+    Promise.resolve(sse(["stdout", "out"], ["stderr", "err"])),
   writeFile: (path: string, content: unknown, options?: unknown) => {
     writeSeen = { content, options, path };
     return Promise.resolve();
@@ -147,6 +179,49 @@ test("cloudflare maps command options without executing a real provider", async 
         env: { A: "1" },
         timeout: 123,
       },
+    });
+  } finally {
+    await sandbox.stop();
+  }
+});
+
+test("cloudflare exposes separate process streams", async () => {
+  startProcessSeen = undefined;
+  const sandbox = await create({
+    adapter: cloudflare({
+      binding,
+    }),
+  });
+
+  try {
+    const process = await sandbox.process.spawn("echo", ["hello"], {
+      cwd: "/tmp",
+      env: { A: "1" },
+      timeout: 123,
+    });
+    const [output, stdout, stderr, result] = await Promise.all([
+      new Response(process.output).text(),
+      new Response(process.stdout).text(),
+      new Response(process.stderr).text(),
+      process.result,
+    ]);
+
+    expect(startProcessSeen).toEqual({
+      line: "echo hello",
+      options: {
+        cwd: "/tmp",
+        env: { A: "1" },
+        timeout: 123,
+      },
+    });
+    expect(output).toBe("outerr");
+    expect(stdout).toBe("out");
+    expect(stderr).toBe("err");
+    expect(result).toEqual({
+      code: 0,
+      ok: true,
+      stderr: "err",
+      stdout: "out",
     });
   } finally {
     await sandbox.stop();
