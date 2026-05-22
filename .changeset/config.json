@@ -1,0 +1,24 @@
+{
+  "$schema": "https://unpkg.com/@changesets/config@3.1.4/schema.json",
+  "access": "public",
+  "baseBranch": "main",
+  "changelog": "@changesets/cli/changelog",
+  "commit": false,
+  "fixed": [
+    [
+      "@sandbox-sdk/ai",
+      "@sandbox-sdk/blaxel",
+      "@sandbox-sdk/cloudflare",
+      "@sandbox-sdk/codesandbox",
+      "@sandbox-sdk/core",
+      "@sandbox-sdk/daytona",
+      "@sandbox-sdk/e2b",
+      "@sandbox-sdk/local",
+      "@sandbox-sdk/modal",
+      "@sandbox-sdk/vercel"
+    ]
+  ],
+  "ignore": [],
+  "linked": [],
+  "updateInternalDependencies": "patch"
+}

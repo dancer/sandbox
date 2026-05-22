@@ -1,0 +1,43 @@
+name: release
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+permissions:
+  contents: write
+  id-token: write
+  pull-requests: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.9
+      - run: bun install --frozen-lockfile
+      - name: create release pull request or publish
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          commit: "chore: version packages"
+          publish: bun run release
+          title: "chore: version packages"
+          version: bun run version:packages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_CONFIG_PROVENANCE: true
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: update production branch
+        if: steps.changesets.outputs.published == 'true'
+        run: git push origin HEAD:production --force

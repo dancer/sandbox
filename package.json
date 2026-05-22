@@ -8,6 +8,7 @@
   ],
   "type": "module",
   "scripts": {
+    "changeset": "changeset",
     "dev": "bun run --cwd apps/site dev",
     "build": "bun run build:packages && bun run --cwd apps/site build && bun run --cwd apps/cloudflare typecheck && tsc -p examples/tsconfig.json",
     "build:packages": "bun run --cwd packages/core build && bun run --cwd packages/local build && bun run --cwd packages/ai build && bun run --cwd packages/vercel build && bun run --cwd packages/e2b build && bun run --cwd packages/daytona build && bun run --cwd packages/cloudflare build && bun run --cwd packages/modal build && bun run --cwd packages/blaxel build && bun run --cwd packages/codesandbox build",
@@ -16,6 +17,7 @@
     "docs:api:check": "bun run docs:api && git diff --exit-code docs/api.md",
     "fix": "ultracite fix",
     "pack:packages": "for p in packages/core packages/local packages/ai packages/vercel packages/e2b packages/daytona packages/cloudflare packages/modal packages/blaxel packages/codesandbox; do (cd $p && bun pm pack --dry-run); done",
+    "release": "bun run build:packages && bun run pack:packages && changeset publish",
     "test": "bun run build:packages && bun test packages scripts test",
     "verify:env": "bun --env-file=.env.local scripts/credentials.ts",
     "verify:providers": "bun run verify:env && bun run build:packages && bun --env-file=.env.local test --timeout=300000 packages/blaxel/test/live.test.ts packages/cloudflare/test/live.test.ts packages/daytona/test/live.test.ts packages/e2b/test/live.test.ts packages/modal/test/live.test.ts packages/vercel/test/live.test.ts && node --env-file=.env.local packages/codesandbox/test/live.mjs",
@@ -27,9 +29,11 @@
     "verify:modal": "bun --env-file=.env.local scripts/credentials.ts modal && bun run --cwd packages/modal build && bun --env-file=.env.local test --timeout=300000 packages/modal/test/live.test.ts",
     "verify:vercel": "bun --env-file=.env.local scripts/credentials.ts vercel && bun run --cwd packages/vercel build && bun --env-file=.env.local test --timeout=300000 packages/vercel/test/live.test.ts",
     "typecheck": "bun run build:packages && bun run --cwd apps/site typecheck && bun run --cwd apps/cloudflare typecheck && tsc -p examples/tsconfig.json",
+    "version:packages": "changeset version",
     "prepare": "husky"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.31.0",
     "@cloudflare/sandbox": "^0.10.2",
     "@cloudflare/workers-types": "^4.20260521.1",
     "@sandbox-sdk/ai": "workspace:*",
