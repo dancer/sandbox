@@ -140,6 +140,8 @@ const capabilities: Capabilities = {
 const present = (value: string | undefined): value is string =>
   value !== undefined && value.length > 0;
 
+const secrets = ["MODAL_TOKEN_ID", "MODAL_TOKEN_SECRET"] as const;
+
 const first = (
   ...values: readonly (string | undefined)[]
 ): string | undefined => values.find(present);
@@ -264,6 +266,20 @@ const set = <Key extends keyof ModalSdk.SandboxCreateParams>(
   }
 };
 
+const assertSandboxEnv = (
+  value: Readonly<Record<string, string>> | undefined
+): void => {
+  const leaked = secrets.filter((name) => value?.[name] !== undefined);
+  if (leaked.length === 0) {
+    return;
+  }
+  throw sandboxError(
+    provider,
+    `Modal provider credentials cannot be forwarded into sandbox env: ${leaked.join(", ")}`,
+    "configuration"
+  );
+};
+
 const createOptions = (
   options: Modal,
   input: Parameters<Adapter<Raw>["create"]>[0],
@@ -304,6 +320,7 @@ const createOptions = (
   set(output, "unencryptedPorts", options.unencryptedPorts);
   set(output, "verbose", options.verbose);
   set(output, "volumes", options.volumes);
+  assertSandboxEnv(output.env);
   return output;
 };
 

@@ -105,6 +105,39 @@ test("modal rejects invalid create timeouts before provider calls", async () => 
   expect(called).toBe(false);
 });
 
+test("modal rejects provider credentials in sandbox env before provider calls", async () => {
+  let called = false;
+  const client = {
+    apps: {
+      fromName: () => Promise.resolve({}),
+    },
+    images: {
+      fromRegistry: () => ({}),
+    },
+    sandboxes: {
+      create: () => {
+        called = true;
+        return Promise.reject(new Error("provider called"));
+      },
+    },
+  } as unknown as ModalSdk.ModalClient;
+
+  await expect(
+    create({
+      adapter: modal({
+        client,
+        env: {
+          MODAL_TOKEN_SECRET: "secret",
+        },
+      }),
+    })
+  ).rejects.toMatchObject({
+    code: "configuration",
+    provider: "modal",
+  });
+  expect(called).toBe(false);
+});
+
 test("modal maps create options, tags, commands, and ports", async () => {
   const execSeen: unknown[] = [];
   let appSeen: unknown;
