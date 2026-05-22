@@ -111,14 +111,19 @@ test("modal maps create options, tags, commands, and ports", async () => {
   let createSeen: unknown;
   let imageSeen: unknown;
   const directories: unknown[] = [];
+  let detached = false;
   let snapshotted = false;
   let tagsSeen: unknown;
+  let terminated = false;
   const bucket = {} as ModalSdk.CloudBucketMount;
   const probe = {} as ModalSdk.Probe;
   const proxy = {} as ModalSdk.Proxy;
   const secret = {} as ModalSdk.Secret;
   const volume = {} as ModalSdk.Volume;
   const raw = {
+    detach: () => {
+      detached = true;
+    },
     exec: (command: string[], options: unknown) => {
       execSeen.push({ command, options });
       return Promise.resolve(processOutput());
@@ -138,7 +143,10 @@ test("modal maps create options, tags, commands, and ports", async () => {
       snapshotted = true;
       return Promise.resolve({ imageId: "im-snapshot-created" });
     },
-    terminate: () => Promise.resolve(),
+    terminate: () => {
+      terminated = true;
+      return Promise.resolve();
+    },
     tunnels: () =>
       Promise.resolve({
         8080: {
@@ -200,6 +208,7 @@ test("modal maps create options, tags, commands, and ports", async () => {
       readinessProbe: probe,
       regions: ["us-east"],
       secrets: [secret],
+      stop: "detach",
       tags: { owner: "sdk" },
       timeout: 123,
       unencryptedPorts: [7070],
@@ -321,6 +330,10 @@ test("modal maps create options, tags, commands, and ports", async () => {
     code: "unsupported",
     provider: "modal",
   });
+
+  await sandbox.stop();
+  expect(detached).toBe(true);
+  expect(terminated).toBe(false);
 });
 
 test("modal writes readable streams in chunks", async () => {

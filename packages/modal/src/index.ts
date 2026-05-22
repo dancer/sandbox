@@ -90,6 +90,8 @@ export type Modal = Readonly<
     regions?: CreateParams["regions"];
     /** Modal secrets injected as sandbox environment variables */
     secrets?: CreateParams["secrets"];
+    /** stop behavior used by `sandbox.stop` */
+    stop?: "detach" | "terminate";
     /** default tags attached to new sandboxes */
     tags?: Readonly<Record<string, string>>;
     /** sandbox lifetime timeout in milliseconds */
@@ -415,7 +417,8 @@ const wrap = async <Value>(
 const createSandbox = (
   raw: Raw,
   cwd: string,
-  ports: readonly number[]
+  ports: readonly number[],
+  stop: Modal["stop"]
 ): Sandbox<Raw> => ({
   capabilities,
   cwd,
@@ -486,6 +489,10 @@ const createSandbox = (
     restore: () => rejectUnsupported("in-place snapshot restore"),
   },
   stop: async () => {
+    if (stop === "detach") {
+      raw.detach();
+      return;
+    }
     await wrap(() => raw.terminate(), "stop");
   },
 });
@@ -520,7 +527,7 @@ export const modal = (options: Modal = {}): Adapter<Raw> => ({
       }
     }
 
-    return createSandbox(raw, cwd, ports);
+    return createSandbox(raw, cwd, ports, options.stop ?? "terminate");
   },
   provider,
 });
