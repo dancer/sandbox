@@ -130,13 +130,15 @@ Use `supportsRaw(sandbox, "...")` and `raw` for features that do not have one
 clean cross-provider meaning:
 Cloudflare sessions, code contexts, quick tunnels, and configured backups,
 bucket mounts, and desktop images; Vercel network policy and timeout extension;
+Vercel named sandbox list, get, getOrCreate, fork, dynamic updates, sessions,
+snapshot lists, snapshot trees, proxy helpers, and native filesystem helpers;
 E2B Git, MCP, PTY, create-time network settings, and mounted volumes; Daytona
 SSH, PTY, LSP, create-time network settings, tier-gated network updates, and
 resize; Modal create-time volumes, cloud bucket mounts, secrets, tags, connect
 tokens, PTY, GPUs, and filesystem or directory snapshots; Blaxel create-time
-volumes, drives, previews, sessions,
-system upgrades, and codegen; and CodeSandbox VM lifecycle, preview tokens,
-sessions, interpreters, terminals, and file watchers.
+volumes, drives, previews, sessions, system upgrades, and codegen; and
+CodeSandbox VM lifecycle, preview tokens, sessions, interpreters, terminals,
+and file watchers.
 
 ## AI Tools
 

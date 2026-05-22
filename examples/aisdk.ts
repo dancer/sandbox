@@ -13,11 +13,9 @@ const create = <Result>(
   withSandbox(
     {
       adapter: vercel({
-        ports: [3000],
         runtime: "node24",
       }),
       cwd: "/vercel/sandbox",
-      ports: [3000],
       timeout: 300_000,
     },
     (sandbox) => {

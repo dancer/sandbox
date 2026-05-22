@@ -148,8 +148,8 @@ const ROWS: { capability: string; cells: Record<ColumnKey, Cell> }[] = [
       modal: no(
         "Modal can create filesystem snapshots, but in-place restore is not exposed by the normalized adapter."
       ),
-      vercel: no(
-        "Vercel can create a new sandbox from a snapshot through the snapshot create option, but in-place restore is not supported."
+      vercel: warn(
+        "Vercel restore updates the named sandbox current snapshot and stops the active session so the next operation resumes from that snapshot."
       ),
     },
   },

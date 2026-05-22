@@ -9,11 +9,9 @@ const model = "openai/gpt-5.4-nano";
 const text = await withSandbox(
   {
     adapter: vercel({
-      ports: [3000],
       runtime: "node24",
     }),
     cwd: "/vercel/sandbox",
-    ports: [3000],
     timeout: 300_000,
   },
   async (sandbox) => {

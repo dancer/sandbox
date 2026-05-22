@@ -2060,6 +2060,47 @@ export type Resources = Readonly<{
 }>;
 ```
 
+#### `Runtime`
+
+Vercel sandbox runtime id
+
+```ts
+export type Runtime =
+  | "node26"
+  | "node24"
+  | "node22"
+  | "python3.13"
+  | (string & {
+      readonly __vercelRuntime?: never;
+    });
+```
+
+#### `KeepLastSnapshots`
+
+Vercel sandbox snapshot retention policy
+
+```ts
+export type KeepLastSnapshots = Readonly<{
+  /** number of snapshots to retain */
+  count: number;
+  /** expiration in milliseconds applied to retained snapshots */
+  expiration?: number;
+  /** delete evicted snapshots immediately when true */
+  deleteEvicted?: boolean;
+}>;
+```
+
+#### `Fork`
+
+Vercel sandbox fork source
+
+```ts
+export type Fork = Readonly<{
+  /** source sandbox name to fork from */
+  sourceSandbox: string;
+}>;
+```
+
 #### `Vercel`
 
 Vercel sandbox adapter configuration
@@ -2072,28 +2113,46 @@ export type Vercel = Readonly<{
   env?: Readonly<Record<string, string>>;
   /** custom fetch implementation passed to @vercel/sandbox */
   fetch?: typeof fetch;
+  /** fork a new sandbox from an existing named Vercel sandbox */
+  fork?: Fork | string;
+  /** use Sandbox.getOrCreate for idempotent named sandbox creation */
+  getOrCreate?: boolean;
+  /** retain only the most recent snapshots for this sandbox */
+  keepLastSnapshots?: KeepLastSnapshots;
+  /** Vercel sandbox name for create and getOrCreate flows */
+  name?: string;
   /** Vercel network policy for the sandbox */
   networkPolicy?: NetworkPolicy;
-  /** ports declared at create time and later exposed with ports.expose */
+  /** ports exposed when the sandbox is created; ports.expose can add more later */
   ports?: readonly number[];
+  /** enable or disable automatic restore between Vercel sandbox sessions */
+  persistent?: boolean;
   /** Vercel project id; falls back to VERCEL_PROJECT_ID when using access-token auth */
   projectId?: string;
   /** resource request for new sandboxes */
   resources?: Resources;
-  /** Vercel runtime id such as node24 or python3.13 */
-  runtime?: string;
+  /** Vercel runtime id such as node26, node24, node22, or python3.13 */
+  runtime?: Runtime;
+  /** abort signal for sandbox creation, get, getOrCreate, or fork */
+  signal?: AbortSignal;
   /** git or tarball source used for new sandboxes */
   source?: Source;
   /** run commands with sudo when supported by Vercel Sandbox */
   sudo?: boolean;
   /** expiration in milliseconds for snapshots created through the normalized api */
   snapshotExpiration?: number;
+  /** metadata tags attached to the Vercel sandbox */
+  tags?: Readonly<Record<string, string>>;
   /** Vercel team id; falls back to VERCEL_TEAM_ID when using access-token auth */
   teamId?: string;
   /** sandbox lifetime timeout in milliseconds */
   timeout?: number;
   /** Vercel access token; falls back to VERCEL_TOKEN */
   token?: string;
+  /** called by @vercel/sandbox when a named sandbox is newly created */
+  onCreate?: (sandbox: VercelRaw) => Promise<void>;
+  /** called by @vercel/sandbox when a named sandbox session resumes */
+  onResume?: (sandbox: VercelRaw) => Promise<void>;
 }>;
 ```
 
@@ -2113,4 +2172,43 @@ alias for users who prefer the explicit provider name
 
 ```ts
 export declare const vercelSandbox: (options?: Vercel) => Adapter<Raw>;
+```
+
+### re-exports
+
+#### `re-export`
+
+```ts
+export {
+  APIError as VercelAPIError,
+  Command as VercelCommand,
+  CommandFinished as VercelCommandFinished,
+  FileSystem as VercelFileSystem,
+  Sandbox as VercelSandbox,
+  Session as VercelSession,
+  Snapshot as VercelSnapshot,
+  StreamError as VercelStreamError,
+  defineSandboxProxy as defineVercelSandboxProxy,
+} from "@vercel/sandbox";
+```
+
+#### `re-export`
+
+```ts
+export type {
+  InvalidRequestProxyHandler as VercelInvalidRequestProxyHandler,
+  NetworkPolicy as VercelNetworkPolicy,
+  NetworkPolicyKeyValueMatcher as VercelNetworkPolicyKeyValueMatcher,
+  NetworkPolicyMatch as VercelNetworkPolicyMatch,
+  NetworkPolicyMatcher as VercelNetworkPolicyMatcher,
+  NetworkPolicyRule as VercelNetworkPolicyRule,
+  NetworkTransformer as VercelNetworkTransformer,
+  SerializedCommand as SerializedVercelCommand,
+  SerializedCommandFinished as SerializedVercelCommandFinished,
+  ProxyHandler as VercelProxyHandler,
+  ProxyMeta as VercelProxyMeta,
+  SerializedSandbox as SerializedVercelSandbox,
+  SerializedSnapshot as SerializedVercelSnapshot,
+  SnapshotTreeNodeData as VercelSnapshotTreeNodeData,
+} from "@vercel/sandbox";
 ```

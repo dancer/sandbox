@@ -8,10 +8,11 @@ import { vercel } from "@sandbox-sdk/vercel";
 
 const sandbox = await create({
   adapter: vercel({
-    ports: [3000],
-    runtime: "node22",
+    runtime: "node24",
   }),
-});`;
+});
+
+const preview = await sandbox.ports.expose(3000);`;
 
 export const Vercel = () => (
   <section>
@@ -20,12 +21,15 @@ export const Vercel = () => (
     </Heading>
     <p>
       Vercel via <code>@vercel/sandbox</code>. Backed by Vercel's Fluid Compute:
-      ephemeral, region-local, hot-pooled. The adapter can pin a runtime at
-      construction and exposes ports through Vercel's built-in tunneling.
+      named, persistent microVMs with snapshots, dynamic ports, network policy,
+      sessions, and provider-native lifecycle controls. The adapter normalizes
+      files, commands, ports, and snapshots while keeping the full Vercel SDK on{" "}
+      <code>raw</code>.
     </p>
     <p>
-      Use the shared <code>snapshot</code> create option to start a fresh Vercel
-      sandbox from a snapshot id. In-place snapshot restore is not supported.
+      Use <code>snapshot</code> to start from a snapshot id, or{" "}
+      <code>snapshots.restore()</code> to point the current named sandbox at a
+      snapshot and resume from it on the next operation.
     </p>
     <CodeBlock code={VERCEL_EXAMPLE} lang="ts" />
     <div className="flex flex-col gap-2">
@@ -35,9 +39,27 @@ export const Vercel = () => (
       <Accordion className="rounded-md border-dotted" type="multiple">
         <PropAccordionItem name="runtime" status="optional" value="runtime">
           <p>
-            Vercel Sandbox runtime (e.g. <code>node22</code>,{" "}
-            <code>python3.12</code>). Determines the base image and the
-            available system packages.
+            Vercel Sandbox runtime. Supported runtime ids include{" "}
+            <code>node26</code>, <code>node24</code>, <code>node22</code>, and{" "}
+            <code>python3.13</code>.
+          </p>
+        </PropAccordionItem>
+        <PropAccordionItem name="name" status="optional" value="name">
+          <p>
+            Named sandbox to create or reuse with <code>getOrCreate</code>.
+            Names make Vercel sandboxes resumable across processes.
+          </p>
+        </PropAccordionItem>
+        <PropAccordionItem name="getOrCreate" status="optional" value="boolean">
+          <p>
+            Use Vercel's native <code>Sandbox.getOrCreate()</code> flow for
+            idempotent named sandbox setup.
+          </p>
+        </PropAccordionItem>
+        <PropAccordionItem name="fork" status="optional" value="fork">
+          <p>
+            Fork from an existing named Vercel sandbox while keeping the shared
+            Sandbox SDK shape.
           </p>
         </PropAccordionItem>
         <PropAccordionItem name="teamId" status="optional" value="teamId">
@@ -60,8 +82,18 @@ export const Vercel = () => (
         </PropAccordionItem>
         <PropAccordionItem name="ports" status="optional" value="ports">
           <p>
-            Ports that can be exposed later with <code>ports.expose()</code>.
-            Vercel requires these at sandbox creation time.
+            Ports to expose immediately. <code>ports.expose()</code> can add new
+            ports later through Vercel's dynamic sandbox update API.
+          </p>
+        </PropAccordionItem>
+        <PropAccordionItem
+          name="keepLastSnapshots"
+          status="optional"
+          value="policy"
+        >
+          <p>
+            Vercel snapshot retention policy for named sandboxes. Use this to
+            cap stored snapshots while keeping fast restore workflows.
           </p>
         </PropAccordionItem>
       </Accordion>
