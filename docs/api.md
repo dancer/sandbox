@@ -1417,6 +1417,7 @@ export type CloudflareBridgeRaw = Readonly<{
     stats(): Promise<CloudflareBridgeJson>;
   }>;
   persist(id: string, options?: Persist): Promise<Uint8Array>;
+  pty(id: string, options?: Pty): PtyConnection;
   request(path: string, init?: RequestInit): Promise<Response>;
   running(id: string): Promise<boolean>;
   session: Readonly<{
@@ -1466,6 +1467,19 @@ export type CloudflareBridge = Readonly<{
 }>;
 ```
 
+#### `PtyConnection`
+
+connection details for the bridge PTY WebSocket route
+
+```ts
+export type PtyConnection = Readonly<{
+  /** headers to pass when the WebSocket client supports custom headers */
+  headers: Readonly<Record<string, string>>;
+  /** WebSocket URL for `/v1/sandbox/:id/pty` */
+  url: string;
+}>;
+```
+
 #### `Persist`
 
 options for `sandbox.raw.persist()`
@@ -1504,6 +1518,23 @@ export type Mount = Readonly<{
   mountPath: string;
   /** bridge mount options forwarded to Cloudflare */
   options?: Readonly<Record<string, unknown>>;
+}>;
+```
+
+#### `Pty`
+
+options for the raw bridge PTY WebSocket route
+
+```ts
+export type Pty = Readonly<{
+  /** terminal width in columns */
+  cols?: number;
+  /** terminal height in rows */
+  rows?: number;
+  /** bridge session id used to scope the terminal */
+  session?: string;
+  /** shell binary to run inside the terminal */
+  shell?: string;
 }>;
 ```
 

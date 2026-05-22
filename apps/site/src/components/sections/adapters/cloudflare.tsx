@@ -70,7 +70,9 @@ export const Cloudflare = () => (
       bridge and use <code>cloudflareBridge()</code>. It keeps normalized files
       and command execution available over HTTP while bridge lifecycle,
       sessions, persist, hydrate, bucket mounts, warm-pool controls, health, and
-      OpenAPI schema access stay typed on <code>sandbox.raw</code>.
+      OpenAPI schema access stay typed on <code>sandbox.raw</code>. PTY support
+      returns a typed WebSocket connection descriptor so your app can own the
+      terminal client.
     </p>
     <CodeBlock code={CLOUDFLARE_BRIDGE_EXAMPLE} lang="ts" />
     <div className="flex flex-col gap-2">

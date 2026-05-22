@@ -43,6 +43,7 @@ export type CloudflareBridgeRaw = Readonly<{
     stats(): Promise<CloudflareBridgeJson>;
   }>;
   persist(id: string, options?: Persist): Promise<Uint8Array>;
+  pty(id: string, options?: Pty): PtyConnection;
   request(path: string, init?: RequestInit): Promise<Response>;
   running(id: string): Promise<boolean>;
   session: Readonly<{
@@ -79,6 +80,14 @@ export type CloudflareBridge = Readonly<{
   id?: string;
 }>;
 
+/** connection details for the bridge PTY WebSocket route */
+export type PtyConnection = Readonly<{
+  /** headers to pass when the WebSocket client supports custom headers */
+  headers: Readonly<Record<string, string>>;
+  /** WebSocket URL for `/v1/sandbox/:id/pty` */
+  url: string;
+}>;
+
 /** options for `sandbox.raw.persist()` */
 export type Persist = Readonly<{
   /** workspace-relative paths to exclude from the tar archive */
@@ -103,6 +112,18 @@ export type Mount = Readonly<{
   mountPath: string;
   /** bridge mount options forwarded to Cloudflare */
   options?: Readonly<Record<string, unknown>>;
+}>;
+
+/** options for the raw bridge PTY WebSocket route */
+export type Pty = Readonly<{
+  /** terminal width in columns */
+  cols?: number;
+  /** terminal height in rows */
+  rows?: number;
+  /** bridge session id used to scope the terminal */
+  session?: string;
+  /** shell binary to run inside the terminal */
+  shell?: string;
 }>;
 
 export const provider = "cloudflare";
@@ -169,6 +190,44 @@ const trim = (value: string): string => value.replace(/\/+$/u, "");
 export const bridgeBody = (input: Uint8Array | string): ArrayBuffer | string =>
   typeof input === "string" ? input : Uint8Array.from(input).buffer;
 
+const bridgeUrl = (value: string): string => {
+  try {
+    const url = new URL(trim(value));
+    if (url.protocol === "http:" || url.protocol === "https:") {
+      return trim(url.toString());
+    }
+  } catch {
+    throw sandboxError(
+      provider,
+      "Cloudflare bridge URL must be a valid http or https URL",
+      "configuration"
+    );
+  }
+
+  throw sandboxError(
+    provider,
+    "Cloudflare bridge URL must be a valid http or https URL",
+    "configuration"
+  );
+};
+
+const ptyNumber = (
+  name: string,
+  value: number | undefined
+): string | undefined => {
+  if (value === undefined) {
+    return;
+  }
+  if (Number.isInteger(value) && value > 0) {
+    return String(value);
+  }
+  throw sandboxError(
+    provider,
+    `Cloudflare bridge pty ${name} must be a positive integer`,
+    "configuration"
+  );
+};
+
 const validate = (
   options: CloudflareBridge
 ): { token?: string; url: string } => {
@@ -182,7 +241,37 @@ const validate = (
   }
 
   const token = options.token?.trim() || env("SANDBOX_API_KEY");
-  return token === undefined ? { url: trim(url) } : { token, url: trim(url) };
+  const value = bridgeUrl(url);
+  return token === undefined ? { url: value } : { token, url: value };
+};
+
+const pty = (
+  url: string,
+  token: string | undefined,
+  id: string,
+  options: Pty = {}
+): PtyConnection => {
+  const target = new URL(`${url}/v1/sandbox/${encodeURIComponent(id)}/pty`);
+  target.protocol = target.protocol === "https:" ? "wss:" : "ws:";
+  const cols = ptyNumber("cols", options.cols);
+  if (cols !== undefined) {
+    target.searchParams.set("cols", cols);
+  }
+  const rows = ptyNumber("rows", options.rows);
+  if (rows !== undefined) {
+    target.searchParams.set("rows", rows);
+  }
+  if (options.shell !== undefined) {
+    target.searchParams.set("shell", options.shell);
+  }
+  if (options.session !== undefined) {
+    target.searchParams.set("session", options.session);
+  }
+
+  return {
+    headers: token === undefined ? {} : { Authorization: `Bearer ${token}` },
+    url: target.toString(),
+  };
 };
 
 const parseJson = async <Value>(response: Response): Promise<Value> => {
@@ -317,6 +406,7 @@ export const bridge = (options: CloudflareBridge): CloudflareBridgeRaw => {
         return parseJson<CloudflareBridgeJson>(response);
       },
     },
+    pty: (id, input) => pty(url, token, id, input),
     request,
     running: async (id) => {
       const response = await request(

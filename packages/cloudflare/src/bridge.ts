@@ -31,6 +31,8 @@ export type {
   CloudflareBridgeRaw,
   Mount,
   Persist,
+  Pty,
+  PtyConnection,
   Session,
 } from "./bridge-client.js";
 

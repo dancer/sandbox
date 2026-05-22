@@ -238,9 +238,10 @@ const sandbox = await create({
 
 The bridge adapter supports normalized files and command execution over HTTP.
 Bridge lifecycle, sessions, persist, hydrate, bucket mounts, warm-pool controls,
-health, and OpenAPI schema access are available through `sandbox.raw`.
-Normalized ports and snapshots stay unsupported because the bridge does not
-expose the same preview and snapshot contract as the Worker binding adapter.
+health, OpenAPI schema access, and PTY connection descriptors are available
+through `sandbox.raw`. Normalized ports, snapshots, and terminal I/O stay
+unsupported because the bridge does not expose the same preview, snapshot, or
+WebSocket ownership contract as the Worker binding adapter.
 
 ## Cloudflare Validation
 

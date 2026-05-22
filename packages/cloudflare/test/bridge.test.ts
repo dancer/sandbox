@@ -90,6 +90,20 @@ test("cloudflareBridge reports missing bridge url", async () => {
   }
 });
 
+test("cloudflareBridge rejects invalid bridge urls", async () => {
+  await expect(
+    create({
+      adapter: cloudflareBridge({
+        fetch: bridgeFetch(() => json({}), []),
+        url: "bridge.example.com",
+      }),
+    })
+  ).rejects.toMatchObject({
+    code: "configuration",
+    provider: "cloudflare",
+  });
+});
+
 test("cloudflareBridge maps create session and cleanup", async () => {
   const seen: Seen[] = [];
   const sandbox = await create({
@@ -322,6 +336,17 @@ test("cloudflareBridge exposes raw bridge lifecycle methods", async () => {
     });
     await sandbox.raw.pool.prime();
     await sandbox.raw.pool.shutdownPrewarmed();
+    expect(
+      sandbox.raw.pty("box-1", {
+        cols: 120,
+        rows: 40,
+        session: "raw-session",
+        shell: "/bin/bash",
+      })
+    ).toEqual({
+      headers: {},
+      url: "wss://bridge.example.com/v1/sandbox/box-1/pty?cols=120&rows=40&shell=%2Fbin%2Fbash&session=raw-session",
+    });
   } finally {
     await sandbox.stop();
   }
@@ -332,6 +357,54 @@ test("cloudflareBridge exposes raw bridge lifecycle methods", async () => {
   expect(seen.map((request) => `${request.method} ${request.path}`)).toContain(
     "POST /v1/pool/prime"
   );
+});
+
+test("cloudflareBridge returns bearer headers for raw pty", async () => {
+  const sandbox = await create({
+    adapter: cloudflareBridge({
+      fetch: bridgeFetch((request) => {
+        if (request.method === "DELETE") {
+          return new Response(null, { status: 204 });
+        }
+        return missing();
+      }, []),
+      id: "box-1",
+      token: "secret",
+      url: "http://bridge.example.com",
+    }),
+  });
+
+  try {
+    expect(sandbox.raw.pty("box-1")).toEqual({
+      headers: { Authorization: "Bearer secret" },
+      url: "ws://bridge.example.com/v1/sandbox/box-1/pty",
+    });
+  } finally {
+    await sandbox.stop();
+  }
+});
+
+test("cloudflareBridge validates raw pty dimensions", async () => {
+  const sandbox = await create({
+    adapter: cloudflareBridge({
+      fetch: bridgeFetch((request) => {
+        if (request.method === "DELETE") {
+          return new Response(null, { status: 204 });
+        }
+        return missing();
+      }, []),
+      id: "box-1",
+      url: "https://bridge.example.com",
+    }),
+  });
+
+  try {
+    expect(() => sandbox.raw.pty("box-1", { cols: 0 })).toThrow(
+      "Cloudflare bridge pty cols must be a positive integer"
+    );
+  } finally {
+    await sandbox.stop();
+  }
 });
 
 test("cloudflareBridge keeps unsupported normalized features capability gated", async () => {
