@@ -4,7 +4,7 @@ import { Heading } from "@/components/heading";
 const RAW_EXAMPLE = `// typed per adapter. the local adapter exposes { root }, E2B exposes
 // the sandbox client, cloudflare exposes the durable object stub, etc
 const { root } = sandbox.raw;
-console.log("workspace mounted at", root);
+await inspectWorkspace(root);
 
 // cloud example: drop down to E2B's native filesystem watcher
 sandbox.raw.files.watchDir("src", (event) => {

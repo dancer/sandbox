@@ -1,3 +1,4 @@
+import { Buffer } from "node:buffer";
 import { dirname } from "node:path/posix";
 
 import {
@@ -214,7 +215,7 @@ const env = (name: string): string | undefined =>
 const decode = (value: string): unknown => {
   const base64 = value.replaceAll("-", "+").replaceAll("_", "/");
   const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, "=");
-  return JSON.parse(globalThis.atob(padded));
+  return JSON.parse(Buffer.from(padded, "base64").toString("utf-8"));
 };
 
 const oidc = (

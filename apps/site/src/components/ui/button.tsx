@@ -57,7 +57,7 @@ const Button = ({
       data-slot="button"
       data-variant={variant}
       data-size={size}
-      className={cn(buttonVariants({ className, size, variant }))}
+      className={cn(buttonVariants({ size, variant }), className)}
       {...props}
     />
   );

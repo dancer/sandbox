@@ -1,3 +1,4 @@
+import { Buffer } from "node:buffer";
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -64,7 +65,7 @@ const blaxelConfig = (context: Context): boolean =>
 const decode = (value: string): unknown => {
   const base64 = value.replaceAll("-", "+").replaceAll("_", "/");
   const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, "=");
-  return JSON.parse(globalThis.atob(padded));
+  return JSON.parse(Buffer.from(padded, "base64").toString("utf-8"));
 };
 
 const claims = (token: string): Claims | undefined => {
