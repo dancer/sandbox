@@ -390,6 +390,125 @@ test("vercel forwards process kill signals", async () => {
   }
 });
 
+test("vercel kills spawned processes on abort", async () => {
+  const original = VercelSandbox.create;
+  let signal: unknown;
+  const wait = async () => {
+    for (;;) {
+      if (signal !== undefined) {
+        return {
+          exitCode: 130,
+          stderr: () => Promise.resolve(""),
+          stdout: () => Promise.resolve(""),
+        };
+      }
+      await Bun.sleep(1);
+    }
+  };
+  const raw = {
+    fs: {
+      mkdir: () => Promise.resolve(),
+    },
+    name: "sandbox",
+    runCommand: () =>
+      Promise.resolve({
+        cmdId: "command",
+        kill: (input?: unknown) => {
+          signal = input;
+          return Promise.resolve();
+        },
+        logs,
+        wait,
+      }),
+    stop: () => Promise.resolve(),
+  } as unknown as VercelSandbox;
+  const controller = new AbortController();
+
+  VercelSandbox.create = (() =>
+    Promise.resolve(raw)) as typeof VercelSandbox.create;
+
+  try {
+    const sandbox = await create({
+      adapter: vercel({
+        projectId: "project",
+        teamId: "team",
+        token: "token",
+      }),
+    });
+    const process = await sandbox.process.spawn("sleep", ["10"], {
+      signal: controller.signal,
+    });
+
+    controller.abort("stopped");
+
+    await expect(process.result).rejects.toMatchObject({
+      code: "aborted",
+      provider: "vercel",
+    });
+    expect(signal).toBe("SIGTERM");
+  } finally {
+    VercelSandbox.create = original;
+  }
+});
+
+test("vercel kills spawned processes on timeout", async () => {
+  const original = VercelSandbox.create;
+  let signal: unknown;
+  const wait = async () => {
+    for (;;) {
+      if (signal !== undefined) {
+        return {
+          exitCode: 124,
+          stderr: () => Promise.resolve(""),
+          stdout: () => Promise.resolve(""),
+        };
+      }
+      await Bun.sleep(1);
+    }
+  };
+  const raw = {
+    fs: {
+      mkdir: () => Promise.resolve(),
+    },
+    name: "sandbox",
+    runCommand: () =>
+      Promise.resolve({
+        cmdId: "command",
+        kill: (input?: unknown) => {
+          signal = input;
+          return Promise.resolve();
+        },
+        logs,
+        wait,
+      }),
+    stop: () => Promise.resolve(),
+  } as unknown as VercelSandbox;
+
+  VercelSandbox.create = (() =>
+    Promise.resolve(raw)) as typeof VercelSandbox.create;
+
+  try {
+    const sandbox = await create({
+      adapter: vercel({
+        projectId: "project",
+        teamId: "team",
+        token: "token",
+      }),
+    });
+    const process = await sandbox.process.spawn("sleep", ["10"], {
+      timeout: 1,
+    });
+
+    await expect(process.result).rejects.toMatchObject({
+      code: "timeout",
+      provider: "vercel",
+    });
+    expect(signal).toBe("SIGTERM");
+  } finally {
+    VercelSandbox.create = original;
+  }
+});
+
 test("vercel exposes separate process streams", async () => {
   const original = VercelSandbox.create;
   const raw = {

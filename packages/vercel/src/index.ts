@@ -596,11 +596,15 @@ const execute = async (
       ...signals,
       ...(sudo === undefined ? {} : { sudo }),
     });
-    return result(
-      output.exitCode,
-      await output.stdout(signals),
-      await output.stderr(signals)
-    );
+    const stdout = await output.stdout(signals);
+    const stderr = await output.stderr(signals);
+    if (options.signal?.aborted) {
+      abort(provider, options.signal.reason);
+    }
+    if (deadline.aborted()) {
+      throw sandboxError(provider, "Command timed out", "timeout", output);
+    }
+    return result(output.exitCode, stdout, stderr);
   } catch (error) {
     if (options.signal?.aborted) {
       abort(provider, error);
@@ -623,11 +627,15 @@ const wait = async (
     deadline.signal === undefined ? {} : { signal: deadline.signal };
   try {
     const output = await running.wait(signals);
-    return result(
-      output.exitCode,
-      await output.stdout(signals),
-      await output.stderr(signals)
-    );
+    const stdout = await output.stdout(signals);
+    const stderr = await output.stderr(signals);
+    if (signal?.aborted) {
+      abort(provider, signal.reason);
+    }
+    if (deadline.aborted()) {
+      throw sandboxError(provider, "Command timed out", "timeout", output);
+    }
+    return result(output.exitCode, stdout, stderr);
   } catch (error) {
     if (signal?.aborted) {
       abort(provider, error);
@@ -662,13 +670,31 @@ const spawn = async (
       ...signals,
       ...(sudo === undefined ? {} : { sudo }),
     });
+    const cancel = (): void => {
+      void running.kill("SIGTERM");
+    };
+    const dispose = (): void => {
+      deadline.signal?.removeEventListener("abort", cancel);
+    };
+    if (deadline.signal?.aborted) {
+      cancel();
+    } else {
+      deadline.signal?.addEventListener("abort", cancel, { once: true });
+    }
     return {
       id: running.cmdId,
       kill: async (signal = "SIGTERM") => {
+        dispose();
         await running.kill(signal as VercelSignal);
       },
       output: stream(running.logs(signals)),
-      result: wait(running, deadline, options.signal),
+      result: (async () => {
+        try {
+          return await wait(running, deadline, options.signal);
+        } finally {
+          dispose();
+        }
+      })(),
       stderr: stream(running.logs(signals), "stderr"),
       stdout: stream(running.logs(signals), "stdout"),
     };
