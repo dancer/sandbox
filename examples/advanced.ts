@@ -9,7 +9,7 @@ import type { VercelRaw } from "@sandbox-sdk/vercel";
 
 export const useVercelRaw = async (sandbox: Sandbox<VercelRaw>) => {
   await sandbox.raw.extendTimeout(300_000);
-  await sandbox.raw.updateNetworkPolicy("deny-all");
+  await sandbox.raw.update({ networkPolicy: "deny-all" });
   return sandbox.raw.domain(3000);
 };
 

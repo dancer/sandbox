@@ -121,7 +121,7 @@ import type { Sandbox } from "@sandbox-sdk/core";
 import type { VercelRaw } from "@sandbox-sdk/vercel";
 
 async function tuneNetwork(sandbox: Sandbox<VercelRaw>) {
-  await sandbox.raw.updateNetworkPolicy("deny-all");
+  await sandbox.raw.update({ networkPolicy: "deny-all" });
   await sandbox.raw.extendTimeout(300_000);
 }
 ```

@@ -23,7 +23,7 @@
       "process.failure",
       "ports.expose",
       "sandbox.raw.extendTimeout",
-      "sandbox.raw.updateNetworkPolicy",
+      "sandbox.raw.update.networkPolicy",
       "sandbox.raw.status",
       "sandbox.raw.delete"
     ],

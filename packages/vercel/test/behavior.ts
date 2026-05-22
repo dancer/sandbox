@@ -116,7 +116,7 @@ export const workflowCoverage: Coverage = {
     "process.failure",
     "ports.expose",
     "sandbox.raw.extendTimeout",
-    "sandbox.raw.updateNetworkPolicy",
+    "sandbox.raw.update.networkPolicy",
     "sandbox.raw.status",
     "sandbox.raw.delete",
   ],
@@ -291,9 +291,10 @@ export const workflow = async (
   let extended = false;
   await sandbox.raw.extendTimeout(1000);
   extended = true;
-  const networkPolicy = await sandbox.raw.updateNetworkPolicy("deny-all");
-  const restoredNetworkPolicy =
-    await sandbox.raw.updateNetworkPolicy("allow-all");
+  await sandbox.raw.update({ networkPolicy: "deny-all" });
+  const { networkPolicy } = sandbox.raw;
+  await sandbox.raw.update({ networkPolicy: "allow-all" });
+  const { networkPolicy: restoredNetworkPolicy } = sandbox.raw;
   const commands = {
     create: await sandbox.files.text(locations.create),
     exec: await sandbox.files.text(locations.exec),
