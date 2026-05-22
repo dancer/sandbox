@@ -82,6 +82,31 @@ test("codesandbox rejects invalid create timeouts before provider calls", async 
   expect(called).toBe(false);
 });
 
+test("codesandbox rejects invalid session ids before provider calls", async () => {
+  let called = false;
+  const sdk = {
+    sandboxes: {
+      create: () => {
+        called = true;
+        return Promise.reject(new Error("provider called"));
+      },
+    },
+  };
+
+  await expect(
+    create({
+      adapter: codesandbox({
+        client: sdk,
+        session: { id: "session-id-that-is-too-long" },
+      }),
+    })
+  ).rejects.toMatchObject({
+    code: "configuration",
+    provider: "codesandbox",
+  });
+  expect(called).toBe(false);
+});
+
 test("codesandbox maps create options and normalized operations", async () => {
   let createSeen: unknown;
   let connectSeen: unknown;

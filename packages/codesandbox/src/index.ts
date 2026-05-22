@@ -57,7 +57,7 @@ export type CodeSandbox = Readonly<{
   path?: string;
   /** sandbox preview privacy */
   privacy?: CreateOptions["privacy"];
-  /** sdk session options forwarded to `sandbox.connect` */
+  /** sdk session options forwarded to `sandbox.connect`; custom ids must be 20 characters or less */
   session?: Omit<SessionOptions, "env">;
   /** stop behavior used by `sandbox.stop` */
   stop?: "delete" | "disconnect" | "hibernate" | "shutdown";
@@ -129,6 +129,16 @@ const validate = (options: CodeSandbox): void => {
     "CodeSandbox credentials missing. Set CSB_API_KEY or pass token to codesandbox().",
     "configuration"
   );
+};
+
+const validateSession = (options: CodeSandbox): void => {
+  if (options.session?.id !== undefined && options.session.id.length > 20) {
+    throw sandboxError(
+      provider,
+      "CodeSandbox session id must be 20 characters or less",
+      "configuration"
+    );
+  }
 };
 
 const sdk = (options: CodeSandbox): Sdk =>
@@ -515,6 +525,7 @@ export const codesandbox = (options: CodeSandbox = {}): Adapter<Raw> => ({
   capabilities,
   async create(input = {}) {
     validate(options);
+    validateSession(options);
     const current = sdk(options);
     const sandbox =
       input.id === undefined

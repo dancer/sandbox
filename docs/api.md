@@ -1718,7 +1718,7 @@ export type CodeSandbox = Readonly<{
   path?: string;
   /** sandbox preview privacy */
   privacy?: CreateOptions["privacy"];
-  /** sdk session options forwarded to `sandbox.connect` */
+  /** sdk session options forwarded to `sandbox.connect`; custom ids must be 20 characters or less */
   session?: Omit<SessionOptions, "env">;
   /** stop behavior used by `sandbox.stop` */
   stop?: "delete" | "disconnect" | "hibernate" | "shutdown";
