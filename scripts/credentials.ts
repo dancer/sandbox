@@ -52,10 +52,8 @@ const any = (names: readonly string[], context: Context): boolean =>
 
 const modalConfig = (context: Context): boolean => {
   const active = current(context);
-  return (
-    has("MODAL_CONFIG_PATH", context) ||
-    active.exists(join(active.home, ".modal.toml"))
-  );
+  const path = envValue("MODAL_CONFIG_PATH", context);
+  return active.exists(path ?? join(active.home, ".modal.toml"));
 };
 
 const blaxelConfig = (context: Context): boolean =>

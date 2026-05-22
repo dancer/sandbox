@@ -107,6 +107,17 @@ describe("credentialRows", () => {
     });
   });
 
+  test("requires custom Modal config paths to exist", () => {
+    expect(
+      row("modal", {
+        MODAL_CONFIG_PATH: "/tmp/sandbox-sdk-missing-modal.toml",
+      })
+    ).toMatchObject({
+      details: "MODAL_TOKEN_ID with MODAL_TOKEN_SECRET or modal cli config",
+      status: "missing",
+    });
+  });
+
   test("reports expired Vercel OIDC before live verification", () => {
     expect(
       row(
