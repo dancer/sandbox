@@ -20,6 +20,8 @@
       "process.shell",
       "process.shell.options",
       "process.spawnShell",
+      "process.spawnShell.stderr",
+      "process.spawnShell.stdout",
       "process.failure",
       "ports.expose",
       "sandbox.raw.extendTimeout",
@@ -106,7 +108,9 @@
       "ok": true,
       "stderr": "",
       "stdout": "hello from vercel",
-      "output": "hello from vercel"
+      "output": "hello from vercel",
+      "stderrStream": "",
+      "stdoutStream": "hello from vercel"
     }
   }
 }

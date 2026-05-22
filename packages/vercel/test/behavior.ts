@@ -69,7 +69,8 @@ export type Workflow = Readonly<{
   provider: string;
   raw: Raw;
   shell: Command;
-  spawn: Command & Readonly<{ output: string }>;
+  spawn: Command &
+    Readonly<{ output: string; stderrStream: string; stdoutStream: string }>;
 }>;
 
 export type Coverage = Readonly<{
@@ -113,6 +114,8 @@ export const workflowCoverage: Coverage = {
     "process.shell",
     "process.shell.options",
     "process.spawnShell",
+    "process.spawnShell.stderr",
+    "process.spawnShell.stdout",
     "process.failure",
     "ports.expose",
     "sandbox.raw.extendTimeout",
@@ -243,6 +246,8 @@ const commandsOk = (
   input.failure.stderr.includes("failed") &&
   input.spawn.ok &&
   input.spawn.output.includes(content) &&
+  input.spawn.stdoutStream.includes(content) &&
+  input.spawn.stderrStream === "" &&
   input.port.port === 3000 &&
   input.port.url.startsWith("https://") &&
   input.raw.extended &&
@@ -281,8 +286,12 @@ export const workflow = async (
   expect(execOptions).toMatchObject({ code: 0, ok: true });
   expect(shellOptions).toMatchObject({ code: 0, ok: true });
   const running = await sandbox.process.spawnShell(`cat ${file}`);
-  const output = await text(running.output);
-  const spawned = await running.result;
+  const [output, stdoutStream, stderrStream, spawned] = await Promise.all([
+    text(running.output),
+    running.stdout === undefined ? Promise.resolve("") : text(running.stdout),
+    running.stderr === undefined ? Promise.resolve("") : text(running.stderr),
+    running.result,
+  ]);
   const failure = await sandbox.process.exec("sh", [
     "-lc",
     "echo failed >&2; exit 7",
@@ -300,7 +309,7 @@ export const workflow = async (
     exec: await sandbox.files.text(locations.exec),
     shell: await sandbox.files.text(locations.shell),
   };
-  const spawn = { ...spawned, output };
+  const spawn = { ...spawned, output, stderrStream, stdoutStream };
   const raw = {
     extended,
     networkPolicy,
@@ -397,6 +406,8 @@ export const expectWorkflow = (payload: Workflow): void => {
     ok: true,
   });
   expect(payload.spawn.output).toContain("hello from vercel");
+  expect(payload.spawn.stdoutStream).toContain("hello from vercel");
+  expect(payload.spawn.stderrStream).toBe("");
   expect(payload.port.port).toBe(3000);
   expect(payload.port.url).toMatch(/^https:\/\//u);
   expect(payload.raw).toEqual({

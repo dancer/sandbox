@@ -47,6 +47,10 @@ for await (const chunk of proc.output) {
   process.stdout.write(chunk);
 }
 
+// providers with separate streams expose stdout and stderr too
+const stdout = proc.stdout ? await new Response(proc.stdout).text() : "";
+const stderr = proc.stderr ? await new Response(proc.stderr).text() : "";
+
 // or kill it on a signal
 await proc.kill("SIGTERM");
 
@@ -205,8 +209,10 @@ export const ApiReference = () => (
       </Heading>
       <p>
         Starts <code>command</code> and returns a handle immediately. Use{" "}
-        <code>output</code> to stream merged stdout + stderr,{" "}
-        <code>kill()</code> to terminate, and <code>result</code> for the final{" "}
+        <code>output</code> to stream merged stdout + stderr, optional{" "}
+        <code>stdout</code> and <code>stderr</code> when the provider exposes
+        separate streams, <code>kill()</code> to terminate, and{" "}
+        <code>result</code> for the final{" "}
         <code>{`{ code, signal?, stdout, stderr }`}</code>.
       </p>
       <CodeBlock code={SPAWN_EXAMPLE} lang="ts" />

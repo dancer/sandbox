@@ -15,7 +15,7 @@ test("adapters expose capability-honest feature modes", () => {
     files: true,
     ports: "derived",
     processExec: true,
-    processSpawn: "combined",
+    processSpawn: "separate",
     snapshotCreate: "filesystem",
     snapshotRestore: "filesystem",
   });

@@ -59,6 +59,8 @@ low-level shape first:
 
 - expose stream-first file reads through `SandboxRuntimeFiles.read()`
 - expose process handles through `spawn()` and `spawnShell()`
+- expose `stdout` and `stderr` streams on process handles when the provider
+  supports separate output streams
 - advertise only capabilities that are actually implemented
 - keep provider-specific methods and escape hatches on `raw`
 - let `fromSandboxRuntime()` derive `files.text()`, `files.read()`,

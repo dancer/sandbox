@@ -176,6 +176,10 @@ export type Running = Readonly<{
   id: string;
   /** combined output stream when the provider exposes streaming output */
   output: ReadableStream<Uint8Array>;
+  /** stdout stream when the provider exposes stdout separately */
+  stdout?: ReadableStream<Uint8Array>;
+  /** stderr stream when the provider exposes stderr separately */
+  stderr?: ReadableStream<Uint8Array>;
   /** final process result */
   result: Promise<Result>;
   /** request process termination */

@@ -171,18 +171,100 @@ const execution = (options: Exec): Exec => {
   return value === undefined ? options : { ...options, timeout: value };
 };
 
-const stream = (child: ReturnType<typeof spawn>): ReadableStream<Uint8Array> =>
-  new ReadableStream({
-    start(controller) {
-      const write = (chunk: Buffer) => {
-        controller.enqueue(chunk);
-      };
-      child.stdout?.on("data", write);
-      child.stderr?.on("data", write);
-      child.on("close", () => controller.close());
-      child.on("error", (error) => controller.error(error));
-    },
-  });
+type Channel = "output" | "stderr" | "stdout";
+
+type Chunk = Readonly<{
+  channel: Exclude<Channel, "output">;
+  value: Uint8Array;
+}>;
+
+const matches = (stream: Channel, chunk: Chunk): boolean =>
+  stream === "output" || stream === chunk.channel;
+
+const streams = (
+  child: ReturnType<typeof spawn>
+): Readonly<Record<Channel, ReadableStream<Uint8Array>>> => {
+  const chunks: Chunk[] = [];
+  const controllers: Record<
+    Channel,
+    Set<ReadableStreamDefaultController<Uint8Array>>
+  > = {
+    output: new Set(),
+    stderr: new Set(),
+    stdout: new Set(),
+  };
+  let closed = false;
+  let failed: unknown;
+
+  const create = (stream: Channel): ReadableStream<Uint8Array> => {
+    let active: ReadableStreamDefaultController<Uint8Array> | undefined;
+    return new ReadableStream({
+      cancel() {
+        if (active !== undefined) {
+          controllers[stream].delete(active);
+        }
+      },
+      start(controller) {
+        active = controller;
+        for (const chunk of chunks) {
+          if (matches(stream, chunk)) {
+            controller.enqueue(chunk.value);
+          }
+        }
+        if (failed !== undefined) {
+          controller.error(failed);
+          return;
+        }
+        if (closed) {
+          controller.close();
+          return;
+        }
+        controllers[stream].add(controller);
+      },
+    });
+  };
+
+  const enqueue = (channel: Exclude<Channel, "output">, chunk: Buffer) => {
+    const value = new Uint8Array(chunk);
+    chunks.push({ channel, value });
+    for (const stream of ["output", channel] as const) {
+      for (const controller of controllers[stream]) {
+        controller.enqueue(value);
+      }
+    }
+  };
+
+  const close = () => {
+    closed = true;
+    for (const group of Object.values(controllers)) {
+      for (const controller of group) {
+        controller.close();
+      }
+      group.clear();
+    }
+  };
+
+  const error = (value: unknown) => {
+    failed = value;
+    for (const group of Object.values(controllers)) {
+      for (const controller of group) {
+        controller.error(value);
+      }
+      group.clear();
+    }
+  };
+
+  child.stdout?.on("data", (chunk: Buffer) => enqueue("stdout", chunk));
+  child.stderr?.on("data", (chunk: Buffer) => enqueue("stderr", chunk));
+  child.on("close", close);
+  child.on("error", error);
+
+  return {
+    output: create("output"),
+    stderr: create("stderr"),
+    stdout: create("stdout"),
+  };
+};
 
 const settle = async (
   child: ReturnType<typeof spawn>,
@@ -294,11 +376,11 @@ export const local = (options: Local = {}): Adapter<Raw> => ({
     ports: "derived",
     process: true,
     processExec: true,
-    processSpawn: "combined",
+    processSpawn: "separate",
     snapshotCreate: "filesystem",
     snapshotRestore: "filesystem",
     snapshots: "filesystem",
-    streaming: "combined",
+    streaming: "separate",
   },
   async create(input = {}) {
     const root = options.root
@@ -375,14 +457,14 @@ export const local = (options: Local = {}): Adapter<Raw> => ({
             start(root, cwd, env, command, args, run)
           );
           const { child } = ready;
-          const output = stream(child);
+          const output = streams(child);
           return {
             id: randomUUID(),
             kill: (signal = "SIGTERM") => {
               child.kill(signal as NodeJS.Signals);
               return Promise.resolve();
             },
-            output,
+            ...output,
             result: settle(child, ready.run),
           };
         },
@@ -391,14 +473,14 @@ export const local = (options: Local = {}): Adapter<Raw> => ({
             start(root, cwd, env, "sh", ["-lc", command], run)
           );
           const { child } = ready;
-          const output = stream(child);
+          const output = streams(child);
           return {
             id: randomUUID(),
             kill: (signal = "SIGTERM") => {
               child.kill(signal as NodeJS.Signals);
               return Promise.resolve();
             },
-            output,
+            ...output,
             result: settle(child, ready.run),
           };
         },

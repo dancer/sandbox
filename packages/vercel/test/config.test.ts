@@ -20,6 +20,14 @@ const logs = async function* logs(): AsyncIterable<{
   stream: string;
 }> {};
 
+const separateLogs = async function* separateLogs(): AsyncIterable<{
+  data: string;
+  stream: string;
+}> {
+  yield { data: "out", stream: "stdout" };
+  yield { data: "err", stream: "stderr" };
+};
+
 const encode = (value: unknown): string =>
   Buffer.from(JSON.stringify(value), "utf-8").toString("base64url");
 
@@ -329,6 +337,61 @@ test("vercel forwards process kill signals", async () => {
     await process.result;
 
     expect(signal).toBe("SIGINT");
+  } finally {
+    VercelSandbox.create = original;
+  }
+});
+
+test("vercel exposes separate process streams", async () => {
+  const original = VercelSandbox.create;
+  const raw = {
+    fs: {
+      mkdir: () => Promise.resolve(),
+    },
+    name: "sandbox",
+    runCommand: () =>
+      Promise.resolve({
+        cmdId: "command",
+        kill: () => Promise.resolve(),
+        logs: separateLogs,
+        wait: () =>
+          Promise.resolve({
+            exitCode: 0,
+            stderr: () => Promise.resolve("err"),
+            stdout: () => Promise.resolve("out"),
+          }),
+      }),
+    stop: () => Promise.resolve(),
+  } as unknown as VercelSandbox;
+
+  VercelSandbox.create = (() =>
+    Promise.resolve(raw)) as typeof VercelSandbox.create;
+
+  try {
+    const sandbox = await create({
+      adapter: vercel({
+        projectId: "project",
+        teamId: "team",
+        token: "token",
+      }),
+    });
+    const process = await sandbox.process.spawn("echo", ["hello"]);
+    const [output, stdout, stderr, result] = await Promise.all([
+      new Response(process.output).text(),
+      new Response(process.stdout).text(),
+      new Response(process.stderr).text(),
+      process.result,
+    ]);
+
+    expect(output).toBe("outerr");
+    expect(stdout).toBe("out");
+    expect(stderr).toBe("err");
+    expect(result).toMatchObject({
+      code: 0,
+      ok: true,
+      stderr: "err",
+      stdout: "out",
+    });
   } finally {
     VercelSandbox.create = original;
   }

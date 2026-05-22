@@ -399,18 +399,27 @@ const getOrCreateInput = (
   }) as Parameters<typeof VercelSandbox.getOrCreate>[0];
 
 const stream = (
-  source: AsyncIterable<{ data: string; stream: string }>
+  source: AsyncIterable<{ data: string; stream: string }>,
+  channel?: "stderr" | "stdout"
 ): ReadableStream<Uint8Array> => {
   const encoder = new TextEncoder();
   const iterator = source[Symbol.asyncIterator]();
   return new ReadableStream({
+    async cancel() {
+      await iterator.return?.();
+    },
     async pull(controller) {
-      const next = await iterator.next();
-      if (next.done) {
-        controller.close();
-        return;
+      while (true) {
+        const next = await iterator.next();
+        if (next.done) {
+          controller.close();
+          return;
+        }
+        if (channel === undefined || next.value.stream === channel) {
+          controller.enqueue(encoder.encode(next.value.data));
+          return;
+        }
       }
-      controller.enqueue(encoder.encode(next.value.data));
     },
   });
 };
@@ -619,6 +628,8 @@ const spawn = async (
       },
       output: stream(running.logs(signals)),
       result: wait(running, deadline, options.signal),
+      stderr: stream(running.logs(signals), "stderr"),
+      stdout: stream(running.logs(signals), "stdout"),
     };
   } catch (error) {
     deadline.clear();

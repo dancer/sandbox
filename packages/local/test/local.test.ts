@@ -289,18 +289,29 @@ test("local writes bytes and removes files", async () => {
 
 test("local streams spawned process output", async () => {
   const sandbox = await create({ adapter: local() });
-  const running = await sandbox.process.spawn("sh", ["-c", "printf hello"]);
+  const running = await sandbox.process.spawn("sh", [
+    "-c",
+    "printf hello; printf error >&2",
+  ]);
   const shell = await sandbox.process.spawnShell("printf shell");
-  const streamed = await new Response(running.output).text();
-  const shellStreamed = await new Response(shell.output).text();
-  const completed = await running.result;
-  const shellCompleted = await shell.result;
+  const [streamed, stdout, stderr, shellStreamed, completed, shellCompleted] =
+    await Promise.all([
+      new Response(running.output).text(),
+      new Response(running.stdout).text(),
+      new Response(running.stderr).text(),
+      new Response(shell.output).text(),
+      running.result,
+      shell.result,
+    ]);
 
   expect(running.id).toBeString();
-  expect(streamed).toBe("hello");
+  expect(streamed).toBe("helloerror");
+  expect(stdout).toBe("hello");
+  expect(stderr).toBe("error");
   expect(completed).toMatchObject({
     code: 0,
     ok: true,
+    stderr: "error",
     stdout: "hello",
   });
   expect(shellStreamed).toBe("shell");
