@@ -104,6 +104,39 @@ test("cloudflareBridge rejects invalid bridge urls", async () => {
   });
 });
 
+test("cloudflareBridge keeps paths under workspace", async () => {
+  const sandbox = await create({
+    adapter: cloudflareBridge({
+      fetch: bridgeFetch((request) => {
+        if (request.path === "/v1/sandbox") {
+          return json({ id: "box-1" });
+        }
+        if (request.method === "DELETE") {
+          return new Response(null, { status: 204 });
+        }
+        return missing();
+      }, []),
+      url: "https://bridge.example.com",
+    }),
+    cwd: "/workspace",
+  });
+
+  try {
+    await expect(
+      sandbox.files.text("/workspace2/file.txt")
+    ).rejects.toMatchObject({
+      code: "path_escape",
+      provider: "cloudflare",
+    });
+    await expect(sandbox.files.text("../escape.txt")).rejects.toMatchObject({
+      code: "path_escape",
+      provider: "cloudflare",
+    });
+  } finally {
+    await sandbox.stop();
+  }
+});
+
 test("cloudflareBridge maps create session and cleanup", async () => {
   const seen: Seen[] = [];
   const sandbox = await create({

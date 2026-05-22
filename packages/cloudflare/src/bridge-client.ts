@@ -154,7 +154,7 @@ export const bridgeCapabilities: Capabilities = {
 export const absolute = (cwd: string, path = cwd): string => {
   const value = path.startsWith("/") ? path : `${cwd}/${path}`;
   const output = new URL(value, "file:///").pathname;
-  if (output === "/" || !output.startsWith("/workspace")) {
+  if (output !== "/workspace" && !output.startsWith("/workspace/")) {
     throw sandboxError(
       provider,
       "Cloudflare bridge paths must stay under /workspace",
