@@ -22,13 +22,34 @@ test("local supports sandbox absolute paths", async () => {
 
   await sandbox.files.write("/workspace/main.ts", "console.log('ok')");
 
-  expect(await sandbox.files.text("workspace/main.ts")).toBe(
-    "console.log('ok')"
-  );
+  expect(await sandbox.files.text("main.ts")).toBe("console.log('ok')");
   expect(sandbox.cwd).toBe("/workspace");
 
   await sandbox.stop();
   await rm(root, { force: true, recursive: true });
+});
+
+test("local resolves relative paths against cwd", async () => {
+  const sandbox = await create({
+    adapter: local(),
+    cwd: "/workspace",
+  });
+
+  await sandbox.files.write("main.txt", "hello");
+  await sandbox.files.mkdir("nested");
+  await sandbox.files.write("nested/value.txt", "nested");
+
+  const result = await sandbox.process.exec("cat", ["main.txt"]);
+  const nested = await sandbox.process.exec("cat", ["value.txt"], {
+    cwd: "nested",
+  });
+
+  expect(await sandbox.files.text("/workspace/main.txt")).toBe("hello");
+  expect(await sandbox.files.text("nested/value.txt")).toBe("nested");
+  expect(result.stdout).toBe("hello");
+  expect(nested.stdout).toBe("nested");
+
+  await sandbox.stop();
 });
 
 test("local creates and checks directories", async () => {
@@ -90,12 +111,12 @@ test("local rejects invalid preview ports", async () => {
   await sandbox.stop();
 });
 
-test("local prevents paths escaping the sandbox root", async () => {
+test("local keeps parent paths inside the sandbox root", async () => {
   const sandbox = await create({ adapter: local() });
 
-  await expect(sandbox.files.write("../outside.txt", "bad")).rejects.toThrow(
-    SandboxError
-  );
+  await sandbox.files.write("../outside.txt", "safe");
+
+  expect(await sandbox.files.text("/outside.txt")).toBe("safe");
 
   await sandbox.stop();
 });

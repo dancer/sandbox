@@ -27,6 +27,7 @@ import {
   duration,
   fromSandboxRuntime,
   port,
+  sandboxPath,
 } from "@sandbox-sdk/core";
 import type {
   Adapter,
@@ -127,6 +128,9 @@ const safe = (root: string, path: string): string => {
     provider: "local",
   });
 };
+
+const inside = (root: string, cwd: string, path?: string): string =>
+  safe(root, sandboxPath(cwd, path));
 
 const display = (root: string, target: string): string =>
   `/${relative(root, target)}`;
@@ -361,7 +365,7 @@ const start = (
   check(run.signal);
   return {
     child: spawn(command, args, {
-      cwd: safe(root, run.cwd ?? cwd),
+      cwd: inside(root, cwd, run.cwd),
       env: { ...env, ...run.env },
     }),
     run,
@@ -400,7 +404,7 @@ export const local = (options: Local = {}): Adapter<Raw> => ({
       files: {
         exists: async (path) => {
           try {
-            await stat(safe(root, path));
+            await stat(inside(root, cwd, path));
             return true;
           } catch (error) {
             if ((error as NodeJS.ErrnoException).code === "ENOENT") {
@@ -410,7 +414,7 @@ export const local = (options: Local = {}): Adapter<Raw> => ({
           }
         },
         list: async (path = cwd) => {
-          const base = safe(root, path);
+          const base = inside(root, cwd, path);
           const names = await wrap(() => readdir(base));
           const entries = await Promise.all(
             names.map(async (name): Promise<Entry> => {
@@ -429,14 +433,14 @@ export const local = (options: Local = {}): Adapter<Raw> => ({
           );
         },
         mkdir: async (path) => {
-          await mkdir(safe(root, path), { recursive: true });
+          await mkdir(inside(root, cwd, path), { recursive: true });
         },
         read: async (path) =>
-          readable(await wrap(() => readFile(safe(root, path)))),
+          readable(await wrap(() => readFile(inside(root, cwd, path)))),
         remove: (path) =>
-          rm(safe(root, path), { force: true, recursive: true }),
+          rm(inside(root, cwd, path), { force: true, recursive: true }),
         write: async (path, value) => {
-          const target = safe(root, path);
+          const target = inside(root, cwd, path);
           await mkdir(dirname(target), { recursive: true });
           await writeFile(target, await bytes(value));
         },
