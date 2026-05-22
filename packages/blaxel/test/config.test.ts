@@ -19,6 +19,14 @@ const response = (exitCode = 0, stdout = "ok", stderr = "") => ({
   workingDir: "/work",
 });
 
+const restore = (name: string, value: string | undefined): void => {
+  if (value === undefined) {
+    Reflect.deleteProperty(process.env, name);
+    return;
+  }
+  process.env[name] = value;
+};
+
 test("blaxel reports incomplete credentials before provider calls", async () => {
   await expect(
     create({
@@ -30,6 +38,44 @@ test("blaxel reports incomplete credentials before provider calls", async () => 
     code: "configuration",
     provider: "blaxel",
   });
+});
+
+test("blaxel ignores empty explicit credentials when env credentials exist", async () => {
+  const apiKey = process.env.BL_API_KEY;
+  const clientCredentials = process.env.BL_CLIENT_CREDENTIALS;
+  const workspace = process.env.BL_WORKSPACE;
+  const original = SandboxInstance.create;
+  const raw = {
+    delete: () => Promise.resolve(),
+    fs: {
+      mkdir: () => Promise.resolve({}),
+    },
+    metadata: { name: "sandbox" },
+  } as unknown as SandboxInstance;
+
+  process.env.BL_API_KEY = "env-key";
+  process.env.BL_CLIENT_CREDENTIALS = "";
+  process.env.BL_WORKSPACE = "env-workspace";
+  SandboxInstance.create = (() =>
+    Promise.resolve(raw)) as typeof SandboxInstance.create;
+
+  try {
+    await expect(
+      create({
+        adapter: blaxel({
+          apiKey: "",
+          workspace: "",
+        }),
+      })
+    ).resolves.toMatchObject({
+      id: "sandbox",
+    });
+  } finally {
+    SandboxInstance.create = original;
+    restore("BL_API_KEY", apiKey);
+    restore("BL_CLIENT_CREDENTIALS", clientCredentials);
+    restore("BL_WORKSPACE", workspace);
+  }
 });
 
 test("blaxel rejects invalid declared ports before provider calls", async () => {

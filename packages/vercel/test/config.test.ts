@@ -243,6 +243,54 @@ test("vercel passes env access token credentials to provider", async () => {
   }
 });
 
+test("vercel ignores empty explicit access credentials when env credentials exist", async () => {
+  const oidc = process.env.VERCEL_OIDC_TOKEN;
+  const accessToken = process.env.VERCEL_TOKEN;
+  const teamId = process.env.VERCEL_TEAM_ID;
+  const projectId = process.env.VERCEL_PROJECT_ID;
+  const original = VercelSandbox.create;
+  const raw = {
+    fs: {
+      mkdir: () => Promise.resolve(),
+    },
+    name: "sandbox",
+    stop: () => Promise.resolve(),
+  } as unknown as VercelSandbox;
+  let seen: unknown;
+
+  process.env.VERCEL_OIDC_TOKEN = "";
+  process.env.VERCEL_TOKEN = "token";
+  process.env.VERCEL_TEAM_ID = "team";
+  process.env.VERCEL_PROJECT_ID = "project";
+  VercelSandbox.create = ((input?: unknown) => {
+    seen = input;
+    return Promise.resolve(raw);
+  }) as typeof VercelSandbox.create;
+
+  try {
+    const sandbox = await create({
+      adapter: vercel({
+        projectId: "",
+        teamId: "",
+        token: "",
+      }),
+    });
+
+    expect(sandbox.id).toBe("sandbox");
+    expect(seen).toMatchObject({
+      projectId: "project",
+      teamId: "team",
+      token: "token",
+    });
+  } finally {
+    VercelSandbox.create = original;
+    restore("VERCEL_OIDC_TOKEN", oidc);
+    restore("VERCEL_TOKEN", accessToken);
+    restore("VERCEL_TEAM_ID", teamId);
+    restore("VERCEL_PROJECT_ID", projectId);
+  }
+});
+
 test("vercel gets named sandboxes and preserves existing routes", async () => {
   const original = VercelSandbox.get;
   let getSeen: unknown;

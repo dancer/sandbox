@@ -124,6 +124,10 @@ const capabilities: Capabilities = {
 const present = (value: string | undefined): value is string =>
   value !== undefined && value.length > 0;
 
+const first = (
+  ...values: readonly (string | undefined)[]
+): string | undefined => values.find(present);
+
 const env = (name: string): string | undefined =>
   (
     globalThis as {
@@ -215,10 +219,12 @@ const streams = (): Readonly<{
 };
 
 const validate = (options: Daytona): void => {
-  const apiKey = options.apiKey ?? env("DAYTONA_API_KEY");
-  const jwtToken = options.jwtToken ?? env("DAYTONA_JWT_TOKEN");
-  const organizationId =
-    options.organizationId ?? env("DAYTONA_ORGANIZATION_ID");
+  const apiKey = first(options.apiKey, env("DAYTONA_API_KEY"));
+  const jwtToken = first(options.jwtToken, env("DAYTONA_JWT_TOKEN"));
+  const organizationId = first(
+    options.organizationId,
+    env("DAYTONA_ORGANIZATION_ID")
+  );
   if (present(options.jwtToken) && !present(organizationId)) {
     throw sandboxError(
       provider,
@@ -246,22 +252,29 @@ const validate = (options: Daytona): void => {
   );
 };
 
-const config = (options: Daytona): DaytonaConfig => ({
-  ...(options.apiKey === undefined ? {} : { apiKey: options.apiKey }),
-  ...(options.apiUrl === undefined ? {} : { apiUrl: options.apiUrl }),
-  ...(options.jwtToken === undefined ? {} : { jwtToken: options.jwtToken }),
-  ...(options.organizationId === undefined
-    ? {}
-    : { organizationId: options.organizationId }),
-  ...(options.otelEnabled === undefined
-    ? {}
-    : { otelEnabled: options.otelEnabled }),
-  ...(options.serverUrl === undefined ? {} : { serverUrl: options.serverUrl }),
-  ...(options.target === undefined ? {} : { target: options.target }),
-  ...(options._experimental === undefined
-    ? {}
-    : { _experimental: options._experimental }),
-});
+const config = (options: Daytona): DaytonaConfig => {
+  const apiKey = first(options.apiKey, env("DAYTONA_API_KEY"));
+  const jwtToken = first(options.jwtToken, env("DAYTONA_JWT_TOKEN"));
+  const organizationId = first(
+    options.organizationId,
+    env("DAYTONA_ORGANIZATION_ID")
+  );
+  const target = first(options.target, env("DAYTONA_TARGET"));
+  return {
+    ...(apiKey === undefined ? {} : { apiKey }),
+    ...(present(options.apiUrl) ? { apiUrl: options.apiUrl } : {}),
+    ...(jwtToken === undefined ? {} : { jwtToken }),
+    ...(organizationId === undefined ? {} : { organizationId }),
+    ...(options.otelEnabled === undefined
+      ? {}
+      : { otelEnabled: options.otelEnabled }),
+    ...(present(options.serverUrl) ? { serverUrl: options.serverUrl } : {}),
+    ...(target === undefined ? {} : { target }),
+    ...(options._experimental === undefined
+      ? {}
+      : { _experimental: options._experimental }),
+  };
+};
 
 const baseParams = (
   options: Daytona,

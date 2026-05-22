@@ -28,6 +28,47 @@ test("e2b reports missing credentials before provider calls", async () => {
   }
 });
 
+test("e2b ignores empty explicit credentials when env credentials exist", async () => {
+  const apiKey = process.env.E2B_API_KEY;
+  const accessToken = process.env.E2B_ACCESS_TOKEN;
+  const original = E2BSandbox.create;
+  let createSeen: unknown;
+  const raw = {
+    files: {
+      makeDir: () => Promise.resolve(),
+    },
+    kill: () => Promise.resolve(),
+    sandboxId: "sandbox",
+  } as unknown as E2BSandbox;
+
+  process.env.E2B_API_KEY = "env-key";
+  process.env.E2B_ACCESS_TOKEN = "";
+  E2BSandbox.create = ((input?: unknown) => {
+    createSeen = input;
+    return Promise.resolve(raw);
+  }) as typeof E2BSandbox.create;
+
+  try {
+    await expect(
+      create({
+        adapter: e2b({
+          accessToken: "",
+          apiKey: "",
+        }),
+      })
+    ).resolves.toMatchObject({
+      id: "sandbox",
+    });
+    expect(createSeen).toMatchObject({
+      apiKey: "env-key",
+    });
+  } finally {
+    E2BSandbox.create = original;
+    restore("E2B_API_KEY", apiKey);
+    restore("E2B_ACCESS_TOKEN", accessToken);
+  }
+});
+
 test("e2b rejects invalid request timeouts before provider calls", async () => {
   const original = E2BSandbox.create;
   let called = false;

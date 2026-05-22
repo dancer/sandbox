@@ -72,6 +72,17 @@ const noop = (): void => void 0;
 const present = (value: string | undefined): value is string =>
   value !== undefined && value.length > 0;
 
+const first = (
+  ...values: readonly (string | undefined)[]
+): string | undefined => values.find(present);
+
+const env = (name: string): string | undefined =>
+  (
+    globalThis as {
+      process?: { env?: Record<string, string | undefined> };
+    }
+  ).process?.env?.[name];
+
 const credentials = (
   value: BlaxelConfig["clientCredentials"] | undefined
 ): boolean =>
@@ -81,12 +92,17 @@ const credentials = (
       present(value.clientId) &&
       present(value.clientSecret);
 
-const env = (name: string): string | undefined =>
-  (
-    globalThis as {
-      process?: { env?: Record<string, string | undefined> };
-    }
-  ).process?.env?.[name];
+const credential = (
+  value: BlaxelConfig["clientCredentials"] | undefined
+): BlaxelConfig["clientCredentials"] | undefined => {
+  if (typeof value === "string") {
+    return first(value, env("BL_CLIENT_CREDENTIALS"));
+  }
+  if (credentials(value)) {
+    return value;
+  }
+  return env("BL_CLIENT_CREDENTIALS");
+};
 
 const configExists = (): boolean =>
   existsSync(joinPath(homedir(), ".blaxel", "config.yaml"));
@@ -100,10 +116,9 @@ const readable = (value: Uint8Array): ReadableStream<Uint8Array> =>
   });
 
 const validate = (options: Blaxel): void => {
-  const apiKey = options.apiKey ?? options.apikey ?? env("BL_API_KEY");
-  const clientCredentials =
-    options.clientCredentials ?? env("BL_CLIENT_CREDENTIALS");
-  const workspace = options.workspace ?? env("BL_WORKSPACE");
+  const apiKey = first(options.apiKey, options.apikey, env("BL_API_KEY"));
+  const clientCredentials = credential(options.clientCredentials);
+  const workspace = first(options.workspace, env("BL_WORKSPACE"));
 
   if (
     (present(apiKey) || credentials(clientCredentials)) &&
@@ -129,30 +144,28 @@ const validate = (options: Blaxel): void => {
 };
 
 const configure = (options: Blaxel): void => {
+  const apiKey = first(options.apiKey, options.apikey, env("BL_API_KEY"));
+  const clientCredentials = credential(options.clientCredentials);
+  const workspace = first(options.workspace, env("BL_WORKSPACE"));
+
   if (
-    options.apiKey === undefined &&
-    options.apikey === undefined &&
-    options.clientCredentials === undefined &&
+    apiKey === undefined &&
+    clientCredentials === undefined &&
     options.disableH2 === undefined &&
     options.proxy === undefined &&
-    options.workspace === undefined
+    workspace === undefined
   ) {
     return;
   }
 
   settings.setConfig({
-    ...(options.apiKey === undefined ? {} : { apiKey: options.apiKey }),
-    ...(options.apikey === undefined ? {} : { apikey: options.apikey }),
-    ...(options.clientCredentials === undefined
-      ? {}
-      : { clientCredentials: options.clientCredentials }),
+    ...(apiKey === undefined ? {} : { apiKey }),
+    ...(clientCredentials === undefined ? {} : { clientCredentials }),
     ...(options.disableH2 === undefined
       ? {}
       : { disableH2: options.disableH2 }),
     ...(options.proxy === undefined ? {} : { proxy: options.proxy }),
-    ...(options.workspace === undefined
-      ? {}
-      : { workspace: options.workspace }),
+    ...(workspace === undefined ? {} : { workspace }),
   });
 };
 

@@ -107,6 +107,10 @@ const capabilities: Capabilities = {
 const present = (value: string | undefined): boolean =>
   value !== undefined && value.length > 0;
 
+const first = (
+  ...values: readonly (string | undefined)[]
+): string | undefined => values.find(present);
+
 const env = (name: string): string | undefined =>
   (
     globalThis as {
@@ -116,10 +120,8 @@ const env = (name: string): string | undefined =>
 
 const validate = (options: E2B): void => {
   if (
-    present(options.apiKey) ||
-    present(options.accessToken) ||
-    present(env("E2B_API_KEY")) ||
-    present(env("E2B_ACCESS_TOKEN"))
+    first(options.apiKey, env("E2B_API_KEY")) !== undefined ||
+    first(options.accessToken, env("E2B_ACCESS_TOKEN")) !== undefined
   ) {
     return;
   }
@@ -133,21 +135,19 @@ const validate = (options: E2B): void => {
 
 const connection = (options: E2B): SandboxConnectOpts => {
   const request = duration(options.requestTimeout, provider, "requestTimeout");
+  const accessToken = first(options.accessToken, env("E2B_ACCESS_TOKEN"));
+  const apiKey = first(options.apiKey, env("E2B_API_KEY"));
   return {
-    ...(options.accessToken === undefined
-      ? {}
-      : { accessToken: options.accessToken }),
-    ...(options.apiKey === undefined ? {} : { apiKey: options.apiKey }),
-    ...(options.apiUrl === undefined ? {} : { apiUrl: options.apiUrl }),
+    ...(accessToken === undefined ? {} : { accessToken }),
+    ...(apiKey === undefined ? {} : { apiKey }),
+    ...(present(options.apiUrl) ? { apiUrl: options.apiUrl } : {}),
     ...(options.debug === undefined ? {} : { debug: options.debug }),
-    ...(options.domain === undefined ? {} : { domain: options.domain }),
+    ...(present(options.domain) ? { domain: options.domain } : {}),
     ...(options.headers === undefined
       ? {}
       : { headers: { ...options.headers } }),
     ...(request === undefined ? {} : { requestTimeoutMs: request }),
-    ...(options.sandboxUrl === undefined
-      ? {}
-      : { sandboxUrl: options.sandboxUrl }),
+    ...(present(options.sandboxUrl) ? { sandboxUrl: options.sandboxUrl } : {}),
   };
 };
 

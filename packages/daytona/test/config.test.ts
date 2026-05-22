@@ -91,6 +91,50 @@ test("daytona accepts api key config without target", async () => {
   }
 });
 
+test("daytona ignores empty explicit credentials when env credentials exist", async () => {
+  type Client = InstanceType<typeof DaytonaClient>;
+  type Create = Client["create"];
+
+  const apiKey = process.env.DAYTONA_API_KEY;
+  const jwtToken = process.env.DAYTONA_JWT_TOKEN;
+  const organizationId = process.env.DAYTONA_ORGANIZATION_ID;
+  const target = process.env.DAYTONA_TARGET;
+  const client = DaytonaClient.prototype as Client;
+  const original = client.create;
+  const raw = {
+    fs: {
+      createFolder: () => Promise.resolve(),
+    },
+    getWorkDir: () => Promise.resolve("/workspace"),
+    id: "sandbox",
+    stop: () => Promise.resolve(),
+  };
+
+  process.env.DAYTONA_API_KEY = "env-key";
+  process.env.DAYTONA_JWT_TOKEN = "";
+  process.env.DAYTONA_ORGANIZATION_ID = "";
+  process.env.DAYTONA_TARGET = "";
+  client.create = (() => Promise.resolve(raw)) as Create;
+
+  try {
+    await expect(
+      create({
+        adapter: daytona({
+          apiKey: "",
+        }),
+      })
+    ).resolves.toMatchObject({
+      id: "sandbox",
+    });
+  } finally {
+    client.create = original;
+    restore("DAYTONA_API_KEY", apiKey);
+    restore("DAYTONA_JWT_TOKEN", jwtToken);
+    restore("DAYTONA_ORGANIZATION_ID", organizationId);
+    restore("DAYTONA_TARGET", target);
+  }
+});
+
 test("daytona rejects invalid create timeouts before provider calls", async () => {
   type Client = InstanceType<typeof DaytonaClient>;
   type Create = Client["create"];

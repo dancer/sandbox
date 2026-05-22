@@ -137,6 +137,10 @@ const capabilities: Capabilities = {
 const present = (value: string | undefined): value is string =>
   value !== undefined && value.length > 0;
 
+const first = (
+  ...values: readonly (string | undefined)[]
+): string | undefined => values.find(present);
+
 const env = (name: string): string | undefined =>
   (
     globalThis as {
@@ -161,8 +165,8 @@ const validate = (options: Modal): void => {
   if (options.client) {
     return;
   }
-  const tokenId = options.tokenId ?? env("MODAL_TOKEN_ID");
-  const tokenSecret = options.tokenSecret ?? env("MODAL_TOKEN_SECRET");
+  const tokenId = first(options.tokenId, env("MODAL_TOKEN_ID"));
+  const tokenSecret = first(options.tokenSecret, env("MODAL_TOKEN_SECRET"));
   if (present(tokenId) && present(tokenSecret)) {
     return;
   }
@@ -187,6 +191,8 @@ const client = (options: Modal): ModalSdk.ModalClient => {
   if (options.client) {
     return options.client;
   }
+  const tokenId = first(options.tokenId, env("MODAL_TOKEN_ID"));
+  const tokenSecret = first(options.tokenSecret, env("MODAL_TOKEN_SECRET"));
   return new ModalSdk.ModalClient({
     ...(options.endpoint === undefined ? {} : { endpoint: options.endpoint }),
     ...(options.environment === undefined
@@ -203,10 +209,8 @@ const client = (options: Modal): ModalSdk.ModalClient => {
     ...(options.timeoutMs === undefined
       ? {}
       : { timeoutMs: options.timeoutMs }),
-    ...(options.tokenId === undefined ? {} : { tokenId: options.tokenId }),
-    ...(options.tokenSecret === undefined
-      ? {}
-      : { tokenSecret: options.tokenSecret }),
+    ...(tokenId === undefined ? {} : { tokenId }),
+    ...(tokenSecret === undefined ? {} : { tokenSecret }),
   });
 };
 

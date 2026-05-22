@@ -199,6 +199,10 @@ const capabilities: Capabilities = {
 const present = (value: string | undefined): value is string =>
   value !== undefined && value.length > 0;
 
+const first = (
+  ...values: readonly (string | undefined)[]
+): string | undefined => values.find(present);
+
 const env = (name: string): string | undefined =>
   (
     globalThis as {
@@ -276,9 +280,9 @@ const credentials = (
   teamId?: string;
   token?: string;
 } => {
-  const projectId = options.projectId ?? env("VERCEL_PROJECT_ID");
-  const teamId = options.teamId ?? env("VERCEL_TEAM_ID");
-  const token = options.token ?? env("VERCEL_TOKEN");
+  const projectId = first(options.projectId, env("VERCEL_PROJECT_ID"));
+  const teamId = first(options.teamId, env("VERCEL_TEAM_ID"));
+  const token = first(options.token, env("VERCEL_TOKEN"));
   if (present(token) || present(teamId) || present(projectId)) {
     return {
       ...(present(projectId) ? { projectId } : {}),
