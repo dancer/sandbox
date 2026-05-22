@@ -42,7 +42,7 @@
   },
   "dependencies": {
     "@sandbox-sdk/core": "workspace:*",
-    "e2b": "^2.21.0"
+    "e2b": "^2.24.0"
   },
   "devDependencies": {
     "@types/node": "^20.19.41",
