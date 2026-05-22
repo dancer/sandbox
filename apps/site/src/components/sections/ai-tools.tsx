@@ -36,7 +36,9 @@ import { local } from "@sandbox-sdk/local";
 import { aisdk, tools } from "@sandbox-sdk/ai";
 
 const sandbox = await create({ adapter: local() });
-const kit = tools(sandbox);
+const kit = tools(sandbox, {
+  allow: ["read", "write", "list", "exec"],
+});
 const ai = aisdk(kit);
 
 await kit.tools.write?.execute({
@@ -52,7 +54,9 @@ import { local } from "@sandbox-sdk/local";
 import { aisdk, tools } from "@sandbox-sdk/ai";
 
 const sandbox = await create({ adapter: local() });
-const kit = aisdk(tools(sandbox));
+const kit = aisdk(tools(sandbox, {
+  allow: ["read", "write", "list", "exec"],
+}));
 
 const result = await generateText({
   model: "openai/gpt-5.4-nano",
@@ -67,7 +71,9 @@ import { tools } from "@sandbox-sdk/ai";
 import { openai } from "@sandbox-sdk/ai/openai";
 
 const sandbox = await create({ adapter: local() });
-const kit = openai(tools(sandbox), { requireApproval: false });
+const kit = openai(tools(sandbox, {
+  allow: ["read", "write", "list", "exec"],
+}));
 
 const agent = new Agent({
   name: "sandbox agent",
@@ -84,7 +90,9 @@ import { tools } from "@sandbox-sdk/ai";
 import { claude } from "@sandbox-sdk/ai/claude";
 
 const sandbox = await create({ adapter: local() });
-const kit = claude(tools(sandbox), { requireApproval: false });
+const kit = claude(tools(sandbox, {
+  allow: ["read", "write", "list", "exec"],
+}));
 
 for await (const message of query({
   prompt: "Set up a Bun project, install zod, and write a parser.",
@@ -230,9 +238,9 @@ export const AiTools = () => (
       <p>
         <code>read</code> and <code>list</code> are safe by default.{" "}
         <code>write</code>, <code>exec</code>, and <code>preview</code> are
-        side-effect tools. OpenAI and Claude adapters expose approval controls
-        at the framework layer, and every tool still runs through the policy
-        hooks configured in <code>tools()</code>.
+        side-effect tools and must be enabled explicitly. OpenAI and Claude
+        adapters expose approval controls at the framework layer, and every tool
+        still runs through the policy hooks configured in <code>tools()</code>.
       </p>
     </section>
   </section>

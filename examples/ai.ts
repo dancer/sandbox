@@ -29,9 +29,9 @@ export const createKit = async () => {
 
   return {
     ai: aisdk(kit),
-    claude: claude(kit, { requireApproval: false }),
+    claude: claude(kit),
     kit,
-    openai: openai(kit, { requireApproval: false }),
+    openai: openai(kit),
     sandbox,
     schema,
     stop: () => sandbox.stop(),

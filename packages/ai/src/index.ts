@@ -60,7 +60,7 @@ export type Options = Readonly<{
   /**
    * tools exposed to the model
    *
-   * @default ["read", "write", "list", "exec"] plus "preview" when ports are supported
+   * @default ["read", "list"]
    */
   allow?: readonly Name[];
   /** policy hook called before command execution */
@@ -298,7 +298,7 @@ export const aisdk = (kit: Kit): AisdkOptions => ({
   tools: kit.tools,
 });
 
-const names = ["read", "write", "list", "exec"] as const;
+const names = ["read", "list"] as const;
 
 const context = <ToolName extends Name>(
   sandbox: Sandbox,
@@ -583,10 +583,7 @@ export const tools = (sandbox: Sandbox, options: Options = {}): Kit => {
   const maxOutput = options.maxOutput ?? 20_000;
   integer("timeout", timeout);
   integer("maxOutput", maxOutput);
-  const requested = options.allow ?? [
-    ...names,
-    ...(supports(sandbox, "ports") ? (["preview"] as const) : []),
-  ];
+  const requested = options.allow ?? names;
   const allow = requested.filter(
     (name) => name !== "preview" || supports(sandbox, "ports")
   );

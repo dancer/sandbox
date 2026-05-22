@@ -16,7 +16,7 @@ const text = await withSandbox(
   },
   async (sandbox) => {
     const kit = tools(sandbox, {
-      allow: ["read", "write", "list", "exec", "preview"],
+      allow: ["read", "write", "list"],
       cwd: "/vercel/sandbox",
     });
 

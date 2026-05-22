@@ -125,9 +125,22 @@ test("tools can read, write, list, and execute", async () => {
   await sandbox.stop();
 });
 
+test("tools default to read-only model-facing tools", async () => {
+  const sandbox = await create({ adapter: local(), cwd: "/workspace" });
+  const kit = tools(sandbox);
+
+  expect(Object.keys(kit.tools).toSorted()).toEqual(["list", "read"]);
+  expect(kit.description).toContain("Allowed sandbox tools: read, list");
+
+  await sandbox.stop();
+});
+
 test("tools expose an ai sdk sandbox shape", async () => {
   const sandbox = await create({ adapter: local(), cwd: "/workspace" });
-  const kit = tools(sandbox, { timeout: 10_000 });
+  const kit = tools(sandbox, {
+    allow: ["read", "write", "list", "exec"],
+    timeout: 10_000,
+  });
   const agent: ExperimentalSandbox = kit.sandbox;
   const ai = aisdk(kit);
 
@@ -162,7 +175,9 @@ test("tools expose an ai sdk sandbox shape", async () => {
 
 test("ai sdk sandbox shape reads and writes files", async () => {
   const sandbox = await create({ adapter: local(), cwd: "/workspace" });
-  const agent: ExperimentalSandbox = tools(sandbox).sandbox;
+  const agent: ExperimentalSandbox = tools(sandbox, {
+    allow: ["read", "write", "list", "exec"],
+  }).sandbox;
   const stream = new ReadableStream<Uint8Array>({
     start(controller) {
       controller.enqueue(new TextEncoder().encode("stream"));
@@ -374,7 +389,7 @@ test("claude supports approval and server overrides", async () => {
 
 test("tools can expose local previews", async () => {
   const sandbox = await create({ adapter: local() });
-  const kit = tools(sandbox);
+  const kit = tools(sandbox, { allow: ["preview"] });
   const preview = await kit.tools.preview?.execute({ port: 3000 });
 
   expect(preview?.url).toBe("http://localhost:3000");
@@ -393,7 +408,7 @@ test("tools can expose local previews", async () => {
 
 test("tools validate preview ports", async () => {
   const sandbox = await create({ adapter: local() });
-  const kit = tools(sandbox);
+  const kit = tools(sandbox, { allow: ["preview"] });
 
   try {
     await kit.tools.preview?.execute({ port: 0 });
@@ -507,6 +522,7 @@ test("tools run write policy before file writes", async () => {
   const sandbox = await create({ adapter: local(), cwd: "/workspace" });
   const seen: string[] = [];
   const kit = tools(sandbox, {
+    allow: ["write"],
     beforeWrite(input, context) {
       seen.push(`${context.tool}:${context.cwd}:${context.sandbox.provider}`);
       if (!input.path.startsWith("/workspace/")) {
@@ -538,6 +554,7 @@ test("tools run exec policy before commands", async () => {
   const sandbox = await create({ adapter: local(), cwd: "/workspace" });
   const commands: string[] = [];
   const kit = tools(sandbox, {
+    allow: ["exec"],
     beforeExec(input) {
       commands.push(input.command);
       if (input.command === "rm") {
@@ -567,6 +584,7 @@ test("tools run exec policy before commands", async () => {
 test("agent command execution uses exec policy", async () => {
   const sandbox = await create({ adapter: local(), cwd: "/workspace" });
   const kit = tools(sandbox, {
+    allow: ["exec"],
     beforeExec(input) {
       if (input.command.includes("blocked")) {
         throw new Error("agent blocked");
