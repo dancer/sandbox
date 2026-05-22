@@ -47,7 +47,8 @@
         "pty": true,
         "sessions": true,
         "ssh": true,
-        "volumes": "create-time"
+        "volumes": "create-time",
+        "resources": "dynamic"
       },
       "snapshotCreate": false,
       "snapshotRestore": false,

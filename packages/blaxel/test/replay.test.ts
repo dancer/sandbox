@@ -27,6 +27,7 @@ const workflow: Workflow = {
       lifecycle: true,
       network: "create-time",
       previews: true,
+      resources: "create-time",
       sessions: true,
       system: true,
       volumes: "create-time",

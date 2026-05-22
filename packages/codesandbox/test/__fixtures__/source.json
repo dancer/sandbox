@@ -25,7 +25,8 @@
         "previews": true,
         "pty": true,
         "sessions": true,
-        "watching": true
+        "watching": true,
+        "resources": "dynamic"
       },
       "snapshotCreate": "memory",
       "snapshotRestore": false,

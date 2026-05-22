@@ -112,7 +112,9 @@ const capabilities: Capabilities = {
   processSpawn: "separate",
   raw: {
     lifecycle: "dynamic",
+    metrics: true,
     network: "dynamic",
+    resources: "create-time",
   },
   snapshotCreate: "disk",
   snapshotRestore: false,

@@ -88,6 +88,7 @@ const capabilities: Capabilities = {
     lifecycle: true,
     previews: true,
     pty: true,
+    resources: "dynamic",
     sessions: true,
     watching: true,
   },

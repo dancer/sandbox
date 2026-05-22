@@ -30,6 +30,7 @@ const workflow: Workflow = {
       network: "create-time",
       previews: true,
       pty: true,
+      resources: "dynamic",
       sessions: true,
       ssh: true,
       volumes: "create-time",

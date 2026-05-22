@@ -91,6 +91,7 @@ const capabilities: Capabilities = {
     git: true,
     lifecycle: "dynamic",
     mcp: "create-time",
+    metrics: true,
     network: "create-time",
     pty: true,
     volumes: "create-time",

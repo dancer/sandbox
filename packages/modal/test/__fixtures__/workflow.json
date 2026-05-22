@@ -44,7 +44,8 @@
         "pty": true,
         "secrets": "create-time",
         "tunnels": "create-time",
-        "volumes": "create-time"
+        "volumes": "create-time",
+        "resources": "create-time"
       },
       "snapshotCreate": "filesystem",
       "snapshotRestore": false,

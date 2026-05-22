@@ -41,7 +41,9 @@
       "processSpawn": "separate",
       "raw": {
         "lifecycle": "dynamic",
-        "network": "dynamic"
+        "network": "dynamic",
+        "metrics": true,
+        "resources": "create-time"
       },
       "snapshotCreate": "disk",
       "snapshotRestore": false,

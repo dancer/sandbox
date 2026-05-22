@@ -32,7 +32,8 @@
         "network": "create-time",
         "pty": true,
         "volumes": "create-time",
-        "watching": true
+        "watching": true,
+        "metrics": true
       },
       "snapshotCreate": "disk",
       "snapshotRestore": false,

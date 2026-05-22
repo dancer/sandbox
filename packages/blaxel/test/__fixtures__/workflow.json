@@ -45,7 +45,8 @@
         "sessions": true,
         "system": true,
         "volumes": "create-time",
-        "watching": true
+        "watching": true,
+        "resources": "create-time"
       },
       "snapshotCreate": false,
       "snapshotRestore": false,
