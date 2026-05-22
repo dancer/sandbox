@@ -612,7 +612,7 @@ export const tools = (sandbox: Sandbox, options: Options = {}): Kit => {
       description: "Write a text file in the sandbox",
       execute: async (input: Write): Promise<WriteResult> => {
         await options.beforeWrite?.(input, context(sandbox, cwd, "write"));
-        await sandbox.files.write(input.path, input.text);
+        await write(sandbox, { content: input.text, path: input.path });
         return { ok: true };
       },
       inputSchema: schema<Write>(

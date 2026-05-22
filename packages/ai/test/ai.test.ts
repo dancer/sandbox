@@ -136,12 +136,14 @@ test("tools can read, write, list, and execute", async () => {
   const kit = tools(sandbox, { allow: ["read", "write", "list", "exec"] });
 
   await kit.tools.write?.execute({
-    path: "/workspace/file.txt",
+    path: "/workspace/nested/file.txt",
     text: "hello",
   });
 
-  const read = await kit.tools.read?.execute({ path: "/workspace/file.txt" });
-  const list = await kit.tools.list?.execute({ path: "/workspace" });
+  const read = await kit.tools.read?.execute({
+    path: "/workspace/nested/file.txt",
+  });
+  const list = await kit.tools.list?.execute({ path: "/workspace/nested" });
   const exec = await kit.tools.exec?.execute({
     args: ["hello"],
     command: "echo",
@@ -157,7 +159,7 @@ test("tools can read, write, list, and execute", async () => {
 
   expect(read?.text).toBe("hello");
   expect(
-    list?.entries.some((entry) => entry.path === "/workspace/file.txt")
+    list?.entries.some((entry) => entry.path === "/workspace/nested/file.txt")
   ).toBe(true);
   expect(exec?.stdout.trim()).toBe("hello");
   expect(shell?.stdout).toBe("shell");
