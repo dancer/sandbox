@@ -8,11 +8,12 @@ import { create } from "@sandbox-sdk/core";
 
 import { codesandbox } from "../dist/index.js";
 
-const token = process.env.CSB_API_KEY?.trim();
+const token =
+  process.env.CSB_API_KEY?.trim() || process.env.TOGETHER_API_KEY?.trim();
 
 if (!token) {
   console.log(
-    "codesandbox live verifier skipped because CSB_API_KEY is missing"
+    "codesandbox live verifier skipped because CSB_API_KEY or TOGETHER_API_KEY is missing"
   );
   process.exit(0);
 }

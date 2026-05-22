@@ -1730,7 +1730,7 @@ export type CodeSandbox = Readonly<{
   timeout?: number;
   /** sandbox title shown in codesandbox */
   title?: string;
-  /** api token. falls back to CSB_API_KEY */
+  /** api token. falls back to CSB_API_KEY or TOGETHER_API_KEY */
   token?: string;
   /** vm tier forwarded when starting the vm */
   vmTier?: CreateOptions["vmTier"];
@@ -1980,6 +1980,8 @@ export type Modal = Readonly<
     regions?: CreateParams["regions"];
     /** Modal secrets injected as sandbox environment variables */
     secrets?: CreateParams["secrets"];
+    /** stop behavior used by `sandbox.stop` */
+    stop?: "detach" | "terminate";
     /** default tags attached to new sandboxes */
     tags?: Readonly<Record<string, string>>;
     /** sandbox lifetime timeout in milliseconds */
