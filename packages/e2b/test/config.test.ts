@@ -68,6 +68,25 @@ test("e2b maps create and command options without running a real provider", asyn
     commands: {
       run: (line: string, options: unknown) => {
         commandSeen = { line, options };
+        const run = options as {
+          background?: boolean;
+          onStderr?: (chunk: string) => void;
+          onStdout?: (chunk: string) => void;
+        };
+        if (run.background) {
+          run.onStdout?.("out");
+          run.onStderr?.("err");
+          return Promise.resolve({
+            kill: () => Promise.resolve(),
+            pid: 123,
+            wait: () =>
+              Promise.resolve({
+                exitCode: 0,
+                stderr: "err",
+                stdout: "out",
+              }),
+          });
+        }
         return Promise.resolve({
           exitCode: 0,
           stderr: "",
@@ -207,6 +226,39 @@ test("e2b maps create and command options without running a real provider", asyn
         timeoutMs: 321,
         user: "runner",
       },
+    });
+
+    const running = await sandbox.process.spawn("echo", ["hello"], {
+      cwd: "/tmp",
+      env: { C: "3" },
+      timeout: 321,
+    });
+    const [streamed, stdout, stderr, spawned] = await Promise.all([
+      new Response(running.output).text(),
+      new Response(running.stdout).text(),
+      new Response(running.stderr).text(),
+      running.result,
+    ]);
+    expect(commandSeen).toEqual({
+      line: "echo hello",
+      options: {
+        background: true,
+        cwd: "/tmp",
+        envs: { C: "3" },
+        onStderr: expect.any(Function),
+        onStdout: expect.any(Function),
+        timeoutMs: 321,
+        user: "runner",
+      },
+    });
+    expect(streamed).toBe("outerr");
+    expect(stdout).toBe("out");
+    expect(stderr).toBe("err");
+    expect(spawned).toEqual({
+      code: 0,
+      ok: true,
+      stderr: "err",
+      stdout: "out",
     });
 
     const input = new ReadableStream<Uint8Array>({

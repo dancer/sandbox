@@ -50,7 +50,8 @@ export type Payload = Readonly<{
   port?: Url;
   provider: string;
   shell?: Result;
-  spawn?: Result & Readonly<{ output: string }>;
+  spawn?: Result &
+    Readonly<{ output: string; stderrStream?: string; stdoutStream?: string }>;
   unsupported: Readonly<{
     spawn: boolean;
     spawnShell: boolean;
@@ -100,15 +101,27 @@ const failed = (result: Result): Result => {
 const spawned = async (
   running: Running,
   expected: string
-): Promise<Result & Readonly<{ output: string }>> => {
-  const stream = await text(running.output);
-  const result = await running.result;
+): Promise<
+  Result &
+    Readonly<{ output: string; stderrStream?: string; stdoutStream?: string }>
+> => {
+  const [stream, stdout, stderr, result] = await Promise.all([
+    text(running.output),
+    running.stdout === undefined ? undefined : text(running.stdout),
+    running.stderr === undefined ? undefined : text(running.stderr),
+    running.result,
+  ]);
   expect(result).toMatchObject({
     code: 0,
     ok: true,
   });
-  expect(`${result.stdout}\n${stream}`).toContain(expected);
-  return { ...result, output: stream };
+  expect(`${result.stdout}\n${stream}\n${stdout ?? ""}`).toContain(expected);
+  return {
+    ...result,
+    output: stream,
+    ...(stderr === undefined ? {} : { stderrStream: stderr }),
+    ...(stdout === undefined ? {} : { stdoutStream: stdout }),
+  };
 };
 
 const ignore = (): undefined => undefined;
@@ -181,7 +194,14 @@ export const workflow = async (
   let shell: Result | undefined;
   let failure: Result | undefined;
   let commands: Commands | undefined;
-  let spawn: (Result & Readonly<{ output: string }>) | undefined;
+  let spawn:
+    | (Result &
+        Readonly<{
+          output: string;
+          stderrStream?: string;
+          stdoutStream?: string;
+        }>)
+    | undefined;
   let unsupported = { spawn: false, spawnShell: false };
   let preview: Url | undefined;
 

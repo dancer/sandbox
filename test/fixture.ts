@@ -51,7 +51,8 @@ export type SnapshotSource = Readonly<{
 
 export const workflowFeatures = (
   spawn: boolean,
-  port: boolean
+  port: boolean,
+  streams = false
 ): readonly string[] => [
   "capabilities",
   "files.mkdir",
@@ -72,6 +73,9 @@ export const workflowFeatures = (
   "process.shell",
   "process.shell.options",
   spawn ? "process.spawnShell" : "process.spawn.unsupported",
+  ...(streams
+    ? ["process.spawnShell.stderr", "process.spawnShell.stdout"]
+    : []),
   "process.failure",
   ...(port ? ["ports.expose"] : []),
   "sandbox.stop",
@@ -94,7 +98,9 @@ export const workflowFixture = (
   coverage: {
     features: workflowFeatures(
       !payload.unsupported.spawn,
-      payload.port !== undefined
+      payload.port !== undefined,
+      payload.spawn?.stdoutStream !== undefined ||
+        payload.spawn?.stderrStream !== undefined
     ),
     fixture: "workflow",
     provider,
@@ -197,6 +203,10 @@ export const expectWorkflow = (payload: Payload, expected: Workflow): void => {
       ok: true,
     });
     expect(payload.spawn?.output).toContain(expected.content);
+    if (expected.capabilities.streaming === "separate") {
+      expect(payload.spawn?.stdoutStream).toContain(expected.content);
+      expect(payload.spawn?.stderrStream ?? "").toBe("");
+    }
   } else {
     expect(payload.spawn).toBeUndefined();
   }

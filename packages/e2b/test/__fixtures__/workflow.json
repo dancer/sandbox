@@ -20,6 +20,8 @@
       "process.shell",
       "process.shell.options",
       "process.spawnShell",
+      "process.spawnShell.stderr",
+      "process.spawnShell.stdout",
       "process.failure",
       "ports.expose",
       "sandbox.stop"
@@ -35,7 +37,7 @@
       "ports": "derived",
       "process": true,
       "processExec": true,
-      "processSpawn": "combined",
+      "processSpawn": "separate",
       "raw": {
         "git": true,
         "lifecycle": "dynamic",
@@ -50,7 +52,7 @@
       "snapshotRestore": false,
       "snapshotSource": "create-time",
       "snapshots": false,
-      "streaming": "combined"
+      "streaming": "separate"
     },
     "commands": {
       "create": "create-env",
@@ -99,7 +101,9 @@
       "ok": true,
       "stderr": "",
       "stdout": "hello from e2b",
-      "output": "hello from e2b"
+      "output": "hello from e2b",
+      "stderrStream": "",
+      "stdoutStream": "hello from e2b"
     },
     "unsupported": {
       "spawn": false,

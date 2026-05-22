@@ -24,7 +24,7 @@ test("adapters expose capability-honest feature modes", () => {
     files: true,
     ports: "derived",
     processExec: true,
-    processSpawn: "combined",
+    processSpawn: "separate",
     raw: {
       git: true,
       lifecycle: "dynamic",
@@ -87,7 +87,7 @@ test("adapters expose capability-honest feature modes", () => {
     files: true,
     ports: "dynamic",
     processExec: true,
-    processSpawn: "combined",
+    processSpawn: "separate",
     raw: {
       desktop: true,
       git: true,
@@ -105,7 +105,7 @@ test("adapters expose capability-honest feature modes", () => {
     snapshotCreate: false,
     snapshotRestore: false,
     snapshotSource: "create-time",
-    streaming: "combined",
+    streaming: "separate",
   });
 
   expect(modal().capabilities).toMatchObject({

@@ -20,6 +20,8 @@
       "process.shell",
       "process.shell.options",
       "process.spawnShell",
+      "process.spawnShell.stderr",
+      "process.spawnShell.stdout",
       "process.failure",
       "ports.expose",
       "sandbox.stop"
@@ -35,7 +37,7 @@
       "ports": "dynamic",
       "process": true,
       "processExec": true,
-      "processSpawn": "combined",
+      "processSpawn": "separate",
       "raw": {
         "desktop": true,
         "git": true,
@@ -54,7 +56,7 @@
       "snapshotRestore": false,
       "snapshotSource": "create-time",
       "snapshots": false,
-      "streaming": "combined"
+      "streaming": "separate"
     },
     "commands": {
       "create": "create-env",
@@ -103,7 +105,9 @@
       "ok": true,
       "stderr": "",
       "stdout": "hello from daytona\n",
-      "output": "hello from daytona\n"
+      "output": "hello from daytona\n",
+      "stderrStream": "",
+      "stdoutStream": "hello from daytona"
     },
     "unsupported": {
       "spawn": false,

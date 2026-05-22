@@ -86,7 +86,7 @@ const capabilities: Capabilities = {
   ports: "derived",
   process: true,
   processExec: true,
-  processSpawn: "combined",
+  processSpawn: "separate",
   raw: {
     git: true,
     lifecycle: "dynamic",
@@ -101,7 +101,7 @@ const capabilities: Capabilities = {
   snapshotRestore: false,
   snapshotSource: "create-time",
   snapshots: false,
-  streaming: "combined",
+  streaming: "separate",
 };
 
 const present = (value: string | undefined): boolean =>
@@ -246,27 +246,87 @@ const execute = (
 ): Promise<Result> =>
   executeLine(raw, cwd, user, command(executable, args), options);
 
-const stream = (): {
-  append(chunk: string): void;
+type Channel = "output" | "stderr" | "stdout";
+
+type Chunk = Readonly<{
+  channel: Exclude<Channel, "output">;
+  value: Uint8Array;
+}>;
+
+const include = (channel: Channel, chunk: Chunk): boolean =>
+  channel === "output" || channel === chunk.channel;
+
+const streams = (): Readonly<{
+  append(channel: Exclude<Channel, "output">, chunk: string): void;
   close(): void;
   output: ReadableStream<Uint8Array>;
-} => {
+  stderr: ReadableStream<Uint8Array>;
+  stdout: ReadableStream<Uint8Array>;
+}> => {
   const encoder = new TextEncoder();
-  let close: (() => void) | undefined;
-  let send: ((chunk: Uint8Array) => void) | undefined;
+  const chunks: Chunk[] = [];
+  const controllers: Record<
+    Channel,
+    Set<ReadableStreamDefaultController<Uint8Array>>
+  > = {
+    output: new Set(),
+    stderr: new Set(),
+    stdout: new Set(),
+  };
+  let closed = false;
+
+  const create = (channel: Channel): ReadableStream<Uint8Array> => {
+    let active: ReadableStreamDefaultController<Uint8Array> | undefined;
+    return new ReadableStream({
+      cancel() {
+        if (active !== undefined) {
+          controllers[channel].delete(active);
+        }
+      },
+      start(controller) {
+        active = controller;
+        for (const chunk of chunks) {
+          if (include(channel, chunk)) {
+            controller.enqueue(chunk.value);
+          }
+        }
+        if (closed) {
+          controller.close();
+          return;
+        }
+        controllers[channel].add(controller);
+      },
+    });
+  };
+
   return {
-    append(chunk) {
-      send?.(encoder.encode(chunk));
+    append(channel, chunk) {
+      if (closed) {
+        return;
+      }
+      const value = encoder.encode(chunk);
+      chunks.push({ channel, value });
+      for (const stream of ["output", channel] as const) {
+        for (const controller of controllers[stream]) {
+          controller.enqueue(value);
+        }
+      }
     },
     close() {
-      close?.();
+      if (closed) {
+        return;
+      }
+      closed = true;
+      for (const group of Object.values(controllers)) {
+        for (const controller of group) {
+          controller.close();
+        }
+        group.clear();
+      }
     },
-    output: new ReadableStream({
-      start(controller) {
-        close = () => controller.close();
-        send = (chunk) => controller.enqueue(chunk);
-      },
-    }),
+    output: create("output"),
+    stderr: create("stderr"),
+    stdout: create("stdout"),
   };
 };
 
@@ -290,14 +350,14 @@ const spawnLine = async (
 ): Promise<Running> => {
   check(options.signal);
   const timeout = duration(options.timeout, provider);
-  const logs = stream();
+  const logs = streams();
   try {
     const handle = await raw.commands.run(line, {
       background: true,
       cwd: options.cwd ?? cwd,
       ...(options.env === undefined ? {} : { envs: { ...options.env } }),
-      onStderr: logs.append,
-      onStdout: logs.append,
+      onStderr: (chunk) => logs.append("stderr", chunk),
+      onStdout: (chunk) => logs.append("stdout", chunk),
       ...(timeout === undefined ? {} : { timeoutMs: timeout }),
       ...(user === undefined ? {} : { user }),
     });
@@ -314,8 +374,11 @@ const spawnLine = async (
           logs.close();
         }
       })(),
+      stderr: logs.stderr,
+      stdout: logs.stdout,
     };
   } catch (error) {
+    logs.close();
     throw sandboxError(provider, "Command failed", "process", error);
   }
 };

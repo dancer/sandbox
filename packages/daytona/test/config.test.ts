@@ -272,10 +272,12 @@ test("daytona maps background process APIs", async () => {
       getSessionCommandLogs: (
         _session: string,
         _command: string,
-        onStdout?: (chunk: string) => void
+        onStdout?: (chunk: string) => void,
+        onStderr?: (chunk: string) => void
       ) => {
         onStdout?.("hello");
-        return Promise.resolve({ stderr: "", stdout: "hello" });
+        onStderr?.("error");
+        return Promise.resolve({ stderr: "error", stdout: "hello" });
       },
     },
     stop: () => Promise.resolve(),
@@ -291,10 +293,19 @@ test("daytona maps background process APIs", async () => {
     });
 
     const running = await sandbox.process.spawn("echo", ["hello"]);
-    await expect(new Response(running.output).text()).resolves.toBe("hello");
-    await expect(running.result).resolves.toMatchObject({
+    const [streamed, stdout, stderr, result] = await Promise.all([
+      new Response(running.output).text(),
+      new Response(running.stdout).text(),
+      new Response(running.stderr).text(),
+      running.result,
+    ]);
+    expect(streamed).toBe("helloerror");
+    expect(stdout).toBe("hello");
+    expect(stderr).toBe("error");
+    expect(result).toMatchObject({
       code: 0,
       ok: true,
+      stderr: "error",
       stdout: "hello",
     });
     await running.kill();
