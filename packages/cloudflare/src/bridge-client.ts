@@ -136,6 +136,7 @@ export const bridgeCapabilities: Capabilities = {
   processExec: true,
   processSpawn: false,
   raw: {
+    backup: true,
     buckets: "configured",
     lifecycle: "dynamic",
     pty: true,

@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 
 import { blaxel } from "@sandbox-sdk/blaxel";
-import { cloudflare } from "@sandbox-sdk/cloudflare";
+import { cloudflare, cloudflareBridge } from "@sandbox-sdk/cloudflare";
 import { codesandbox } from "@sandbox-sdk/codesandbox";
 import { rawCapabilityMode, supports, supportsRaw } from "@sandbox-sdk/core";
 import { daytona } from "@sandbox-sdk/daytona";
@@ -165,6 +165,27 @@ test("adapters expose capability-honest feature modes", () => {
     snapshotCreate: "memory",
     snapshotRestore: false,
     snapshotSource: "create-time",
+  });
+
+  expect(
+    cloudflareBridge({
+      fetch: () => new Response(null, { status: 204 }),
+      url: "https://bridge.example.com",
+    }).capabilities
+  ).toMatchObject({
+    files: true,
+    ports: false,
+    processExec: true,
+    processSpawn: false,
+    raw: {
+      backup: true,
+      buckets: "configured",
+      lifecycle: "dynamic",
+      pty: true,
+      sessions: true,
+    },
+    snapshotCreate: false,
+    snapshotRestore: false,
   });
 });
 
