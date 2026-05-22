@@ -397,6 +397,8 @@ const spawn = async (
   check(options.signal);
   const timeout = seconds(options.timeout);
   const maxWait = duration(options.timeout, provider) ?? 600_000;
+  const logs = streams();
+  let close = noop;
   try {
     const response = await raw.process.exec({
       command: line,
@@ -406,8 +408,6 @@ const spawn = async (
       workingDir: options.cwd ?? cwd,
     });
     const id = response.pid;
-    const logs = streams();
-    let close = noop;
 
     const stream = raw.process.streamLogs(id, {
       onError(error) {
@@ -470,10 +470,11 @@ const spawn = async (
       stdout: logs.stdout,
     };
   } catch (error) {
+    close();
+    logs.close();
     if (options.signal?.aborted) {
       abort(provider, error);
     }
-    close();
     throw sandboxError(provider, "Command failed", "process", error);
   }
 };

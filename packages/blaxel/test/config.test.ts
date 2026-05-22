@@ -332,3 +332,37 @@ test("blaxel maps create options and normalized operations", async () => {
     SandboxInstance.create = original;
   }
 });
+
+test("blaxel preserves spawn provider errors", async () => {
+  const original = SandboxInstance.create;
+  const raw = {
+    delete: () => Promise.resolve(),
+    fs: {
+      mkdir: () => Promise.resolve({}),
+    },
+    metadata: { name: "sandbox" },
+    process: {
+      exec: () => Promise.reject(new Error("provider spawn failed")),
+    },
+  } as unknown as SandboxInstance;
+
+  SandboxInstance.create = (() =>
+    Promise.resolve(raw)) as typeof SandboxInstance.create;
+
+  try {
+    const sandbox = await create({
+      adapter: blaxel({
+        apiKey: "key",
+        workspace: "workspace",
+      }),
+      cwd: "/work",
+    });
+
+    await expect(sandbox.process.spawnShell("sleep 1")).rejects.toMatchObject({
+      code: "process",
+      provider: "blaxel",
+    });
+  } finally {
+    SandboxInstance.create = original;
+  }
+});
