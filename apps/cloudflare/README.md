@@ -9,6 +9,9 @@ bun install
 bun run --cwd apps/cloudflare deploy
 ```
 
+Wrangler builds the configured Sandbox container during deploy, so Docker must
+be installed and running before this command can succeed.
+
 Set the live test URL after deploy:
 
 ```bash
@@ -26,6 +29,14 @@ export CLOUDFLARE_SANDBOX_TOKEN="same-value"
 The live route requires `SANDBOX_SDK_TOKEN`. Without it, the Worker returns
 `missing_token` so a deployed validation endpoint cannot run sandboxes
 unauthenticated.
+
+## routes
+
+- `/sandbox-sdk/live` verifies normalized files, process execution, environment, and streaming behavior
+- `/sandbox-sdk/ports` verifies `ports.expose()` against a custom preview host
+- `/sandbox-sdk/tunnels` verifies Cloudflare quick tunnels through `sandbox.raw`
+- `/sandbox-sdk/raw` verifies raw sessions, code contexts, interpreter execution, retained change checks, and safe method presence for configured raw features
+- `/sandbox-sdk/cleanup` stops sandboxes created by preview and tunnel checks
 
 ## binding
 
