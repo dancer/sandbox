@@ -7,6 +7,14 @@ import { codesandbox } from "../src/index";
 const commandError = (exitCode: number, output: string): Error =>
   Object.assign(new Error("command failed"), { exitCode, output });
 
+const restore = (name: string, value: string | undefined): void => {
+  if (value === undefined) {
+    Reflect.deleteProperty(process.env, name);
+    return;
+  }
+  process.env[name] = value;
+};
+
 test("codesandbox reports missing credentials before provider calls", async () => {
   await expect(
     create({
@@ -18,6 +26,38 @@ test("codesandbox reports missing credentials before provider calls", async () =
     code: "configuration",
     provider: "codesandbox",
   });
+});
+
+test("codesandbox accepts together api key fallback", async () => {
+  const codeSandboxKey = process.env.CSB_API_KEY;
+  const togetherKey = process.env.TOGETHER_API_KEY;
+  process.env.CSB_API_KEY = "";
+  process.env.TOGETHER_API_KEY = "together";
+
+  try {
+    let called = false;
+    await expect(
+      create({
+        adapter: codesandbox({
+          clientOptions: {
+            fetch: () => {
+              called = true;
+              return Promise.resolve(
+                new Response("provider called", { status: 500 })
+              );
+            },
+          },
+        }),
+      })
+    ).rejects.not.toMatchObject({
+      code: "configuration",
+      provider: "codesandbox",
+    });
+    expect(called).toBe(true);
+  } finally {
+    restore("CSB_API_KEY", codeSandboxKey);
+    restore("TOGETHER_API_KEY", togetherKey);
+  }
 });
 
 test("codesandbox rejects invalid create timeouts before provider calls", async () => {

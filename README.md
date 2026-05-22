@@ -321,7 +321,7 @@ CodeSandbox config and replay tests.
 
 - Blaxel: `BL_WORKSPACE` with `BL_API_KEY` or `BL_CLIENT_CREDENTIALS`, or Blaxel CLI config; set `BL_REGION` when you need a specific region
 - Cloudflare: deploy `apps/cloudflare` and set `CLOUDFLARE_SANDBOX_WORKER_URL` and `CLOUDFLARE_SANDBOX_TOKEN`; set `CLOUDFLARE_SANDBOX_PREVIEW_HOST` to verify `ports.expose()`
-- CodeSandbox: `CSB_API_KEY`
+- CodeSandbox: `CSB_API_KEY` or `TOGETHER_API_KEY`
 - Daytona: `DAYTONA_API_KEY`
 - E2B: `E2B_API_KEY` or `E2B_ACCESS_TOKEN`
 - Modal: `MODAL_TOKEN_ID` and `MODAL_TOKEN_SECRET`, or Modal CLI config
