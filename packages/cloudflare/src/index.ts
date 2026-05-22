@@ -479,14 +479,32 @@ const spawnLine = async (
       ...(options.env === undefined ? {} : { env: { ...options.env } }),
       ...(timeout === undefined ? {} : { timeout }),
     });
+    const cancel = (): void => {
+      void process.kill("SIGTERM");
+    };
+    const dispose = (): void => {
+      options.signal?.removeEventListener("abort", cancel);
+    };
+    if (options.signal?.aborted) {
+      cancel();
+    } else {
+      options.signal?.addEventListener("abort", cancel, { once: true });
+    }
     const output = logs(raw, process);
     return {
       id: process.id,
       kill: async (signal = "SIGTERM") => {
+        dispose();
         await process.kill(signal);
       },
       ...output,
-      result: lazy(() => wait(raw, process)),
+      result: lazy(async () => {
+        try {
+          return await wait(raw, process);
+        } finally {
+          dispose();
+        }
+      }),
     };
   } catch (error) {
     throw sandboxError(provider, "Process spawn failed", "process", error);

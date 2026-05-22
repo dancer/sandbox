@@ -1,4 +1,5 @@
 import { expect, mock, test } from "bun:test";
+import { setTimeout as delay } from "node:timers/promises";
 
 import type { Sandbox as CloudflareSandbox } from "@cloudflare/sandbox";
 import { create } from "@sandbox-sdk/core";
@@ -9,6 +10,7 @@ let exposeCalls = 0;
 let exposeSeen: unknown;
 let executeSeen: unknown;
 let getSeen: unknown;
+let killedSignal: unknown;
 let mkdirSeen: unknown;
 let readSeen: unknown;
 let setEnvSeen: unknown;
@@ -77,7 +79,10 @@ const raw = {
     startProcessSeen = { line, options };
     return Promise.resolve({
       id: "process",
-      kill: () => Promise.resolve(),
+      kill: (signal?: string) => {
+        killedSignal = signal;
+        return Promise.resolve();
+      },
       waitForExit: () => Promise.resolve({ exitCode: 0 }),
     });
   },
@@ -223,6 +228,27 @@ test("cloudflare exposes separate process streams", async () => {
       stderr: "err",
       stdout: "out",
     });
+  } finally {
+    await sandbox.stop();
+  }
+});
+
+test("cloudflare kills spawned processes on abort", async () => {
+  killedSignal = undefined;
+  const controller = new AbortController();
+  const sandbox = await create({
+    adapter: cloudflare({
+      binding,
+    }),
+  });
+
+  try {
+    await sandbox.process.spawnShell("sleep 1", {
+      signal: controller.signal,
+    });
+    controller.abort();
+    await delay(0);
+    expect(killedSignal).toBe("SIGTERM");
   } finally {
     await sandbox.stop();
   }
