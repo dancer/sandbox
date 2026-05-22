@@ -92,6 +92,9 @@ live("e2b exposes advertised raw capabilities", async () => {
     const info = await sandbox.raw.getInfo();
     expect(info.network?.allowPublicTraffic).toBe(false);
 
+    const metrics = await sandbox.raw.getMetrics();
+    expect(Array.isArray(metrics)).toBe(true);
+
     const watcher = await sandbox.raw.files.watchDir(
       cwd,
       () => {

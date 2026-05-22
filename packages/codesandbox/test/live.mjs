@@ -319,6 +319,7 @@ const raw = async (sandbox) => {
   assert.equal(typeof sandbox.raw.sandbox.bootupType, "string");
   assert.equal(typeof sandbox.raw.sandbox.createSession, "function");
   assert.equal(typeof sandbox.raw.sandbox.updateHibernationTimeout, "function");
+  assert.equal(typeof sandbox.raw.sandbox.updateTier, "function");
   assert.equal(typeof sandbox.raw.sdk.hosts?.createToken, "function");
   assert.equal(typeof sandbox.raw.client.fs.watch, "function");
   assert.equal(typeof sandbox.raw.client.interpreters.javascript, "function");

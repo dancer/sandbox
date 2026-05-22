@@ -112,6 +112,11 @@ live("daytona exposes advertised raw capabilities", async () => {
     const labels = await sandbox.raw.setLabels({ sandboxSdk: "raw" });
     expect(labels.sandboxSdk).toBe("raw");
     expect(sandbox.raw.networkBlockAll).toBe(false);
+    expect(typeof sandbox.raw.cpu).toBe("number");
+    expect(typeof sandbox.raw.memory).toBe("number");
+    expect(typeof sandbox.raw.disk).toBe("number");
+    expect(typeof sandbox.raw.resize).toBe("function");
+    expect(typeof sandbox.raw.waitForResizeComplete).toBe("function");
 
     await sandbox.raw.setAutostopInterval(15);
 

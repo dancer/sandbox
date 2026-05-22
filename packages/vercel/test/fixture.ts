@@ -49,15 +49,17 @@ export const enabled = (): boolean =>
 export const path = (name: string): string =>
   `${cwd}/sandbox-sdk-${name}-${randomUUID()}.txt`;
 
-export const adapter = () => {
+export const adapter = (options: Parameters<typeof vercel>[0] = {}) => {
   const credentials = explicit();
   return credentials === undefined
     ? vercel({
+        ...options,
         ports: [3000],
         timeout: 300_000,
       })
     : vercel({
         ...credentials,
+        ...options,
         ports: [3000],
         timeout: 300_000,
       });

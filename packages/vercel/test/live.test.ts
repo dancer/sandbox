@@ -66,3 +66,21 @@ live("vercel creates and starts from a live snapshot", async () => {
     await cleanupSnapshot(snapshotId);
   }
 });
+
+live("vercel exposes advertised raw capabilities", async () => {
+  const sandbox = await create({
+    adapter: adapter({ resources: { vcpus: 1 } }),
+    cwd,
+  });
+
+  try {
+    expect(sandbox.raw.status).toBe("running");
+    await sandbox.process.shell("printf raw-metrics");
+    await sandbox.raw.stop({ blocking: true });
+    expect(sandbox.raw.status).toBe("stopped");
+    expect("activeCpuUsageMs" in sandbox.raw).toBe(true);
+    expect("networkTransfer" in sandbox.raw).toBe(true);
+  } finally {
+    await cleanup(sandbox);
+  }
+});
