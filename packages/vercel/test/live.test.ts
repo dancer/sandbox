@@ -53,6 +53,21 @@ live("vercel runs a live sandbox workflow", async () => {
   }
 });
 
+live("vercel supports the latest typed node runtime", async () => {
+  const sandbox = await create({
+    adapter: adapter({ ports: [], runtime: "node26" }),
+    cwd,
+  });
+
+  try {
+    const output = await sandbox.process.exec("node", ["--version"]);
+    expect(output.code).toBe(0);
+    expect(output.stdout.trim()).toMatch(/^v26\./u);
+  } finally {
+    await cleanup(sandbox);
+  }
+});
+
 live("vercel creates and starts from a live snapshot", async () => {
   const file = path("snapshot");
   const sandbox = await create({
