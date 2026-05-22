@@ -69,6 +69,7 @@ const coverage = {
     "process.spawnShell",
     "process.failure",
     "ports.expose",
+    "ports.expose.token",
     "snapshots.create",
     "snapshotSource",
     "sandbox.raw.delete",
@@ -124,6 +125,7 @@ const sanitize = (payload) => ({
   },
   port: {
     ...payload.port,
+    tokenUrl: "https://preview.csb.app?preview_token=token",
     url: "https://preview.csb.app",
   },
 });
@@ -205,6 +207,19 @@ const workflow = async (sandbox) => {
 
   try {
     const preview = await sandbox.ports.expose(3000);
+    let tokenUrl = "";
+    const previewToken = await sandbox.raw.sdk.hosts.createToken(sandbox.id, {
+      expiresAt: new Date(Date.now() + 300_000),
+    });
+    try {
+      const tokenPreview = await sandbox.ports.expose(3000, {
+        token: previewToken.token,
+      });
+      tokenUrl = tokenPreview.url;
+      assert.match(tokenUrl, /preview_token=/u);
+    } finally {
+      await sandbox.raw.sdk.hosts.revokeToken(sandbox.id, previewToken.tokenId);
+    }
 
     const payload = {
       capabilities: sandbox.capabilities,
@@ -225,7 +240,7 @@ const workflow = async (sandbox) => {
         stream: await text(await sandbox.files.stream(streamFile)),
       },
       ok: true,
-      port: preview,
+      port: { ...preview, tokenUrl },
       provider: sandbox.provider,
       shell,
       spawn: { ...spawned, output },
@@ -250,6 +265,8 @@ const workflow = async (sandbox) => {
     assert.match(payload.spawn.output, /hello from codesandbox/u);
     assert.equal(payload.port.port, 3000);
     assert.match(payload.port.url, /^https:\/\//u);
+    assert.match(payload.port.tokenUrl, /^https:\/\//u);
+    assert.match(payload.port.tokenUrl, /preview_token=/u);
 
     return payload;
   } finally {

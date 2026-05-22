@@ -41,6 +41,7 @@ export type Workflow = Readonly<{
   ok: boolean;
   port: Readonly<{
     port: number;
+    tokenUrl: string;
     url: string;
   }>;
   provider: string;
@@ -107,6 +108,7 @@ export const expectCoverage = (payload: Coverage): void => {
     "process.spawnShell",
     "process.failure",
     "ports.expose",
+    "ports.expose.token",
     "snapshots.create",
     "snapshotSource",
     "sandbox.raw.delete",
@@ -183,6 +185,8 @@ export const expectWorkflow = (payload: Workflow): void => {
   expect(payload.spawn.output).toContain("hello from codesandbox");
   expect(payload.port.port).toBe(3000);
   expect(payload.port.url).toMatch(/^https:\/\//u);
+  expect(payload.port.tokenUrl).toMatch(/^https:\/\//u);
+  expect(payload.port.tokenUrl).toContain("preview_token=");
   expect(payload.raw.interpreter.javascript).toBe("raw javascript");
   expect(payload.raw.interpreter.python).toBe("raw python");
   expect(payload.raw.setup.status).toBeTruthy();

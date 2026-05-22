@@ -22,6 +22,7 @@
       "process.spawnShell",
       "process.failure",
       "ports.expose",
+      "ports.expose.token",
       "snapshots.create",
       "snapshotSource",
       "sandbox.raw.delete",
@@ -92,6 +93,7 @@
     "ok": true,
     "port": {
       "port": 3000,
+      "tokenUrl": "https://preview.csb.app?preview_token=token",
       "url": "https://preview.csb.app"
     },
     "provider": "codesandbox",

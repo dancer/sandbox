@@ -51,6 +51,7 @@ test("codesandbox maps create options and normalized operations", async () => {
   let mkdirSeen: unknown;
   let portSeen: unknown;
   let backgroundSeen: unknown;
+  let hostSeen: unknown;
   let runSeen: unknown;
   let shutdownSeen: string | undefined;
   let disconnected = false;
@@ -101,6 +102,12 @@ test("codesandbox maps create options and normalized operations", async () => {
       writeFile: () => Promise.resolve(),
       writeTextFile: () => Promise.resolve(),
     },
+    hosts: {
+      getUrl: (port: number, protocol?: string) => {
+        hostSeen = { port, protocol };
+        return `${protocol ?? "https"}://sandbox-${port}.csb.app`;
+      },
+    },
     interpreters: {
       javascript: () => Promise.resolve("javascript"),
       python: () => Promise.resolve("python"),
@@ -148,6 +155,16 @@ test("codesandbox maps create options and normalized operations", async () => {
     id: "sandbox",
   };
   const sdk = {
+    hosts: {
+      getUrl: (
+        token: { sandboxId: string; token: string },
+        port: number,
+        protocol?: string
+      ) => {
+        hostSeen = { port, protocol, token };
+        return `${protocol ?? "https"}://${token.sandboxId}-${port}.csb.app?preview_token=${token.token}`;
+      },
+    },
     sandboxes: {
       create: (options: unknown) => {
         createSeen = options;
@@ -203,16 +220,31 @@ test("codesandbox maps create options and normalized operations", async () => {
 
   await expect(current.ports.expose(3000)).resolves.toEqual({
     port: 3000,
-    url: "https://preview.csb.app",
+    url: "https://sandbox-3000.csb.app",
   });
   expect(portSeen).toBe(3000);
+  expect(hostSeen).toEqual({ port: 3000, protocol: undefined });
   client.ports.waitForPort = (port: number) => {
     portSeen = port;
     return Promise.resolve({ host: "preview.csb.app", port });
   };
-  await expect(current.ports.expose(3000)).resolves.toEqual({
+  await expect(
+    current.ports.expose(3000, { protocol: "http" })
+  ).resolves.toEqual({
     port: 3000,
-    url: "https://preview.csb.app",
+    url: "http://sandbox-3000.csb.app",
+  });
+  expect(hostSeen).toEqual({ port: 3000, protocol: "http" });
+  await expect(
+    current.ports.expose(3000, { token: "private" })
+  ).resolves.toEqual({
+    port: 3000,
+    url: "https://sandbox-3000.csb.app?preview_token=private",
+  });
+  expect(hostSeen).toEqual({
+    port: 3000,
+    protocol: undefined,
+    token: { sandboxId: "sandbox", token: "private" },
   });
   portSeen = undefined;
   await expect(current.ports.expose(0)).rejects.toMatchObject({

@@ -18,6 +18,7 @@ import type {
   Entry,
   Exec,
   Input,
+  Port,
   Result,
   Running,
   Sandbox,
@@ -213,6 +214,31 @@ const url = (host: string): string =>
   host.startsWith("http://") || host.startsWith("https://")
     ? host
     : `https://${host}`;
+
+const previewUrl = (
+  raw: Raw,
+  value: number,
+  protocol: NonNullable<Port["protocol"]> | undefined,
+  token: string | undefined,
+  fallback: string
+): string => {
+  if (protocol === "tcp") {
+    unsupported(provider, "tcp previews");
+  }
+  if (token !== undefined) {
+    if (raw.sdk.hosts === undefined) {
+      unsupported(provider, "manual preview tokens");
+    }
+    return raw.sdk.hosts.getUrl(
+      { sandboxId: raw.sandbox.id, token },
+      value,
+      protocol
+    );
+  }
+  return raw.client.hosts === undefined
+    ? url(fallback)
+    : raw.client.hosts.getUrl(value, protocol);
+};
 
 const spawn = async (
   client: SandboxClient,
@@ -426,14 +452,23 @@ const createSandbox = (
   ports: {
     expose: async (value, options = {}) => {
       const target = port(value, provider);
-      if (options.host !== undefined || options.protocol === "tcp") {
-        unsupported(provider, "custom preview hosts or tcp previews");
+      if (options.host !== undefined) {
+        unsupported(provider, "custom preview hosts");
       }
       const preview = await wrap(
         () => raw.client.ports.waitForPort(target),
         "port exposure"
       );
-      return { port: target, url: url(preview.host) };
+      return {
+        port: target,
+        url: previewUrl(
+          raw,
+          target,
+          options.protocol,
+          options.token,
+          preview.host
+        ),
+      };
     },
   },
   process: {
