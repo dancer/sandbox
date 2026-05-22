@@ -24,6 +24,15 @@ import type {
   Sandbox,
 } from "@sandbox-sdk/core";
 
+export { cloudflareBridge } from "./bridge.js";
+export type {
+  CloudflareBridge,
+  CloudflareBridgeJson,
+  CloudflareBridgeRaw,
+  Mount as CloudflareBridgeMount,
+  Persist as CloudflareBridgePersist,
+  Session as CloudflareBridgeSession,
+} from "./bridge.js";
 export type { Sandbox as CloudflareSandbox } from "@cloudflare/sandbox";
 
 type Native = CloudflareSandbox<unknown>;
