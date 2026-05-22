@@ -782,46 +782,20 @@ json schema payload exposed to the AI SDK
 export type JsonSchema = Readonly<Record<string, unknown>>;
 ```
 
-#### `SchemaResult`
-
-result returned when the AI SDK resolves a lazy schema
-
-```ts
-export type SchemaResult<Input = unknown> = Readonly<{
-  /** json schema passed to the model provider */
-  jsonSchema: JsonSchema;
-  /** type-only input marker for editor inference */
-  _type: Input;
-  /** optional runtime validator understood by the AI SDK */
-  validate?: (value: unknown) =>
-    | {
-        error: Error;
-        success: false;
-      }
-    | {
-        success: true;
-        value: Input;
-      }
-    | PromiseLike<
-        | {
-            error: Error;
-            success: false;
-          }
-        | {
-            success: true;
-            value: Input;
-          }
-      >;
-}>;
-```
-
 #### `Schema`
 
-lazy AI SDK schema created from json schema
+AI SDK schema created from json schema
 
 ```ts
-export type Schema<Input = unknown> = (() => SchemaResult<Input>) &
-  SchemaResult<Input>;
+export type Schema<Input = unknown> = AisdkSchema<Input>;
+```
+
+#### `SchemaResult`
+
+result returned when the AI SDK resolves a schema
+
+```ts
+export type SchemaResult<Input = unknown> = Schema<Input>;
 ```
 
 #### `Tool`
@@ -829,16 +803,17 @@ export type Schema<Input = unknown> = (() => SchemaResult<Input>) &
 provider-agnostic tool shape compatible with the AI SDK
 
 ```ts
-export type Tool<Input, Output> = Readonly<{
-  /** prompt-facing tool description */
-  description: string;
-  /** AI SDK-compatible lazy input schema */
-  inputSchema: Schema<Input>;
-  /** true when model output should match the schema exactly */
-  strict?: boolean;
-  /** tool implementation */
-  execute(input: Input, options?: unknown): Promise<Output>;
-}>;
+export type Tool<Input, Output> = AisdkTool<Input, Output> &
+  Readonly<{
+    /** prompt-facing tool description */
+    description: string;
+    /** AI SDK-compatible input schema */
+    inputSchema: Schema<Input>;
+    /** true when model output should match the schema exactly */
+    strict: true;
+    /** tool implementation */
+    execute(input: Input, options?: unknown): Promise<Output>;
+  }>;
 ```
 
 #### `Name`
@@ -937,6 +912,8 @@ options ready to spread into aisdk v6/v7 generateText, streamText, or ToolLoopAg
 export type AisdkOptions = Readonly<{
   /** aisdk sandbox object forwarded to tool execution */
   experimental_sandbox: AgentSandbox;
+  /** ToolLoopAgent instructions describing the sandbox, available tools, and safety limits */
+  instructions: string;
   /** prompt context describing the sandbox, available tools, and safety limits */
   system: string;
   /** aisdk compatible tool set */
@@ -946,7 +923,7 @@ export type AisdkOptions = Readonly<{
 
 #### `AgentSandbox`
 
-small sandbox description object for agents that support executeCommand
+sandbox object compatible with AI SDK v7 and older executeCommand integrations
 
 ```ts
 export type AgentSandbox = Readonly<{
@@ -958,8 +935,22 @@ export type AgentSandbox = Readonly<{
   executeCommand(input: Command): Promise<CommandResult>;
   /** provider name */
   provider: string;
+  /** read one file as a byte stream, returning null when it does not exist */
+  readFile(input: File): PromiseLike<ReadableStream<Uint8Array> | null>;
+  /** read one file as bytes, returning null when it does not exist */
+  readBinaryFile(input: File): PromiseLike<Uint8Array | null>;
+  /** read one text file, returning null when it does not exist */
+  readTextFile(input: TextFile): PromiseLike<string | null>;
+  /** run a command using the AI SDK v7 sandbox contract */
+  runCommand(input: Command): PromiseLike<CommandResult>;
   /** default working directory */
   workingDirectory: string;
+  /** write one file from a byte stream */
+  writeFile(input: FileWrite): PromiseLike<void>;
+  /** write one file from bytes */
+  writeBinaryFile(input: BinaryFileWrite): PromiseLike<void>;
+  /** write one text file */
+  writeTextFile(input: TextFileWrite): PromiseLike<void>;
 }>;
 ```
 
@@ -999,6 +990,73 @@ export type Command = Readonly<{
   /** working directory inside the sandbox */
   workingDirectory?: string;
 }>;
+```
+
+#### `File`
+
+file stream input used by the AI SDK sandbox shape
+
+```ts
+export type File = Readonly<{
+  /** abort signal forwarded when supported by the underlying adapter */
+  abortSignal?: AbortSignal;
+  /** file path inside the sandbox */
+  path: string;
+}>;
+```
+
+#### `TextFile`
+
+text file read input used by the AI SDK sandbox shape
+
+```ts
+export type TextFile = File &
+  Readonly<{
+    /** 1-based inclusive ending line */
+    endLine?: number;
+    /** text encoding used to decode the file */
+    encoding?: string;
+    /** 1-based inclusive starting line */
+    startLine?: number;
+  }>;
+```
+
+#### `FileWrite`
+
+file stream write input used by the AI SDK sandbox shape
+
+```ts
+export type FileWrite = File &
+  Readonly<{
+    /** byte stream to write */
+    content: ReadableStream<Uint8Array>;
+  }>;
+```
+
+#### `BinaryFileWrite`
+
+binary file write input used by the AI SDK sandbox shape
+
+```ts
+export type BinaryFileWrite = File &
+  Readonly<{
+    /** bytes to write */
+    content: Uint8Array;
+  }>;
+```
+
+#### `TextFileWrite`
+
+text file write input used by the AI SDK sandbox shape
+
+```ts
+export type TextFileWrite = File &
+  Readonly<{
+    /** text to write */
+    content: string;
+    /** text encoding used to encode the file */
+    encoding?: string;
+  }>;
 ```
 
 #### `CommandResult`

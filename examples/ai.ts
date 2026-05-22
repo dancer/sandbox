@@ -25,7 +25,7 @@ export const createKit = async () => {
     allow: ["read", "write", "list", "exec"],
     cwd: "/workspace",
   });
-  const schema = kit.tools.exec?.inputSchema();
+  const schema = kit.tools.exec?.inputSchema;
 
   return {
     ai: aisdk(kit),

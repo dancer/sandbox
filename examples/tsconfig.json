@@ -9,7 +9,7 @@
     "skipLibCheck": true,
     "strict": true,
     "target": "ES2022",
-    "types": ["@cloudflare/workers-types"],
+    "types": ["@cloudflare/workers-types", "bun-types"],
     "verbatimModuleSyntax": true
   },
   "include": ["*.ts"]

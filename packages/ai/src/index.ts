@@ -1,43 +1,40 @@
-import { sandboxError, supports, supportsRaw } from "@sandbox-sdk/core";
+import {
+  isSandboxError,
+  sandboxError,
+  supports,
+  supportsRaw,
+} from "@sandbox-sdk/core";
 import type { RawCapability, Result, Sandbox } from "@sandbox-sdk/core";
+import type {
+  JSONSchema7,
+  Schema as AisdkSchema,
+  Tool as AisdkTool,
+  ToolSet as AisdkToolSet,
+} from "ai";
 
 const schemaKey = Symbol.for("vercel.ai.schema");
 
 /** json schema payload exposed to the AI SDK */
 export type JsonSchema = Readonly<Record<string, unknown>>;
 
-/** result returned when the AI SDK resolves a lazy schema */
-export type SchemaResult<Input = unknown> = Readonly<{
-  /** json schema passed to the model provider */
-  jsonSchema: JsonSchema;
-  /** type-only input marker for editor inference */
-  _type: Input;
-  /** optional runtime validator understood by the AI SDK */
-  validate?: (
-    value: unknown
-  ) =>
-    | { error: Error; success: false }
-    | { success: true; value: Input }
-    | PromiseLike<
-        { error: Error; success: false } | { success: true; value: Input }
-      >;
-}>;
+/** AI SDK schema created from json schema */
+export type Schema<Input = unknown> = AisdkSchema<Input>;
 
-/** lazy AI SDK schema created from json schema */
-export type Schema<Input = unknown> = (() => SchemaResult<Input>) &
-  SchemaResult<Input>;
+/** result returned when the AI SDK resolves a schema */
+export type SchemaResult<Input = unknown> = Schema<Input>;
 
 /** provider-agnostic tool shape compatible with the AI SDK */
-export type Tool<Input, Output> = Readonly<{
-  /** prompt-facing tool description */
-  description: string;
-  /** AI SDK-compatible lazy input schema */
-  inputSchema: Schema<Input>;
-  /** true when model output should match the schema exactly */
-  strict?: boolean;
-  /** tool implementation */
-  execute(input: Input, options?: unknown): Promise<Output>;
-}>;
+export type Tool<Input, Output> = AisdkTool<Input, Output> &
+  Readonly<{
+    /** prompt-facing tool description */
+    description: string;
+    /** AI SDK-compatible input schema */
+    inputSchema: Schema<Input>;
+    /** true when model output should match the schema exactly */
+    strict: true;
+    /** tool implementation */
+    execute(input: Input, options?: unknown): Promise<Output>;
+  }>;
 
 /** built-in sandbox tool name */
 export type Name = "exec" | "list" | "preview" | "read" | "write";
@@ -106,13 +103,15 @@ export type Kit = Readonly<{
 export type AisdkOptions = Readonly<{
   /** aisdk sandbox object forwarded to tool execution */
   experimental_sandbox: AgentSandbox;
+  /** ToolLoopAgent instructions describing the sandbox, available tools, and safety limits */
+  instructions: string;
   /** prompt context describing the sandbox, available tools, and safety limits */
   system: string;
   /** aisdk compatible tool set */
   tools: Tools;
 }>;
 
-/** small sandbox description object for agents that support executeCommand */
+/** sandbox object compatible with AI SDK v7 and older executeCommand integrations */
 export type AgentSandbox = Readonly<{
   /** advertised sandbox capabilities */
   capabilities: Sandbox["capabilities"];
@@ -122,19 +121,42 @@ export type AgentSandbox = Readonly<{
   executeCommand(input: Command): Promise<CommandResult>;
   /** provider name */
   provider: string;
+  /** read one file as a byte stream, returning null when it does not exist */
+  readFile(input: File): PromiseLike<ReadableStream<Uint8Array> | null>;
+  /** read one file as bytes, returning null when it does not exist */
+  readBinaryFile(input: File): PromiseLike<Uint8Array | null>;
+  /** read one text file, returning null when it does not exist */
+  readTextFile(input: TextFile): PromiseLike<string | null>;
+  /** run a command using the AI SDK v7 sandbox contract */
+  runCommand(input: Command): PromiseLike<CommandResult>;
   /** default working directory */
   workingDirectory: string;
+  /** write one file from a byte stream */
+  writeFile(input: FileWrite): PromiseLike<void>;
+  /** write one file from bytes */
+  writeBinaryFile(input: BinaryFileWrite): PromiseLike<void>;
+  /** write one text file */
+  writeTextFile(input: TextFileWrite): PromiseLike<void>;
 }>;
 
-interface Draft {
+type Draft = AisdkToolSet &
+  Partial<{
+    exec: Tool<Exec, ExecResult>;
+    list: Tool<Partial<Path>, ListResult>;
+    preview: Tool<Preview, PreviewResult>;
+    read: Tool<Path, TextResult>;
+    write: Tool<Write, WriteResult>;
+  }>;
+
+export type Tools = Readonly<Draft>;
+
+interface DraftTools {
   exec?: Tool<Exec, ExecResult>;
   list?: Tool<Partial<Path>, ListResult>;
   preview?: Tool<Preview, PreviewResult>;
   read?: Tool<Path, TextResult>;
   write?: Tool<Write, WriteResult>;
 }
-
-export type Tools = Readonly<Draft>;
 
 /** command input accepted by the exec tool and exec policy */
 export type Exec = Readonly<{
@@ -157,6 +179,48 @@ export type Command = Readonly<{
   /** working directory inside the sandbox */
   workingDirectory?: string;
 }>;
+
+/** file stream input used by the AI SDK sandbox shape */
+export type File = Readonly<{
+  /** abort signal forwarded when supported by the underlying adapter */
+  abortSignal?: AbortSignal;
+  /** file path inside the sandbox */
+  path: string;
+}>;
+
+/** text file read input used by the AI SDK sandbox shape */
+export type TextFile = File &
+  Readonly<{
+    /** 1-based inclusive ending line */
+    endLine?: number;
+    /** text encoding used to decode the file */
+    encoding?: string;
+    /** 1-based inclusive starting line */
+    startLine?: number;
+  }>;
+
+/** file stream write input used by the AI SDK sandbox shape */
+export type FileWrite = File &
+  Readonly<{
+    /** byte stream to write */
+    content: ReadableStream<Uint8Array>;
+  }>;
+
+/** binary file write input used by the AI SDK sandbox shape */
+export type BinaryFileWrite = File &
+  Readonly<{
+    /** bytes to write */
+    content: Uint8Array;
+  }>;
+
+/** text file write input used by the AI SDK sandbox shape */
+export type TextFileWrite = File &
+  Readonly<{
+    /** text to write */
+    content: string;
+    /** text encoding used to encode the file */
+    encoding?: string;
+  }>;
 
 /** command result returned by the agent sandbox shape */
 export type CommandResult = Readonly<{
@@ -229,6 +293,7 @@ export type PreviewResult = Readonly<{
 /** create aisdk v6/v7 call options from a sandbox tool kit */
 export const aisdk = (kit: Kit): AisdkOptions => ({
   experimental_sandbox: kit.sandbox,
+  instructions: kit.description,
   system: kit.description,
   tools: kit.tools,
 });
@@ -289,27 +354,82 @@ const result = (output: Result, limit: number): ExecResult => {
   return { ...value, signal: output.signal };
 };
 
+const assertActive = (signal: AbortSignal | undefined): void => {
+  if (signal?.aborted) {
+    throw sandboxError("ai", "Operation aborted", "aborted", signal.reason);
+  }
+};
+
+const missing = <Value>(error: unknown): Value | null => {
+  if (isSandboxError(error) && error.code === "not_found") {
+    return null;
+  }
+  throw error;
+};
+
+const parent = (path: string): string | undefined => {
+  const index = path.lastIndexOf("/");
+  if (index <= 0) {
+    return undefined;
+  }
+  return path.slice(0, index);
+};
+
+const write = async (
+  sandbox: Sandbox,
+  input: {
+    abortSignal?: AbortSignal;
+    content: string | Uint8Array | ReadableStream<Uint8Array>;
+    path: string;
+  }
+): Promise<void> => {
+  assertActive(input.abortSignal);
+  const directory = parent(input.path);
+  if (directory !== undefined) {
+    await sandbox.files.mkdir(directory);
+  }
+  assertActive(input.abortSignal);
+  await sandbox.files.write(input.path, input.content);
+  assertActive(input.abortSignal);
+};
+
+const readText = async (
+  sandbox: Sandbox,
+  input: TextFile
+): Promise<string | null> => {
+  assertActive(input.abortSignal);
+  try {
+    const bytes = await sandbox.files.read(input.path);
+    assertActive(input.abortSignal);
+    const text = new TextDecoder(input.encoding ?? "utf-8").decode(bytes);
+    if (input.startLine === undefined && input.endLine === undefined) {
+      return text;
+    }
+    const start = Math.max((input.startLine ?? 1) - 1, 0);
+    const end =
+      input.endLine === undefined ? undefined : Math.max(input.endLine, 0);
+    return text.split("\n").slice(start, end).join("\n");
+  } catch (error) {
+    return missing<string>(error);
+  }
+};
+
 const schema = <Input>(
   properties: Readonly<Record<string, unknown>>,
   required: readonly string[]
 ): Schema<Input> => {
-  const jsonSchema = {
-    additionalProperties: false,
-    properties,
-    required,
-    type: "object",
-  } satisfies JsonSchema;
   const value = {
+    additionalProperties: false,
+    properties: properties as Record<string, JSONSchema7>,
+    required: [...required],
+    type: "object",
+  } satisfies JSONSchema7;
+  return {
     _type: undefined as Input,
     [schemaKey]: true,
-    jsonSchema,
+    jsonSchema: value,
     validate: undefined,
-  };
-  return Object.assign(() => value, {
-    _type: undefined as Input,
-    jsonSchema,
-    validate: undefined,
-  }) as unknown as Schema<Input>;
+  } as unknown as Schema<Input>;
 };
 
 const description = (
@@ -401,7 +521,59 @@ const agent = (
     };
   },
   provider: sandbox.provider,
+  readBinaryFile: async (input) => {
+    assertActive(input.abortSignal);
+    try {
+      const output = await sandbox.files.read(input.path);
+      assertActive(input.abortSignal);
+      return output;
+    } catch (error) {
+      return missing<Uint8Array>(error);
+    }
+  },
+  readFile: async (input) => {
+    assertActive(input.abortSignal);
+    try {
+      const output = await sandbox.files.stream(input.path);
+      assertActive(input.abortSignal);
+      return output;
+    } catch (error) {
+      return missing<ReadableStream<Uint8Array>>(error);
+    }
+  },
+  readTextFile: (input) => readText(sandbox, input),
+  runCommand: async (input) => {
+    await beforeExec?.(
+      {
+        command: input.command,
+        cwd: input.workingDirectory ?? cwd,
+      },
+      context(sandbox, cwd, "exec")
+    );
+    const output = await sandbox.process.shell(input.command, {
+      cwd: input.workingDirectory ?? cwd,
+      ...(input.abortSignal === undefined ? {} : { signal: input.abortSignal }),
+      timeout,
+    });
+    return {
+      exitCode: output.code,
+      stderr: output.stderr,
+      stdout: output.stdout,
+    };
+  },
   workingDirectory: cwd,
+  writeBinaryFile: (input) => write(sandbox, input),
+  writeFile: (input) => write(sandbox, input),
+  writeTextFile: (input) => {
+    if (input.encoding !== undefined && !/^utf-?8$/iu.test(input.encoding)) {
+      throw sandboxError(
+        "ai",
+        "Only utf-8 text writes are supported",
+        "unsupported"
+      );
+    }
+    return write(sandbox, input);
+  },
 });
 
 /** create aisdk compatible tools and prompt context for a sandbox */
@@ -419,11 +591,11 @@ export const tools = (sandbox: Sandbox, options: Options = {}): Kit => {
     (name) => name !== "preview" || supports(sandbox, "ports")
   );
   const enabled = new Set<Name>(allow);
-  const output: Draft = {};
+  const output: DraftTools = {};
 
   if (enabled.has("read")) {
     output.read = {
-      description: "Read a text file from the sandbox.",
+      description: "Read a text file from the sandbox",
       execute: async (input: Path): Promise<TextResult> => {
         await options.beforeRead?.(input, context(sandbox, cwd, "read"));
         return {
@@ -437,7 +609,7 @@ export const tools = (sandbox: Sandbox, options: Options = {}): Kit => {
 
   if (enabled.has("write")) {
     output.write = {
-      description: "Write a text file in the sandbox.",
+      description: "Write a text file in the sandbox",
       execute: async (input: Write): Promise<WriteResult> => {
         await options.beforeWrite?.(input, context(sandbox, cwd, "write"));
         await sandbox.files.write(input.path, input.text);
@@ -453,7 +625,7 @@ export const tools = (sandbox: Sandbox, options: Options = {}): Kit => {
 
   if (enabled.has("list")) {
     output.list = {
-      description: "List files in a sandbox directory.",
+      description: "List files in a sandbox directory",
       execute: async (input: Partial<Path>): Promise<ListResult> => {
         await options.beforeList?.(input, context(sandbox, cwd, "list"));
         return {
@@ -467,7 +639,7 @@ export const tools = (sandbox: Sandbox, options: Options = {}): Kit => {
 
   if (enabled.has("exec")) {
     output.exec = {
-      description: "Run a shell command inside the sandbox.",
+      description: "Run a shell command inside the sandbox",
       execute: async (input: Exec): Promise<ExecResult> => {
         await options.beforeExec?.(input, context(sandbox, cwd, "exec"));
         const run = {
@@ -501,7 +673,7 @@ export const tools = (sandbox: Sandbox, options: Options = {}): Kit => {
 
   if (enabled.has("preview")) {
     output.preview = {
-      description: "Expose or retrieve a preview URL for a sandbox port.",
+      description: "Expose or retrieve a preview URL for a sandbox port",
       execute: async (input: Preview): Promise<PreviewResult> => {
         port(input.port);
         await options.beforePreview?.(input, context(sandbox, cwd, "preview"));
@@ -521,6 +693,6 @@ export const tools = (sandbox: Sandbox, options: Options = {}): Kit => {
   return {
     description: text,
     sandbox: agent(sandbox, text, cwd, timeout, options.beforeExec),
-    tools: output,
+    tools: output as Tools,
   };
 };

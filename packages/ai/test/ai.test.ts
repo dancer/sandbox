@@ -30,6 +30,50 @@ interface ClaudeTool {
   name: string;
 }
 
+type ExperimentalSandbox = Readonly<{
+  description: string;
+  readBinaryFile(options: {
+    abortSignal?: AbortSignal;
+    path: string;
+  }): PromiseLike<Uint8Array | null>;
+  readFile(options: {
+    abortSignal?: AbortSignal;
+    path: string;
+  }): PromiseLike<ReadableStream<Uint8Array> | null>;
+  readTextFile(options: {
+    abortSignal?: AbortSignal;
+    encoding?: string;
+    endLine?: number;
+    path: string;
+    startLine?: number;
+  }): PromiseLike<string | null>;
+  runCommand(options: {
+    abortSignal?: AbortSignal;
+    command: string;
+    workingDirectory?: string;
+  }): PromiseLike<{
+    exitCode: number;
+    stderr: string;
+    stdout: string;
+  }>;
+  writeBinaryFile(options: {
+    abortSignal?: AbortSignal;
+    content: Uint8Array;
+    path: string;
+  }): PromiseLike<void>;
+  writeFile(options: {
+    abortSignal?: AbortSignal;
+    content: ReadableStream<Uint8Array>;
+    path: string;
+  }): PromiseLike<void>;
+  writeTextFile(options: {
+    abortSignal?: AbortSignal;
+    content: string;
+    encoding?: string;
+    path: string;
+  }): PromiseLike<void>;
+}>;
+
 const asOpenAiTool = (value: unknown): OpenAiTool => value as OpenAiTool;
 
 const invokeOpenAi = (value: unknown, input: unknown): Promise<unknown> =>
@@ -73,11 +117,10 @@ test("tools returns prompt context and selected tools", async () => {
   if (!schema) {
     throw new Error("missing exec tool");
   }
-  const value = schema();
-  expect(Object.getOwnPropertySymbols(value)).toContain(
+  expect(Object.getOwnPropertySymbols(schema)).toContain(
     Symbol.for("vercel.ai.schema")
   );
-  expect(value).toMatchObject({
+  expect(schema).toMatchObject({
     jsonSchema: {
       additionalProperties: false,
     },
@@ -126,10 +169,15 @@ test("tools can read, write, list, and execute", async () => {
 test("tools expose an ai sdk sandbox shape", async () => {
   const sandbox = await create({ adapter: local(), cwd: "/workspace" });
   const kit = tools(sandbox, { timeout: 10_000 });
+  const agent: ExperimentalSandbox = kit.sandbox;
   const ai = aisdk(kit);
 
   const output = await kit.sandbox.executeCommand({
     command: "printf ai",
+    workingDirectory: "/workspace",
+  });
+  const command = await agent.runCommand({
+    command: "printf run",
     workingDirectory: "/workspace",
   });
 
@@ -138,11 +186,60 @@ test("tools expose an ai sdk sandbox shape", async () => {
     stderr: "",
     stdout: "ai",
   });
+  expect(command).toEqual({
+    exitCode: 0,
+    stderr: "",
+    stdout: "run",
+  });
   expect(ai).toEqual({
     experimental_sandbox: kit.sandbox,
+    instructions: kit.description,
     system: kit.description,
     tools: kit.tools,
   });
+
+  await sandbox.stop();
+});
+
+test("ai sdk sandbox shape reads and writes files", async () => {
+  const sandbox = await create({ adapter: local(), cwd: "/workspace" });
+  const agent: ExperimentalSandbox = tools(sandbox).sandbox;
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(new TextEncoder().encode("stream"));
+      controller.close();
+    },
+  });
+
+  await agent.writeTextFile({
+    content: "one\ntwo\nthree",
+    path: "/workspace/text.txt",
+  });
+  await agent.writeBinaryFile({
+    content: new TextEncoder().encode("bytes"),
+    path: "/workspace/binary.txt",
+  });
+  await agent.writeFile({
+    content: stream,
+    path: "/workspace/nested/stream.txt",
+  });
+
+  const text = await agent.readTextFile({
+    endLine: 2,
+    path: "/workspace/text.txt",
+    startLine: 2,
+  });
+  const binary = await agent.readBinaryFile({ path: "/workspace/binary.txt" });
+  const file = await agent.readFile({ path: "/workspace/nested/stream.txt" });
+  const missing = await agent.readTextFile({ path: "/workspace/missing.txt" });
+
+  expect(text).toBe("two");
+  expect(new TextDecoder().decode(binary ?? new Uint8Array())).toBe("bytes");
+  expect(file).toBeInstanceOf(ReadableStream);
+  expect(new TextDecoder().decode(await new Response(file).arrayBuffer())).toBe(
+    "stream"
+  );
+  expect(missing).toBeNull();
 
   await sandbox.stop();
 });

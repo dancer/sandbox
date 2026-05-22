@@ -61,7 +61,7 @@ export const openai = (
         execute: (input) => entry.tool.execute(input),
         name: name(prefix, entry.name),
         needsApproval: approval(entry.name, requireApproval),
-        parameters: parameters(entry.tool.inputSchema.jsonSchema),
+        parameters: parameters(entry.tool.inputSchema.jsonSchema as JsonSchema),
         strict: true,
       }),
     ])

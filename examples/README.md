@@ -12,6 +12,7 @@ credentials.
 - `advanced.ts`
 - `ai.ts`
 - `aisdk.ts`
+- `gateway.ts`
 - `blaxel.ts`
 - `codesandbox.ts`
 - `e2b.ts`

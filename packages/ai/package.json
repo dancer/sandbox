@@ -55,12 +55,14 @@
     "@anthropic-ai/claude-agent-sdk": "^0.3.145",
     "@openai/agents": "^0.11.4",
     "@sandbox-sdk/local": "workspace:*",
+    "ai": "^6.0.190",
     "typescript": "^5.9.3",
     "zod": "^4.3.6"
   },
   "peerDependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.3.0",
     "@openai/agents": "^0.11.0",
+    "ai": "^6.0.0 || ^7.0.0-0",
     "zod": "^4.0.0"
   },
   "peerDependenciesMeta": {
@@ -68,6 +70,9 @@
       "optional": true
     },
     "@openai/agents": {
+      "optional": true
+    },
+    "ai": {
       "optional": true
     },
     "zod": {
