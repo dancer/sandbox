@@ -81,7 +81,12 @@ const credentials = (
       present(value.clientId) &&
       present(value.clientSecret);
 
-const env = (name: string): string | undefined => globalThis.process?.env[name];
+const env = (name: string): string | undefined =>
+  (
+    globalThis as {
+      process?: { env?: Record<string, string | undefined> };
+    }
+  ).process?.env?.[name];
 
 const configExists = (): boolean =>
   existsSync(joinPath(homedir(), ".blaxel", "config.yaml"));

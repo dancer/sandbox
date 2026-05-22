@@ -56,7 +56,7 @@
     "@openai/agents": "^0.11.4",
     "@sandbox-sdk/local": "workspace:*",
     "ai": "^6.0.190",
-    "typescript": "^5.9.3",
+    "typescript": "^6.0.3",
     "zod": "^4.3.6"
   },
   "peerDependencies": {

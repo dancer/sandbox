@@ -104,7 +104,12 @@ const noop = (): void => void 0;
 const present = (value: string | undefined): value is string =>
   value !== undefined && value.length > 0;
 
-const env = (name: string): string | undefined => globalThis.process?.env[name];
+const env = (name: string): string | undefined =>
+  (
+    globalThis as {
+      process?: { env?: Record<string, string | undefined> };
+    }
+  ).process?.env?.[name];
 
 const validate = (options: CodeSandbox): void => {
   if (options.client) {

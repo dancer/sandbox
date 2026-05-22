@@ -107,7 +107,12 @@ const capabilities: Capabilities = {
 const present = (value: string | undefined): boolean =>
   value !== undefined && value.length > 0;
 
-const env = (name: string): string | undefined => globalThis.process?.env[name];
+const env = (name: string): string | undefined =>
+  (
+    globalThis as {
+      process?: { env?: Record<string, string | undefined> };
+    }
+  ).process?.env?.[name];
 
 const validate = (options: E2B): void => {
   if (

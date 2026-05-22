@@ -197,7 +197,12 @@ const capabilities: Capabilities = {
 const present = (value: string | undefined): value is string =>
   value !== undefined && value.length > 0;
 
-const env = (name: string): string | undefined => globalThis.process?.env[name];
+const env = (name: string): string | undefined =>
+  (
+    globalThis as {
+      process?: { env?: Record<string, string | undefined> };
+    }
+  ).process?.env?.[name];
 
 const decode = (value: string): unknown => {
   const base64 = value.replaceAll("-", "+").replaceAll("_", "/");
