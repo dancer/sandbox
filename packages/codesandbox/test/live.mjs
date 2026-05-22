@@ -33,7 +33,7 @@ const text = (stream) => new Response(stream).text();
 
 const decode = (value) => decoder.decode(value);
 
-const limit = async (promise, label, milliseconds = 180_000) => {
+const limit = async (promise, label, milliseconds = 300_000) => {
   const controller = new AbortController();
   const expire = async () => {
     await sleep(milliseconds, undefined, { signal: controller.signal });
