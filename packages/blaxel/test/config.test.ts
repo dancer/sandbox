@@ -142,10 +142,22 @@ test("blaxel maps create options and normalized operations", async () => {
         killed = id;
         return Promise.resolve({});
       },
-      streamLogs: () => ({
-        close: () => {},
-        wait: () => Promise.resolve(),
-      }),
+      streamLogs: (
+        _id: string,
+        callbacks: {
+          onLog?: (log: string) => void;
+          onStderr?: (log: string) => void;
+          onStdout?: (log: string) => void;
+        }
+      ) => {
+        callbacks.onStdout?.("out");
+        callbacks.onStderr?.("err");
+        callbacks.onLog?.("outerr");
+        return {
+          close: () => {},
+          wait: () => Promise.resolve(),
+        };
+      },
       wait: () => Promise.resolve(response()),
     },
   } as unknown as SandboxInstance;
@@ -243,6 +255,21 @@ test("blaxel maps create options and normalized operations", async () => {
     });
 
     const running = await sandbox.process.spawnShell("sleep 1");
+    const [streamed, stdout, stderr, spawned] = await Promise.all([
+      new Response(running.output).text(),
+      new Response(running.stdout).text(),
+      new Response(running.stderr).text(),
+      running.result,
+    ]);
+    expect(streamed).toBe("outerr");
+    expect(stdout).toBe("out");
+    expect(stderr).toBe("err");
+    expect(spawned).toMatchObject({
+      code: 0,
+      ok: true,
+      stderr: "",
+      stdout: "ok",
+    });
     await running.kill();
     expect(killed).toBe("process");
 

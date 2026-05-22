@@ -133,7 +133,7 @@ test("adapters expose capability-honest feature modes", () => {
     files: true,
     ports: "dynamic",
     processExec: true,
-    processSpawn: true,
+    processSpawn: "separate",
     raw: {
       codegen: true,
       drives: true,
@@ -149,6 +149,7 @@ test("adapters expose capability-honest feature modes", () => {
     snapshotCreate: false,
     snapshotRestore: false,
     snapshotSource: false,
+    streaming: "separate",
   });
 
   expect(codesandbox().capabilities).toMatchObject({

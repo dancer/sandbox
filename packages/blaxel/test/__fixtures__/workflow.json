@@ -20,6 +20,8 @@
       "process.shell",
       "process.shell.options",
       "process.spawnShell",
+      "process.spawnShell.stderr",
+      "process.spawnShell.stdout",
       "process.failure",
       "ports.expose",
       "sandbox.stop"
@@ -35,7 +37,7 @@
       "ports": "dynamic",
       "process": true,
       "processExec": true,
-      "processSpawn": true,
+      "processSpawn": "separate",
       "raw": {
         "codegen": true,
         "drives": true,
@@ -52,7 +54,7 @@
       "snapshotRestore": false,
       "snapshotSource": false,
       "snapshots": false,
-      "streaming": "combined"
+      "streaming": "separate"
     },
     "commands": {
       "create": "create-env",
@@ -101,7 +103,9 @@
       "ok": true,
       "stderr": "",
       "stdout": "hello from blaxel",
-      "output": "hello from blaxel"
+      "output": "hello from blaxel",
+      "stderrStream": "",
+      "stdoutStream": "hello from blaxel"
     },
     "unsupported": {
       "spawn": false,

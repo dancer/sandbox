@@ -47,7 +47,7 @@ const capabilities: Capabilities = {
   ports: "dynamic",
   process: true,
   processExec: true,
-  processSpawn: true,
+  processSpawn: "separate",
   raw: {
     codegen: true,
     drives: true,
@@ -64,7 +64,7 @@ const capabilities: Capabilities = {
   snapshotRestore: false,
   snapshotSource: false,
   snapshots: false,
-  streaming: "combined",
+  streaming: "separate",
 };
 
 const noop = (): void => void 0;
@@ -189,6 +189,95 @@ const check = (signal?: AbortSignal): void => {
   }
 };
 
+type Channel = "output" | "stderr" | "stdout";
+
+const streams = (): Readonly<{
+  append(channel: Channel, chunk: string): void;
+  close(): void;
+  error(error: unknown): void;
+  output: ReadableStream<Uint8Array>;
+  stderr: ReadableStream<Uint8Array>;
+  stdout: ReadableStream<Uint8Array>;
+}> => {
+  const encoder = new TextEncoder();
+  const chunks: Record<Channel, Uint8Array[]> = {
+    output: [],
+    stderr: [],
+    stdout: [],
+  };
+  const controllers: Record<
+    Channel,
+    Set<ReadableStreamDefaultController<Uint8Array>>
+  > = {
+    output: new Set(),
+    stderr: new Set(),
+    stdout: new Set(),
+  };
+  let closed = false;
+
+  const create = (channel: Channel): ReadableStream<Uint8Array> => {
+    let active: ReadableStreamDefaultController<Uint8Array> | undefined;
+    return new ReadableStream({
+      cancel() {
+        if (active !== undefined) {
+          controllers[channel].delete(active);
+        }
+      },
+      start(controller) {
+        active = controller;
+        for (const chunk of chunks[channel]) {
+          controller.enqueue(chunk);
+        }
+        if (closed) {
+          controller.close();
+          return;
+        }
+        controllers[channel].add(controller);
+      },
+    });
+  };
+
+  return {
+    append(channel, chunk) {
+      if (closed) {
+        return;
+      }
+      const value = encoder.encode(chunk);
+      chunks[channel].push(value);
+      for (const controller of controllers[channel]) {
+        controller.enqueue(value);
+      }
+    },
+    close() {
+      if (closed) {
+        return;
+      }
+      closed = true;
+      for (const group of Object.values(controllers)) {
+        for (const controller of group) {
+          controller.close();
+        }
+        group.clear();
+      }
+    },
+    error(error) {
+      if (closed) {
+        return;
+      }
+      closed = true;
+      for (const group of Object.values(controllers)) {
+        for (const controller of group) {
+          controller.error(error);
+        }
+        group.clear();
+      }
+    },
+    output: create("output"),
+    stderr: create("stderr"),
+    stdout: create("stdout"),
+  };
+};
+
 const execute = async (
   raw: Raw,
   cwd: string,
@@ -304,38 +393,39 @@ const spawn = async (
       workingDir: options.cwd ?? cwd,
     });
     const id = response.pid;
-    const encoder = new TextEncoder();
+    const logs = streams();
     let close = noop;
-    const output = new ReadableStream<Uint8Array>({
-      cancel() {
+
+    const stream = raw.process.streamLogs(id, {
+      onError(error) {
         close();
+        logs.error(error);
       },
-      start(controller) {
-        const stream = raw.process.streamLogs(id, {
-          onError(error) {
-            controller.error(error);
-          },
-          onLog(log) {
-            controller.enqueue(encoder.encode(log));
-          },
-        });
-        const { close: finish } = stream;
-        close = finish;
-        void (async () => {
-          try {
-            await stream.wait();
-            controller.close();
-          } catch (error) {
-            controller.error(error);
-          }
-        })();
+      onLog(log) {
+        logs.append("output", log);
+      },
+      onStderr(log) {
+        logs.append("stderr", log);
+      },
+      onStdout(log) {
+        logs.append("stdout", log);
       },
     });
+    ({ close } = stream);
+    void (async () => {
+      try {
+        await stream.wait();
+      } finally {
+        logs.close();
+      }
+    })();
+
     const process = (async (): Promise<Result> => {
       try {
         return complete(await raw.process.wait(id, { maxWait }));
       } finally {
         close();
+        logs.close();
       }
     })();
 
@@ -347,6 +437,7 @@ const spawn = async (
             await raw.process.kill(id);
           } finally {
             close();
+            logs.close();
           }
         })();
       },
@@ -358,14 +449,18 @@ const spawn = async (
       kill: async () => {
         await raw.process.kill(id);
         close();
+        logs.close();
       },
-      output,
+      output: logs.output,
       result: process,
+      stderr: logs.stderr,
+      stdout: logs.stdout,
     };
   } catch (error) {
     if (options.signal?.aborted) {
       abort(provider, error);
     }
+    close();
     throw sandboxError(provider, "Command failed", "process", error);
   }
 };
