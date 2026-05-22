@@ -51,17 +51,16 @@ export const path = (name: string): string =>
 
 export const adapter = (options: Parameters<typeof vercel>[0] = {}) => {
   const credentials = explicit();
+  const defaults = {
+    ports: [3000],
+    timeout: 300_000,
+    ...options,
+  };
   return credentials === undefined
-    ? vercel({
-        ...options,
-        ports: [3000],
-        timeout: 300_000,
-      })
+    ? vercel(defaults)
     : vercel({
         ...credentials,
-        ...options,
-        ports: [3000],
-        timeout: 300_000,
+        ...defaults,
       });
 };
 
