@@ -28,11 +28,9 @@ test("codesandbox reports missing credentials before provider calls", async () =
   });
 });
 
-test("codesandbox accepts together api key fallback", async () => {
+test("codesandbox accepts csb api key fallback", async () => {
   const codeSandboxKey = process.env.CSB_API_KEY;
-  const togetherKey = process.env.TOGETHER_API_KEY;
-  process.env.CSB_API_KEY = "";
-  process.env.TOGETHER_API_KEY = "together";
+  process.env.CSB_API_KEY = "codesandbox";
 
   try {
     let called = false;
@@ -56,7 +54,6 @@ test("codesandbox accepts together api key fallback", async () => {
     expect(called).toBe(true);
   } finally {
     restore("CSB_API_KEY", codeSandboxKey);
-    restore("TOGETHER_API_KEY", togetherKey);
   }
 });
 

@@ -326,8 +326,8 @@ const allRows = (context: Context): readonly Row[] => [
   complete(
     "codesandbox",
     "bun run verify:codesandbox",
-    ["CSB_API_KEY", "TOGETHER_API_KEY"],
-    any(["CSB_API_KEY", "TOGETHER_API_KEY"], context)
+    ["CSB_API_KEY"],
+    has("CSB_API_KEY", context)
   ),
   daytonaRow(context),
   complete(

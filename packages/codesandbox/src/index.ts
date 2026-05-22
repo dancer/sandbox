@@ -69,7 +69,7 @@ export type CodeSandbox = Readonly<{
   timeout?: number;
   /** sandbox title shown in codesandbox */
   title?: string;
-  /** api token. falls back to CSB_API_KEY or TOGETHER_API_KEY */
+  /** api token. falls back to CSB_API_KEY */
   token?: string;
   /** vm tier forwarded when starting the vm */
   vmTier?: CreateOptions["vmTier"];
@@ -120,17 +120,13 @@ const validate = (options: CodeSandbox): void => {
   if (options.client) {
     return;
   }
-  const token = first(
-    options.token,
-    env("CSB_API_KEY"),
-    env("TOGETHER_API_KEY")
-  );
+  const token = first(options.token, env("CSB_API_KEY"));
   if (present(token)) {
     return;
   }
   throw sandboxError(
     provider,
-    "CodeSandbox credentials missing. Set CSB_API_KEY, set TOGETHER_API_KEY, or pass token to codesandbox().",
+    "CodeSandbox credentials missing. Set CSB_API_KEY or pass token to codesandbox().",
     "configuration"
   );
 };

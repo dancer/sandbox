@@ -56,17 +56,6 @@ describe("credentialRows", () => {
     expect(rows.every((entry) => entry.status === "ready")).toBe(true);
   });
 
-  test("accepts Together CodeSandbox credentials", () => {
-    expect(
-      row("codesandbox", {
-        TOGETHER_API_KEY: "token",
-      })
-    ).toMatchObject({
-      details: "ready",
-      status: "ready",
-    });
-  });
-
   test("reports Cloudflare workflow as partial until preview host is present", () => {
     expect(
       row("cloudflare", {

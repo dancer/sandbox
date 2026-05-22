@@ -1730,7 +1730,7 @@ export type CodeSandbox = Readonly<{
   timeout?: number;
   /** sandbox title shown in codesandbox */
   title?: string;
-  /** api token. falls back to CSB_API_KEY or TOGETHER_API_KEY */
+  /** api token. falls back to CSB_API_KEY */
   token?: string;
   /** vm tier forwarded when starting the vm */
   vmTier?: CreateOptions["vmTier"];

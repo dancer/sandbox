@@ -37,8 +37,7 @@ export const CodeSandbox = () => (
       <Accordion className="rounded-md border-dotted" type="multiple">
         <PropAccordionItem name="token" status="optional" value="token">
           <p>
-            CodeSandbox API token. Omit it to use <code>CSB_API_KEY</code> or{" "}
-            <code>TOGETHER_API_KEY</code>.
+            CodeSandbox API token. Omit it to use <code>CSB_API_KEY</code>.
           </p>
         </PropAccordionItem>
         <PropAccordionItem name="template" status="optional" value="template">
