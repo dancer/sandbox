@@ -871,7 +871,7 @@ export type Options = Readonly<{
   /**
    * tools exposed to the model
    *
-   * @default ["read", "write", "list", "exec"] plus "preview" when ports are supported
+   * @default ["read", "list"]
    */
   allow?: readonly Name[];
   /** policy hook called before command execution */
