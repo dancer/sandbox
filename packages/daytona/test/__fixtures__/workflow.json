@@ -41,10 +41,12 @@
         "git": true,
         "interpreter": true,
         "lifecycle": "dynamic",
+        "lsp": true,
         "network": "create-time",
         "previews": true,
         "pty": true,
         "sessions": true,
+        "ssh": true,
         "volumes": "create-time"
       },
       "snapshotCreate": false,

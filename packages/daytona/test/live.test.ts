@@ -115,6 +115,14 @@ live("daytona exposes advertised raw capabilities", async () => {
 
     await sandbox.raw.setAutostopInterval(15);
 
+    const ssh = await sandbox.raw.createSshAccess(1);
+    expect(ssh.token).toBeTruthy();
+    await sandbox.raw.revokeSshAccess(ssh.token);
+
+    const lsp = await sandbox.raw.createLspServer("typescript", cwd);
+    expect(typeof lsp.start).toBe("function");
+    expect(typeof lsp.stop).toBe("function");
+
     const sessionId = `sandbox-sdk-session-${randomUUID()}`;
     await sandbox.raw.process.createSession(sessionId);
     try {
