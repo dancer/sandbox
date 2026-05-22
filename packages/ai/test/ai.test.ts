@@ -3,6 +3,7 @@ import { expect, test } from "bun:test";
 import { RunContext } from "@openai/agents";
 import { create, isSandboxError } from "@sandbox-sdk/core";
 import { local } from "@sandbox-sdk/local";
+import type { Experimental_Sandbox as ExperimentalSandbox } from "ai";
 
 import { claude } from "../src/claude";
 import { aisdk, tools } from "../src/index";
@@ -29,50 +30,6 @@ interface ClaudeTool {
   inputSchema: unknown;
   name: string;
 }
-
-type ExperimentalSandbox = Readonly<{
-  description: string;
-  readBinaryFile(options: {
-    abortSignal?: AbortSignal;
-    path: string;
-  }): PromiseLike<Uint8Array | null>;
-  readFile(options: {
-    abortSignal?: AbortSignal;
-    path: string;
-  }): PromiseLike<ReadableStream<Uint8Array> | null>;
-  readTextFile(options: {
-    abortSignal?: AbortSignal;
-    encoding?: string;
-    endLine?: number;
-    path: string;
-    startLine?: number;
-  }): PromiseLike<string | null>;
-  runCommand(options: {
-    abortSignal?: AbortSignal;
-    command: string;
-    workingDirectory?: string;
-  }): PromiseLike<{
-    exitCode: number;
-    stderr: string;
-    stdout: string;
-  }>;
-  writeBinaryFile(options: {
-    abortSignal?: AbortSignal;
-    content: Uint8Array;
-    path: string;
-  }): PromiseLike<void>;
-  writeFile(options: {
-    abortSignal?: AbortSignal;
-    content: ReadableStream<Uint8Array>;
-    path: string;
-  }): PromiseLike<void>;
-  writeTextFile(options: {
-    abortSignal?: AbortSignal;
-    content: string;
-    encoding?: string;
-    path: string;
-  }): PromiseLike<void>;
-}>;
 
 const asOpenAiTool = (value: unknown): OpenAiTool => value as OpenAiTool;
 

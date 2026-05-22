@@ -273,8 +273,8 @@ Cloudflare transport knowledge.
 Cloudflare port previews need custom-domain wildcard routing in production.
 Deploying to `.workers.dev` is enough for the live validation endpoint, but not
 for production `ports.expose()` preview URLs.
-Preview ports must follow Cloudflare's provider rules: integers from 1 to
-65535, excluding system ports below 1024 and reserved port 3000.
+Preview ports must follow Cloudflare's provider rules: ports in 1024-65535,
+excluding reserved port 3000.
 Set `CLOUDFLARE_SANDBOX_PREVIEW_HOST` to run the optional Cloudflare port
 verification test against a custom preview host.
 
