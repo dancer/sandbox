@@ -10,6 +10,8 @@ credentials.
 - `core.ts`
 - `entrypoints.ts`
 - `advanced.ts`
+- `ai.ts`
+- `aisdk.ts`
 - `blaxel.ts`
 - `codesandbox.ts`
 - `e2b.ts`
@@ -17,4 +19,3 @@ credentials.
 - `vercel.ts`
 - `cloudflare.ts`
 - `modal.ts`
-- `ai.ts`
