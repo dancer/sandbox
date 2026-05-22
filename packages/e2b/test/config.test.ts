@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { setTimeout as sleep } from "node:timers/promises";
 
 import { create } from "@sandbox-sdk/core";
 import { Sandbox as E2BSandbox } from "e2b";
@@ -335,6 +336,63 @@ test("e2b maps create and command options without running a real provider", asyn
       code: "unsupported",
       provider: "e2b",
     });
+  } finally {
+    E2BSandbox.create = original;
+  }
+});
+
+test("e2b kills spawned processes on abort", async () => {
+  const original = E2BSandbox.create;
+  let killed = false;
+  const wait = async (): Promise<{
+    exitCode: number;
+    stderr: string;
+    stdout: string;
+  }> => {
+    for (let attempts = 0; attempts < 1000; attempts += 1) {
+      if (killed) {
+        break;
+      }
+      await sleep(1);
+    }
+    return { exitCode: 130, stderr: "", stdout: "" };
+  };
+  const raw = {
+    commands: {
+      run: () =>
+        Promise.resolve({
+          kill: () => {
+            killed = true;
+            return Promise.resolve(true);
+          },
+          pid: 123,
+          wait,
+        }),
+    },
+    files: {
+      makeDir: () => Promise.resolve(),
+    },
+    kill: () => Promise.resolve(),
+    sandboxId: "sandbox",
+  } as unknown as E2BSandbox;
+  const controller = new AbortController();
+
+  E2BSandbox.create = (() => Promise.resolve(raw)) as typeof E2BSandbox.create;
+
+  try {
+    const sandbox = await create({
+      adapter: e2b({
+        apiKey: "key",
+      }),
+    });
+    const running = await sandbox.process.spawn("sleep", ["10"], {
+      signal: controller.signal,
+    });
+
+    controller.abort("stopped");
+    await running.result;
+
+    expect(killed).toBe(true);
   } finally {
     E2BSandbox.create = original;
   }

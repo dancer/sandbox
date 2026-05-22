@@ -361,16 +361,27 @@ const spawnLine = async (
       ...(timeout === undefined ? {} : { timeoutMs: timeout }),
       ...(user === undefined ? {} : { user }),
     });
+    const cancel = (): void => {
+      void handle.kill();
+    };
+    if (options.signal?.aborted) {
+      cancel();
+    } else {
+      options.signal?.addEventListener("abort", cancel, { once: true });
+    }
+    const kill = async (): Promise<void> => {
+      options.signal?.removeEventListener("abort", cancel);
+      await handle.kill();
+    };
     return {
       id: handle.pid.toString(),
-      kill: async () => {
-        await handle.kill();
-      },
+      kill,
       output: logs.output,
       result: (async () => {
         try {
           return await wait(handle);
         } finally {
+          options.signal?.removeEventListener("abort", cancel);
           logs.close();
         }
       })(),
@@ -379,6 +390,9 @@ const spawnLine = async (
     };
   } catch (error) {
     logs.close();
+    if (options.signal?.aborted) {
+      abort(provider, error);
+    }
     throw sandboxError(provider, "Command failed", "process", error);
   }
 };
