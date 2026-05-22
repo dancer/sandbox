@@ -1388,6 +1388,125 @@ Cloudflare Sandbox adapter for Sandbox SDK
 
 ### types
 
+#### `CloudflareBridgeJson`
+
+generic JSON object returned by bridge utility routes
+
+```ts
+export type CloudflareBridgeJson = Readonly<Record<string, unknown>>;
+```
+
+#### `CloudflareBridgeRaw`
+
+```ts
+export type CloudflareBridgeRaw = Readonly<{
+  create(): Promise<
+    Readonly<{
+      id: string;
+    }>
+  >;
+  delete(id: string): Promise<void>;
+  fetch: typeof fetch;
+  health(): Promise<CloudflareBridgeJson>;
+  hydrate(id: string, archive: Input): Promise<void>;
+  mount(id: string, input: Mount): Promise<void>;
+  openapi(): Promise<CloudflareBridgeJson>;
+  pool: Readonly<{
+    prime(): Promise<void>;
+    shutdownPrewarmed(): Promise<void>;
+    stats(): Promise<CloudflareBridgeJson>;
+  }>;
+  persist(id: string, options?: Persist): Promise<Uint8Array>;
+  request(path: string, init?: RequestInit): Promise<Response>;
+  running(id: string): Promise<boolean>;
+  session: Readonly<{
+    create(
+      id: string,
+      options?: Session
+    ): Promise<
+      Readonly<{
+        id: string;
+      }>
+    >;
+    delete(id: string, session: string): Promise<void>;
+  }>;
+  unmount(id: string, mountPath: string): Promise<void>;
+  url: string;
+}>;
+```
+
+#### `CloudflareBridge`
+
+Cloudflare Sandbox bridge adapter configuration
+
+```ts
+export type CloudflareBridge = Readonly<{
+  /**
+   * deployed bridge base URL
+   *
+   * falls back to `SANDBOX_API_URL`
+   */
+  url?: string;
+  /**
+   * bearer token for the bridge
+   *
+   * falls back to `SANDBOX_API_KEY`
+   */
+  token?: string;
+  /**
+   * default sandbox working directory
+   *
+   * @default "/workspace"
+   */
+  cwd?: string;
+  /** custom fetch implementation for tests or non-standard runtimes */
+  fetch?: typeof fetch;
+  /** stable sandbox id used when create input omits id */
+  id?: string;
+}>;
+```
+
+#### `Persist`
+
+options for `sandbox.raw.persist()`
+
+```ts
+export type Persist = Readonly<{
+  /** workspace-relative paths to exclude from the tar archive */
+  excludes?: readonly string[];
+}>;
+```
+
+#### `Session`
+
+options for creating a bridge execution session
+
+```ts
+export type Session = Readonly<{
+  /** custom session id */
+  id?: string;
+  /** initial working directory */
+  cwd?: string;
+  /** session-scoped environment variables */
+  env?: Readonly<Record<string, string>>;
+}>;
+```
+
+#### `Mount`
+
+options for mounting an object-storage bucket through the bridge
+
+```ts
+export type Mount = Readonly<{
+  /** bucket name or Worker R2 binding name */
+  bucket: string;
+  /** absolute mount path inside the sandbox */
+  mountPath: string;
+  /** bridge mount options forwarded to Cloudflare */
+  options?: Readonly<Record<string, unknown>>;
+}>;
+```
+
 #### `CloudflareRaw`
 
 native Cloudflare Sandbox object exposed as `sandbox.raw`
@@ -1439,6 +1558,16 @@ export type Cloudflare = Readonly<{
 ```
 
 ### functions
+
+#### `cloudflareBridge`
+
+create a Cloudflare Sandbox adapter that talks to the official HTTP bridge
+
+```ts
+export declare const cloudflareBridge: (
+  options?: CloudflareBridge
+) => Adapter<CloudflareBridgeRaw>;
+```
 
 #### `cloudflare`
 

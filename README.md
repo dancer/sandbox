@@ -222,6 +222,26 @@ The Cloudflare adapter is designed for Workers. Importing the package is safe in
 Node-based tooling, but creating a Cloudflare sandbox loads
 `@cloudflare/sandbox` inside the Worker path.
 
+For non-Worker apps, use the official Cloudflare Sandbox bridge instead:
+
+```ts
+import { create } from "@sandbox-sdk/core";
+import { cloudflareBridge } from "@sandbox-sdk/cloudflare";
+
+const sandbox = await create({
+  adapter: cloudflareBridge({
+    token: process.env.SANDBOX_API_KEY,
+    url: process.env.SANDBOX_API_URL,
+  }),
+});
+```
+
+The bridge adapter supports normalized files and command execution over HTTP.
+Bridge lifecycle, sessions, persist, hydrate, bucket mounts, warm-pool controls,
+health, and OpenAPI schema access are available through `sandbox.raw`.
+Normalized ports and snapshots stay unsupported because the bridge does not
+expose the same preview and snapshot contract as the Worker binding adapter.
+
 ## Cloudflare Validation
 
 `apps/cloudflare` is a deployable Worker fixture for the Cloudflare live test.

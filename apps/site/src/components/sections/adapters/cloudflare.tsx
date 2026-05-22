@@ -29,6 +29,22 @@ export default {
   },
 };`;
 
+const CLOUDFLARE_BRIDGE_EXAMPLE = `import { create } from "@sandbox-sdk/core";
+import { cloudflareBridge } from "@sandbox-sdk/cloudflare";
+
+const sandbox = await create({
+  adapter: cloudflareBridge({
+    url: process.env.SANDBOX_API_URL,
+    token: process.env.SANDBOX_API_KEY,
+  }),
+});
+
+await sandbox.files.write("/workspace/main.ts", "console.log('hello')");
+
+const result = await sandbox.process.shell("bun /workspace/main.ts");
+
+console.log(result.stdout);`;
+
 export const Cloudflare = () => (
   <section>
     <Heading as="h3" id="adapter-cloudflare">
@@ -49,6 +65,14 @@ export const Cloudflare = () => (
       production preview URLs.
     </p>
     <CodeBlock code={CLOUDFLARE_EXAMPLE} lang="ts" />
+    <p>
+      For Node apps and other non-Worker runtimes, deploy Cloudflare's HTTP
+      bridge and use <code>cloudflareBridge()</code>. It keeps normalized files
+      and command execution available over HTTP while bridge lifecycle,
+      sessions, persist, hydrate, bucket mounts, warm-pool controls, health, and
+      OpenAPI schema access stay typed on <code>sandbox.raw</code>.
+    </p>
+    <CodeBlock code={CLOUDFLARE_BRIDGE_EXAMPLE} lang="ts" />
     <div className="flex flex-col gap-2">
       <Heading as="h4" id="adapter-cloudflare-options">
         Options
