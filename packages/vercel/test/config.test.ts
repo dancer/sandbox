@@ -58,7 +58,7 @@ test("vercel passes oidc credentials directly to provider", async () => {
     fs: {
       mkdir: () => Promise.resolve(),
     },
-    sandboxId: "sandbox",
+    name: "sandbox",
     stop: () => Promise.resolve(),
   } as unknown as VercelSandbox;
   let seen: unknown;
@@ -141,7 +141,7 @@ test("vercel prefers explicit access credentials over local oidc", async () => {
     fs: {
       mkdir: () => Promise.resolve(),
     },
-    sandboxId: "sandbox",
+    name: "sandbox",
     stop: () => Promise.resolve(),
   } as unknown as VercelSandbox;
   let seen: unknown;
@@ -202,7 +202,7 @@ test("vercel passes env access token credentials to provider", async () => {
     fs: {
       mkdir: () => Promise.resolve(),
     },
-    sandboxId: "sandbox",
+    name: "sandbox",
     stop: () => Promise.resolve(),
   } as unknown as VercelSandbox;
   let seen: unknown;
@@ -234,6 +234,57 @@ test("vercel passes env access token credentials to provider", async () => {
   }
 });
 
+test("vercel gets named sandboxes and preserves existing routes", async () => {
+  const original = VercelSandbox.get;
+  let getSeen: unknown;
+  let updateSeen: unknown;
+  const raw = {
+    domain: (port: number) => `https://preview.example.com/${port}`,
+    fs: {
+      mkdir: () => Promise.resolve(),
+    },
+    name: "workspace",
+    routes: [{ port: 4567, subdomain: "old", url: "https://old.example.com" }],
+    stop: () => Promise.resolve(),
+    update: (input: unknown) => {
+      updateSeen = input;
+      return Promise.resolve();
+    },
+  } as unknown as VercelSandbox;
+
+  VercelSandbox.get = ((input: unknown) => {
+    getSeen = input;
+    return Promise.resolve(raw);
+  }) as typeof VercelSandbox.get;
+
+  try {
+    const sandbox = await create({
+      adapter: vercel({
+        projectId: "project",
+        teamId: "team",
+        token: "token",
+      }),
+      id: "workspace",
+    });
+
+    expect(sandbox.id).toBe("workspace");
+    expect(getSeen).toMatchObject({
+      name: "workspace",
+      projectId: "project",
+      resume: true,
+      teamId: "team",
+      token: "token",
+    });
+    await expect(sandbox.ports.expose(3000)).resolves.toEqual({
+      port: 3000,
+      url: "https://preview.example.com/3000",
+    });
+    expect(updateSeen).toEqual({ ports: [4567, 3000] });
+  } finally {
+    VercelSandbox.get = original;
+  }
+});
+
 test("vercel forwards process kill signals", async () => {
   const original = VercelSandbox.create;
   let signal: unknown;
@@ -241,6 +292,7 @@ test("vercel forwards process kill signals", async () => {
     fs: {
       mkdir: () => Promise.resolve(),
     },
+    name: "sandbox",
     runCommand: () =>
       Promise.resolve({
         cmdId: "command",
@@ -256,7 +308,6 @@ test("vercel forwards process kill signals", async () => {
             stdout: () => Promise.resolve(""),
           }),
       }),
-    sandboxId: "sandbox",
     stop: () => Promise.resolve(),
   } as unknown as VercelSandbox;
 
@@ -338,12 +389,15 @@ test("vercel rejects invalid create timeouts before provider calls", async () =>
   }
 });
 
-test("vercel maps create options and gates undeclared ports", async () => {
+test("vercel maps create options and updates dynamic ports", async () => {
   const original = VercelSandbox.create;
   let createSeen: unknown;
   let domainSeen: unknown;
   let mkdirSeen: unknown;
   let snapshotSeen: unknown;
+  let restoreSeen: unknown;
+  let stopCalled = false;
+  let updateSeen: unknown;
   let snapshotted = false;
   const raw = {
     domain: (port: number) => {
@@ -356,13 +410,28 @@ test("vercel maps create options and gates undeclared ports", async () => {
         return Promise.resolve();
       },
     },
-    sandboxId: "sandbox",
+    name: "sandbox",
     snapshot: (input?: unknown) => {
       snapshotSeen = input;
       snapshotted = true;
       return Promise.resolve({ snapshotId: "snapshot-id" });
     },
-    stop: () => Promise.resolve(),
+    status: "running",
+    stop: () => {
+      stopCalled = true;
+      return Promise.resolve();
+    },
+    update: (input: unknown) => {
+      updateSeen = input;
+      if (
+        typeof input === "object" &&
+        input !== null &&
+        "currentSnapshotId" in input
+      ) {
+        restoreSeen = input;
+      }
+      return Promise.resolve();
+    },
   } as unknown as VercelSandbox;
 
   VercelSandbox.create = ((input?: unknown) => {
@@ -386,6 +455,7 @@ test("vercel maps create options and gates undeclared ports", async () => {
       }),
       cwd: "/work",
       env: { B: "2" },
+      metadata: { feature: "test" },
       ports: [8080],
       snapshot: "snapshot",
       timeout: 456,
@@ -400,6 +470,7 @@ test("vercel maps create options and gates undeclared ports", async () => {
       resources: { vcpus: 2 },
       runtime: "node24",
       source: { snapshotId: "snapshot", type: "snapshot" },
+      tags: { feature: "test" },
       teamId: "team",
       timeout: 456,
       token: "token",
@@ -409,16 +480,16 @@ test("vercel maps create options and gates undeclared ports", async () => {
       path: "/work",
     });
 
-    await expect(sandbox.ports.expose(3000)).rejects.toMatchObject({
-      code: "unsupported",
-      provider: "vercel",
+    await expect(sandbox.ports.expose(3000)).resolves.toEqual({
+      port: 3000,
+      url: "https://preview.example.com/3000",
     });
-    expect(domainSeen).toBeUndefined();
+    expect(updateSeen).toEqual({ ports: [8080, 3000] });
+    expect(domainSeen).toBe(3000);
     await expect(sandbox.ports.expose(0)).rejects.toMatchObject({
       code: "configuration",
       provider: "vercel",
     });
-    expect(domainSeen).toBeUndefined();
 
     await expect(sandbox.ports.expose(8080)).resolves.toEqual({
       port: 8080,
@@ -431,12 +502,11 @@ test("vercel maps create options and gates undeclared ports", async () => {
     });
     expect(snapshotted).toBe(true);
     expect(snapshotSeen).toEqual({ expiration: 86_400_000 });
-    await expect(
-      sandbox.snapshots.restore("snapshot-id")
-    ).rejects.toMatchObject({
-      code: "unsupported",
-      provider: "vercel",
-    });
+    await expect(sandbox.snapshots.restore("snapshot-id")).resolves.toBe(
+      undefined
+    );
+    expect(restoreSeen).toEqual({ currentSnapshotId: "snapshot-id" });
+    expect(stopCalled).toBe(true);
   } finally {
     VercelSandbox.create = original;
   }
@@ -448,8 +518,8 @@ test("vercel normalizes provider command errors", async () => {
     fs: {
       mkdir: () => Promise.resolve(),
     },
+    name: "sandbox",
     runCommand: () => Promise.reject(new Error("provider failed")),
-    sandboxId: "sandbox",
     stop: () => Promise.resolve(),
   } as unknown as VercelSandbox;
 
@@ -481,11 +551,11 @@ test("vercel rejects invalid command timeouts before provider calls", async () =
     fs: {
       mkdir: () => Promise.resolve(),
     },
+    name: "sandbox",
     runCommand: () => {
       called = true;
       return Promise.reject(new Error("provider called"));
     },
-    sandboxId: "sandbox",
     stop: () => Promise.resolve(),
   } as unknown as VercelSandbox;
 

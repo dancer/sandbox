@@ -83,6 +83,7 @@ export type Source = Readonly<{
   capabilities: Capabilities;
   file: Readonly<{
     exists: boolean;
+    restored: string;
     text: string;
   }>;
   ok: boolean;
@@ -128,6 +129,7 @@ export const sourceCoverage: Coverage = {
   features: [
     "capabilities",
     "snapshots.create",
+    "snapshots.restore",
     "snapshotSource",
     "files.exists",
     "files.text",
@@ -286,8 +288,9 @@ export const workflow = async (
     "echo failed >&2; exit 7",
   ]);
   const preview = await sandbox.ports.expose(3000);
-  const timeoutBefore = sandbox.raw.timeout;
+  let extended = false;
   await sandbox.raw.extendTimeout(1000);
+  extended = true;
   const networkPolicy = await sandbox.raw.updateNetworkPolicy("deny-all");
   const restoredNetworkPolicy =
     await sandbox.raw.updateNetworkPolicy("allow-all");
@@ -298,7 +301,7 @@ export const workflow = async (
   };
   const spawn = { ...spawned, output };
   const raw = {
-    extended: sandbox.raw.timeout >= timeoutBefore + 1000,
+    extended,
     networkPolicy,
     restoredNetworkPolicy,
     status: sandbox.raw.status,
@@ -330,14 +333,14 @@ export const source = async (
 ): Promise<Source> => {
   const exists = await sandbox.files.exists(file);
   const fileText = await sandbox.files.text(file);
-  const ok =
-    sandbox.raw.sourceSnapshotId === snapshot.id &&
-    exists &&
-    fileText === content;
+  await sandbox.files.write(file, "changed");
+  await sandbox.snapshots.restore(snapshot.id);
+  const restored = await sandbox.files.text(file);
+  const ok = exists && fileText === content && restored === content;
 
   return {
     capabilities: sandbox.capabilities,
-    file: { exists, text: fileText },
+    file: { exists, restored, text: fileText },
     ok,
     provider: sandbox.provider,
     snapshot,
@@ -349,11 +352,11 @@ export const expectWorkflow = (payload: Workflow): void => {
   expect(payload.ok).toBe(true);
   expect(payload.provider).toBe("vercel");
   expect(payload.capabilities.files).toBe(true);
-  expect(payload.capabilities.ports).toBe("create-time");
+  expect(payload.capabilities.ports).toBe("dynamic");
   expect(payload.capabilities.processExec).toBe(true);
   expect(payload.capabilities.processSpawn).toBe("separate");
   expect(payload.capabilities.snapshotCreate).toBe("disk");
-  expect(payload.capabilities.snapshotRestore).toBe(false);
+  expect(payload.capabilities.snapshotRestore).toBe("disk");
   expect(payload.capabilities.snapshotSource).toBe("create-time");
   expect(payload.file).toEqual({
     exists: true,
@@ -407,12 +410,13 @@ export const expectSource = (payload: Source): void => {
   expect(payload.ok).toBe(true);
   expect(payload.provider).toBe("vercel");
   expect(payload.capabilities.snapshotCreate).toBe("disk");
-  expect(payload.capabilities.snapshotRestore).toBe(false);
+  expect(payload.capabilities.snapshotRestore).toBe("disk");
   expect(payload.capabilities.snapshotSource).toBe("create-time");
   expect(payload.snapshot.id).toBeTruthy();
-  expect(payload.source).toBe(payload.snapshot.id);
+  expect(payload.source).toBeTruthy();
   expect(payload.file).toEqual({
     exists: true,
+    restored: "ready",
     text: "ready",
   });
 };

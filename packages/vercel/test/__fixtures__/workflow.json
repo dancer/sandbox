@@ -35,20 +35,22 @@
     "capabilities": {
       "environment": true,
       "files": true,
-      "ports": "create-time",
+      "ports": "dynamic",
       "process": true,
       "processExec": true,
       "processSpawn": "separate",
       "raw": {
         "lifecycle": "dynamic",
         "network": "dynamic",
+        "previews": "dynamic",
         "metrics": true,
-        "resources": "create-time"
+        "resources": "dynamic",
+        "sessions": "dynamic"
       },
       "snapshotCreate": "disk",
-      "snapshotRestore": false,
+      "snapshotRestore": "disk",
       "snapshotSource": "create-time",
-      "snapshots": false,
+      "snapshots": "disk",
       "streaming": "separate"
     },
     "commands": {

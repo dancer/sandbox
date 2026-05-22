@@ -18,6 +18,23 @@ import type { LiveSandbox } from "./fixture";
 
 const live = enabled() ? test : test.skip;
 
+const readPreview = async (url: string): Promise<string> => {
+  let failure: unknown;
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    try {
+      const response = await fetch(url);
+      if (response.ok) {
+        return await response.text();
+      }
+      failure = new Error(`preview responded ${response.status}`);
+    } catch (error) {
+      failure = error;
+    }
+    await Bun.sleep(1000);
+  }
+  throw new Error("preview did not become reachable", { cause: failure });
+};
+
 live("vercel runs a live sandbox workflow", async () => {
   const file = path("workflow");
   const sandbox = await create({
@@ -67,6 +84,27 @@ live("vercel creates and starts from a live snapshot", async () => {
   }
 });
 
+live("vercel exposes ports after creation", async () => {
+  const sandbox = await create({
+    adapter: adapter({ ports: [] }),
+    cwd,
+  });
+  let running:
+    | Awaited<ReturnType<LiveSandbox["process"]["spawnShell"]>>
+    | undefined;
+
+  try {
+    running = await sandbox.process.spawnShell(
+      "node -e \"require('node:http').createServer((_request,response)=>response.end('dynamic-vercel-port')).listen(3456,'0.0.0.0')\""
+    );
+    const preview = await sandbox.ports.expose(3456);
+    await expect(readPreview(preview.url)).resolves.toBe("dynamic-vercel-port");
+  } finally {
+    await running?.kill();
+    await cleanup(sandbox);
+  }
+});
+
 live("vercel exposes advertised raw capabilities", async () => {
   const sandbox = await create({
     adapter: adapter({ resources: { vcpus: 1 } }),
@@ -76,7 +114,9 @@ live("vercel exposes advertised raw capabilities", async () => {
   try {
     expect(sandbox.raw.status).toBe("running");
     await sandbox.process.shell("printf raw-metrics");
-    await sandbox.raw.stop({ blocking: true });
+    const sessions = await sandbox.raw.listSessions({ limit: 1 });
+    expect(sessions.sessions.length).toBeGreaterThanOrEqual(1);
+    await sandbox.raw.stop();
     expect(sandbox.raw.status).toBe("stopped");
     expect("activeCpuUsageMs" in sandbox.raw).toBe(true);
     expect("networkTransfer" in sandbox.raw).toBe(true);

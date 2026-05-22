@@ -7,7 +7,6 @@ import {
   port,
   result,
   timeout,
-  unsupported,
 } from "@sandbox-sdk/core";
 import type {
   Adapter,
@@ -20,7 +19,35 @@ import type {
   Sandbox,
 } from "@sandbox-sdk/core";
 import { Sandbox as VercelSandbox } from "@vercel/sandbox";
-import type { Command as VercelCommand, NetworkPolicy } from "@vercel/sandbox";
+import type { Command as NativeCommand, NetworkPolicy } from "@vercel/sandbox";
+
+export {
+  APIError as VercelAPIError,
+  Command as VercelCommand,
+  CommandFinished as VercelCommandFinished,
+  FileSystem as VercelFileSystem,
+  Sandbox as VercelSandbox,
+  Session as VercelSession,
+  Snapshot as VercelSnapshot,
+  StreamError as VercelStreamError,
+  defineSandboxProxy as defineVercelSandboxProxy,
+} from "@vercel/sandbox";
+export type {
+  InvalidRequestProxyHandler as VercelInvalidRequestProxyHandler,
+  NetworkPolicy as VercelNetworkPolicy,
+  NetworkPolicyKeyValueMatcher as VercelNetworkPolicyKeyValueMatcher,
+  NetworkPolicyMatch as VercelNetworkPolicyMatch,
+  NetworkPolicyMatcher as VercelNetworkPolicyMatcher,
+  NetworkPolicyRule as VercelNetworkPolicyRule,
+  NetworkTransformer as VercelNetworkTransformer,
+  SerializedCommand as SerializedVercelCommand,
+  SerializedCommandFinished as SerializedVercelCommandFinished,
+  ProxyHandler as VercelProxyHandler,
+  ProxyMeta as VercelProxyMeta,
+  SerializedSandbox as SerializedVercelSandbox,
+  SerializedSnapshot as SerializedVercelSnapshot,
+  SnapshotTreeNodeData as VercelSnapshotTreeNodeData,
+} from "@vercel/sandbox";
 
 /** native Vercel Sandbox object exposed as `sandbox.raw` */
 export type VercelRaw = VercelSandbox;
@@ -61,6 +88,30 @@ export type Resources = Readonly<{
   vcpus: number;
 }>;
 
+/** Vercel sandbox runtime id */
+export type Runtime =
+  | "node26"
+  | "node24"
+  | "node22"
+  | "python3.13"
+  | (string & { readonly __vercelRuntime?: never });
+
+/** Vercel sandbox snapshot retention policy */
+export type KeepLastSnapshots = Readonly<{
+  /** number of snapshots to retain */
+  count: number;
+  /** expiration in milliseconds applied to retained snapshots */
+  expiration?: number;
+  /** delete evicted snapshots immediately when true */
+  deleteEvicted?: boolean;
+}>;
+
+/** Vercel sandbox fork source */
+export type Fork = Readonly<{
+  /** source sandbox name to fork from */
+  sourceSandbox: string;
+}>;
+
 /** Vercel sandbox adapter configuration */
 export type Vercel = Readonly<{
   /** default working directory for normalized file and process operations */
@@ -69,28 +120,46 @@ export type Vercel = Readonly<{
   env?: Readonly<Record<string, string>>;
   /** custom fetch implementation passed to @vercel/sandbox */
   fetch?: typeof fetch;
+  /** fork a new sandbox from an existing named Vercel sandbox */
+  fork?: Fork | string;
+  /** use Sandbox.getOrCreate for idempotent named sandbox creation */
+  getOrCreate?: boolean;
+  /** retain only the most recent snapshots for this sandbox */
+  keepLastSnapshots?: KeepLastSnapshots;
+  /** Vercel sandbox name for create and getOrCreate flows */
+  name?: string;
   /** Vercel network policy for the sandbox */
   networkPolicy?: NetworkPolicy;
-  /** ports declared at create time and later exposed with ports.expose */
+  /** ports exposed when the sandbox is created; ports.expose can add more later */
   ports?: readonly number[];
+  /** enable or disable automatic restore between Vercel sandbox sessions */
+  persistent?: boolean;
   /** Vercel project id; falls back to VERCEL_PROJECT_ID when using access-token auth */
   projectId?: string;
   /** resource request for new sandboxes */
   resources?: Resources;
-  /** Vercel runtime id such as node24 or python3.13 */
-  runtime?: string;
+  /** Vercel runtime id such as node26, node24, node22, or python3.13 */
+  runtime?: Runtime;
+  /** abort signal for sandbox creation, get, getOrCreate, or fork */
+  signal?: AbortSignal;
   /** git or tarball source used for new sandboxes */
   source?: Source;
   /** run commands with sudo when supported by Vercel Sandbox */
   sudo?: boolean;
   /** expiration in milliseconds for snapshots created through the normalized api */
   snapshotExpiration?: number;
+  /** metadata tags attached to the Vercel sandbox */
+  tags?: Readonly<Record<string, string>>;
   /** Vercel team id; falls back to VERCEL_TEAM_ID when using access-token auth */
   teamId?: string;
   /** sandbox lifetime timeout in milliseconds */
   timeout?: number;
   /** Vercel access token; falls back to VERCEL_TOKEN */
   token?: string;
+  /** called by @vercel/sandbox when a named sandbox is newly created */
+  onCreate?: (sandbox: VercelRaw) => Promise<void>;
+  /** called by @vercel/sandbox when a named sandbox session resumes */
+  onResume?: (sandbox: VercelRaw) => Promise<void>;
 }>;
 
 type Raw = VercelRaw;
@@ -99,14 +168,14 @@ type VercelCreate = NonNullable<Parameters<typeof VercelSandbox.create>[0]>;
 
 type VercelGet = Parameters<typeof VercelSandbox.get>[0];
 
-type VercelSignal = NonNullable<Parameters<VercelCommand["kill"]>[0]>;
+type VercelSignal = NonNullable<Parameters<NativeCommand["kill"]>[0]>;
 
 const provider = "vercel";
 
 const capabilities: Capabilities = {
   environment: true,
   files: true,
-  ports: "create-time",
+  ports: "dynamic",
   process: true,
   processExec: true,
   processSpawn: "separate",
@@ -114,12 +183,14 @@ const capabilities: Capabilities = {
     lifecycle: "dynamic",
     metrics: true,
     network: "dynamic",
-    resources: "create-time",
+    previews: "dynamic",
+    resources: "dynamic",
+    sessions: "dynamic",
   },
   snapshotCreate: "disk",
-  snapshotRestore: false,
+  snapshotRestore: "disk",
   snapshotSource: "create-time",
-  snapshots: false,
+  snapshots: "disk",
   streaming: "separate",
 };
 
@@ -263,14 +334,24 @@ const createInput = (
   return {
     ...auth(options),
     env: { ...options.env, ...input.env },
+    keepLastSnapshots: options.keepLastSnapshots,
+    name: input.id ?? options.name,
     networkPolicy: options.networkPolicy,
+    onResume: options.onResume,
+    persistent: options.persistent,
     ports: [...ports],
     resources: options.resources,
     runtime: options.runtime,
+    signal: options.signal,
+    snapshotExpiration: options.snapshotExpiration,
     source:
       snapshot === undefined
         ? options.source
         : { snapshotId: snapshot, type: "snapshot" },
+    tags:
+      input.metadata === undefined && options.tags === undefined
+        ? undefined
+        : { ...options.tags, ...input.metadata },
     ...(lifetime === undefined ? {} : { timeout: lifetime }),
   } as VercelCreate;
 };
@@ -278,8 +359,37 @@ const createInput = (
 const getInput = (options: Vercel, id: string): VercelGet =>
   ({
     ...auth(options),
-    sandboxId: id,
+    name: id,
+    onResume: options.onResume,
+    resume: true,
+    signal: options.signal,
   }) as VercelGet;
+
+const forkInput = (
+  options: Vercel,
+  input: NonNullable<Parameters<Adapter<Raw>["create"]>[0]>,
+  ports: readonly number[]
+): Parameters<typeof VercelSandbox.fork>[0] => {
+  const create = createInput(options, input, ports);
+  const source =
+    typeof options.fork === "string"
+      ? options.fork
+      : options.fork?.sourceSandbox;
+  return {
+    ...create,
+    sourceSandbox: source,
+  } as Parameters<typeof VercelSandbox.fork>[0];
+};
+
+const getOrCreateInput = (
+  options: Vercel,
+  input: NonNullable<Parameters<Adapter<Raw>["create"]>[0]>,
+  ports: readonly number[]
+): Parameters<typeof VercelSandbox.getOrCreate>[0] =>
+  ({
+    ...createInput(options, input, ports),
+    onCreate: options.onCreate,
+  }) as Parameters<typeof VercelSandbox.getOrCreate>[0];
 
 const stream = (
   source: AsyncIterable<{ data: string; stream: string }>
@@ -320,12 +430,44 @@ const wrap = async <Value>(
   }
 };
 
-const rejectUnsupported = (feature: string): Promise<never> => {
+const stopped = (raw: Raw): boolean => {
   try {
-    unsupported(provider, feature);
-  } catch (error) {
-    return Promise.reject(error);
+    return raw.status === "stopped";
+  } catch {
+    return true;
   }
+};
+
+const stopActive = async (raw: Raw): Promise<void> => {
+  if (stopped(raw)) {
+    return;
+  }
+  await raw.stop();
+};
+
+const routePorts = (raw: Raw): readonly number[] => {
+  try {
+    return raw.routes.map((route) => route.port);
+  } catch {
+    return [];
+  }
+};
+
+const createRaw = (
+  options: Vercel,
+  input: NonNullable<Parameters<Adapter<Raw>["create"]>[0]>,
+  ports: readonly number[]
+): Promise<Raw> => {
+  if (input.id !== undefined) {
+    return VercelSandbox.get(getInput(options, input.id));
+  }
+  if (options.fork !== undefined) {
+    return VercelSandbox.fork(forkInput(options, input, ports));
+  }
+  if (options.getOrCreate) {
+    return VercelSandbox.getOrCreate(getOrCreateInput(options, input, ports));
+  }
+  return VercelSandbox.create(createInput(options, input, ports));
 };
 
 const read = async (
@@ -379,7 +521,7 @@ const execute = async (
 };
 
 const wait = async (
-  running: VercelCommand,
+  running: NativeCommand,
   deadline: ReturnType<typeof timeout>,
   signal?: AbortSignal
 ): Promise<Result> => {
@@ -452,99 +594,121 @@ const createSandbox = (
   sudo: boolean | undefined,
   ports: readonly number[],
   snapshotExpiration: number | undefined
-): Sandbox<Raw> => ({
-  capabilities,
-  cwd,
-  files: {
-    exists: (path) => wrap(() => raw.fs.exists(path), "exists"),
-    list: async (path = cwd) => {
-      const entries = await wrap(
-        () => raw.fs.readdir(path, { withFileTypes: true }),
-        "list"
-      );
-      return entries
-        .map(
-          (entry): Entry => ({
-            kind: entry.isDirectory() ? "directory" : "file",
-            path: `${path.replace(/\/$/u, "")}/${entry.name}`,
-          })
-        )
-        .toSorted((left, right) => left.path.localeCompare(right.path));
-    },
-    mkdir: async (path) => {
-      await wrap(() => raw.fs.mkdir(path, { recursive: true }), "mkdir");
-    },
-    read: (path) => wrap(() => read(raw, path, cwd), "read"),
-    remove: async (path) => {
-      await wrap(
-        () => raw.fs.rm(path, { force: true, recursive: true }),
-        "remove"
-      );
-    },
-    stream: async (path) =>
-      readable(await wrap(() => read(raw, path, cwd), "read")),
-    text: async (path) =>
-      new TextDecoder().decode(await wrap(() => read(raw, path, cwd), "read")),
-    write: async (path: string, input: Input) => {
-      await wrap(
-        async () => raw.writeFiles([{ content: await bytes(input), path }]),
-        "write"
-      );
-    },
-  },
-  id: raw.sandboxId,
-  ports: {
-    expose: async (value) => {
-      const target = port(value, provider);
-      if (!ports.includes(target)) {
-        throw sandboxError(
-          provider,
-          "Vercel ports must be declared at sandbox creation",
-          "unsupported"
+): Sandbox<Raw> => {
+  const exposed = new Set([...ports, ...routePorts(raw)]);
+  return {
+    capabilities,
+    cwd,
+    files: {
+      exists: (path) => wrap(() => raw.fs.exists(path), "exists"),
+      list: async (path = cwd) => {
+        const entries = await wrap(
+          () => raw.fs.readdir(path, { withFileTypes: true }),
+          "list"
         );
-      }
-      const preview = await wrap(
-        () => ({
-          port: target,
-          url: raw.domain(target),
-        }),
-        "port exposure"
-      );
-      return preview;
+        return entries
+          .map(
+            (entry): Entry => ({
+              kind: entry.isDirectory() ? "directory" : "file",
+              path: `${path.replace(/\/$/u, "")}/${entry.name}`,
+            })
+          )
+          .toSorted((left, right) => left.path.localeCompare(right.path));
+      },
+      mkdir: async (path) => {
+        await wrap(() => raw.fs.mkdir(path, { recursive: true }), "mkdir");
+      },
+      read: (path) => wrap(() => read(raw, path, cwd), "read"),
+      remove: async (path) => {
+        await wrap(
+          () => raw.fs.rm(path, { force: true, recursive: true }),
+          "remove"
+        );
+      },
+      stream: async (path) =>
+        readable(await wrap(() => read(raw, path, cwd), "read")),
+      text: async (path) =>
+        new TextDecoder().decode(
+          await wrap(() => read(raw, path, cwd), "read")
+        ),
+      write: async (path: string, input: Input) => {
+        await wrap(
+          async () => raw.writeFiles([{ content: await bytes(input), path }]),
+          "write"
+        );
+      },
     },
-  },
-  process: {
-    exec: (command, args = [], options = {}) =>
-      execute(raw, cwd, sudo, command, args, options),
-    shell: (command, options = {}) =>
-      execute(raw, cwd, sudo, "sh", ["-lc", command], options),
-    spawn: (command, args = [], options = {}) =>
-      spawn(raw, cwd, sudo, command, args, options),
-    spawnShell: (command, options = {}) =>
-      spawn(raw, cwd, sudo, "sh", ["-lc", command], options),
-  },
-  provider,
-  raw,
-  snapshots: {
-    create: async () => {
-      const expiration = duration(
-        snapshotExpiration,
-        provider,
-        "snapshotExpiration"
-      );
-      const snapshot = await wrap(
-        () =>
-          raw.snapshot(expiration === undefined ? undefined : { expiration }),
-        "snapshot"
-      );
-      return { id: snapshot.snapshotId };
+    id: raw.name,
+    ports: {
+      expose: async (value) => {
+        const target = port(value, provider);
+        if (!exposed.has(target)) {
+          if (exposed.size >= 4) {
+            throw sandboxError(
+              provider,
+              "Vercel sandboxes can expose up to 4 ports",
+              "configuration"
+            );
+          }
+          const next = [...exposed, target];
+          await wrap(() => raw.update({ ports: next }), "port update");
+          exposed.add(target);
+        }
+        const preview = await wrap(
+          () => ({
+            port: target,
+            url: raw.domain(target),
+          }),
+          "port exposure"
+        );
+        return preview;
+      },
     },
-    restore: () => rejectUnsupported("in-place snapshot restore"),
-  },
-  stop: async () => {
-    await wrap(() => raw.stop({ blocking: true }), "stop");
-  },
-});
+    process: {
+      exec: (command, args = [], options = {}) =>
+        execute(raw, cwd, sudo, command, args, options),
+      shell: (command, options = {}) =>
+        execute(raw, cwd, sudo, "sh", ["-lc", command], options),
+      spawn: (command, args = [], options = {}) =>
+        spawn(raw, cwd, sudo, command, args, options),
+      spawnShell: (command, options = {}) =>
+        spawn(raw, cwd, sudo, "sh", ["-lc", command], options),
+    },
+    provider,
+    raw,
+    snapshots: {
+      create: async () => {
+        const expiration = duration(
+          snapshotExpiration,
+          provider,
+          "snapshotExpiration"
+        );
+        const snapshot = await wrap(
+          () =>
+            raw.snapshot(expiration === undefined ? undefined : { expiration }),
+          "snapshot"
+        );
+        return { id: snapshot.snapshotId };
+      },
+      restore: async (id) => {
+        if (!present(id)) {
+          throw sandboxError(
+            provider,
+            "Vercel snapshot id is required for restore",
+            "configuration"
+          );
+        }
+        await wrap(async () => {
+          await stopActive(raw);
+          await raw.update({ currentSnapshotId: id });
+        }, "snapshot restore");
+      },
+    },
+    stop: async () => {
+      await wrap(() => stopActive(raw), "stop");
+    },
+  };
+};
 
 /** create a Vercel Sandbox adapter with normalized sandbox operations */
 export const vercel = (options: Vercel = {}): Adapter<Raw> => ({
@@ -555,10 +719,7 @@ export const vercel = (options: Vercel = {}): Adapter<Raw> => ({
     const ports = (input.ports ?? options.ports ?? []).map((value) =>
       port(value, provider)
     );
-    const raw =
-      input.id === undefined
-        ? await VercelSandbox.create(createInput(options, input, ports))
-        : await VercelSandbox.get(getInput(options, input.id));
+    const raw = await createRaw(options, input, ports);
 
     if (input.id === undefined) {
       await raw.fs.mkdir(cwd, { recursive: true });

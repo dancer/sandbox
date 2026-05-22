@@ -42,18 +42,21 @@ test("adapters expose capability-honest feature modes", () => {
 
   expect(vercel().capabilities).toMatchObject({
     files: true,
-    ports: "create-time",
+    ports: "dynamic",
     processExec: true,
     processSpawn: "separate",
     raw: {
       lifecycle: "dynamic",
       metrics: true,
       network: "dynamic",
-      resources: "create-time",
+      previews: "dynamic",
+      resources: "dynamic",
+      sessions: "dynamic",
     },
     snapshotCreate: "disk",
-    snapshotRestore: false,
+    snapshotRestore: "disk",
     snapshotSource: "create-time",
+    snapshots: "disk",
   });
 
   expect(
