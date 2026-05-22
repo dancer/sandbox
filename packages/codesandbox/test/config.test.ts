@@ -113,6 +113,7 @@ test("codesandbox maps create options and normalized operations", async () => {
   let mkdirSeen: unknown;
   let portSeen: unknown;
   let backgroundSeen: unknown;
+  const fileSeen: unknown[] = [];
   let hostSeen: unknown;
   let runSeen: unknown;
   let shutdownSeen: string | undefined;
@@ -147,22 +148,43 @@ test("codesandbox maps create options and normalized operations", async () => {
     },
     fs: {
       mkdir: (path: string, recursive?: boolean) => {
+        fileSeen.push({ method: "mkdir", path, recursive });
         mkdirSeen = { path, recursive };
         return Promise.resolve();
       },
-      readFile: () => Promise.resolve(new Uint8Array([1, 2])),
-      readTextFile: () => Promise.resolve("text"),
-      readdir: () =>
-        Promise.resolve([{ name: "file.txt", type: "file" as const }]),
-      remove: () => Promise.resolve(),
-      stat: () => Promise.resolve({ mtime: 1_767_225_600_000, size: 2 }),
+      readFile: (path: string) => {
+        fileSeen.push({ method: "readFile", path });
+        return Promise.resolve(new Uint8Array([1, 2]));
+      },
+      readTextFile: (path: string) => {
+        fileSeen.push({ method: "readTextFile", path });
+        return Promise.resolve("text");
+      },
+      readdir: (path: string) => {
+        fileSeen.push({ method: "readdir", path });
+        return Promise.resolve([{ name: "file.txt", type: "file" as const }]);
+      },
+      remove: (path: string, recursive?: boolean) => {
+        fileSeen.push({ method: "remove", path, recursive });
+        return Promise.resolve();
+      },
+      stat: (path: string) => {
+        fileSeen.push({ method: "stat", path });
+        return Promise.resolve({ mtime: 1_767_225_600_000, size: 2 });
+      },
       watch: () =>
         Promise.resolve({
           dispose: () => {},
           onEvent: () => ({ dispose: () => {} }),
         }),
-      writeFile: () => Promise.resolve(),
-      writeTextFile: () => Promise.resolve(),
+      writeFile: (path: string) => {
+        fileSeen.push({ method: "writeFile", path });
+        return Promise.resolve();
+      },
+      writeTextFile: (path: string, value: string) => {
+        fileSeen.push({ method: "writeTextFile", path, value });
+        return Promise.resolve();
+      },
     },
     hosts: {
       getUrl: (port: number, protocol?: string) => {
@@ -279,6 +301,31 @@ test("codesandbox maps create options and normalized operations", async () => {
   });
   expect(connectSeen).toEqual({ env: { A: "1", B: "2" } });
   expect(mkdirSeen).toEqual({ path: "/work", recursive: true });
+  fileSeen.length = 0;
+
+  await current.files.write("data.txt", "value");
+  await expect(current.files.text("data.txt")).resolves.toBe("text");
+  await expect(current.files.read("data.txt")).resolves.toEqual(
+    new Uint8Array([1, 2])
+  );
+  await expect(current.files.list()).resolves.toEqual([
+    {
+      kind: "file",
+      modified: new Date(1_767_225_600_000),
+      path: "/work/file.txt",
+      size: 2,
+    },
+  ]);
+  await current.files.remove("data.txt");
+  expect(fileSeen).toEqual([
+    { method: "mkdir", path: "/work", recursive: true },
+    { method: "writeTextFile", path: "/work/data.txt", value: "value" },
+    { method: "readTextFile", path: "/work/data.txt" },
+    { method: "readFile", path: "/work/data.txt" },
+    { method: "readdir", path: "/work" },
+    { method: "stat", path: "/work/file.txt" },
+    { method: "remove", path: "/work/data.txt", recursive: true },
+  ]);
 
   await expect(current.ports.expose(3000)).resolves.toEqual({
     port: 3000,

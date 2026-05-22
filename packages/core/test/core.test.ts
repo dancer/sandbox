@@ -17,6 +17,7 @@ import {
   requireCapability,
   result,
   sandboxError,
+  sandboxPath,
   supports,
   supportsRaw,
   timeout,
@@ -202,10 +203,78 @@ test("withSandbox preserves work and cleanup errors", async () => {
   throw new Error("expected aggregate error");
 });
 
-test("fromSandboxRuntime lifts stream-first files", async () => {
+test("fromSandboxRuntime lifts stream-first files without rewriting paths", async () => {
+  let written: { path: string; value: unknown } | undefined;
+  const seen: string[] = [];
+  const current = fromSandboxRuntime({
+    ...sandbox({ files: true }),
+    cwd: "/workspace",
+    files: {
+      exists: (path) => {
+        seen.push(path);
+        return Promise.resolve(path === "/workspace/file.txt");
+      },
+      list: (path) => {
+        seen.push(path ?? "");
+        return Promise.resolve([{ kind: "file", path: "/workspace/file.txt" }]);
+      },
+      mkdir: (path) => {
+        seen.push(path);
+        return Promise.resolve();
+      },
+      read: (path) => {
+        seen.push(path);
+        return Promise.resolve(readable("hello"));
+      },
+      remove: (path) => {
+        seen.push(path);
+        return Promise.resolve();
+      },
+      write: (path, value) => {
+        seen.push(path);
+        written = { path, value };
+        return Promise.resolve();
+      },
+    },
+    process: {
+      spawn: () => Promise.reject(new Error("not used")),
+      spawnShell: () => Promise.reject(new Error("not used")),
+    },
+  } satisfies SandboxRuntime);
+
+  expect(await current.files.exists("/workspace/file.txt")).toBe(true);
+  expect(await current.files.list("/workspace")).toEqual([
+    { kind: "file", path: "/workspace/file.txt" },
+  ]);
+  expect(await current.files.read("/workspace/file.txt")).toEqual(
+    encode("hello")
+  );
+  expect(await current.files.text("/workspace/file.txt")).toBe("hello");
+
+  await current.files.mkdir("/workspace/src");
+  await current.files.remove("/workspace/old.txt");
+  await current.files.write("/workspace/file.txt", "value");
+
+  expect(written).toEqual({
+    path: "/workspace/file.txt",
+    value: "value",
+  });
+  expect(seen).toEqual([
+    "/workspace/file.txt",
+    "/workspace",
+    "/workspace/file.txt",
+    "/workspace/file.txt",
+    "/workspace/src",
+    "/workspace/old.txt",
+    "/workspace/file.txt",
+  ]);
+});
+
+test("fromSandboxRuntime preserves absolute file paths", async () => {
   let written: { path: string; value: unknown } | undefined;
   const current = fromSandboxRuntime({
     ...sandbox({ files: true }),
+    cwd: "/workspace",
     files: {
       exists: (path) => Promise.resolve(path === "/workspace/file.txt"),
       list: () =>
@@ -240,6 +309,19 @@ test("fromSandboxRuntime lifts stream-first files", async () => {
     path: "/workspace/file.txt",
     value: "value",
   });
+});
+
+test("sandboxPath resolves relative paths against cwd", () => {
+  expect(sandboxPath("/workspace", "file.txt")).toBe("/workspace/file.txt");
+  expect(sandboxPath("/workspace/", "src/index.ts")).toBe(
+    "/workspace/src/index.ts"
+  );
+  expect(sandboxPath("/workspace", "")).toBe("/workspace");
+  expect(sandboxPath("/workspace")).toBe("/workspace");
+  expect(sandboxPath("/workspace/app", "../file.txt")).toBe(
+    "/workspace/file.txt"
+  );
+  expect(sandboxPath("/workspace", "/tmp/file.txt")).toBe("/tmp/file.txt");
 });
 
 test("fromSandboxRuntime derives exec from spawn output", async () => {

@@ -486,12 +486,12 @@ test("daytona uses provider streaming file APIs", async () => {
     },
   });
   let uploadSeen: unknown;
-  let downloaded = false;
+  let downloadSeen: unknown;
   const raw = {
     fs: {
       createFolder: () => Promise.resolve(),
-      downloadFileStream: () => {
-        downloaded = true;
+      downloadFileStream: (path: string) => {
+        downloadSeen = path;
         return Promise.resolve(Readable.from(["stream"]));
       },
       uploadFileStream: (source: unknown, path: string) => {
@@ -513,16 +513,16 @@ test("daytona uses provider streaming file APIs", async () => {
       }),
     });
 
-    await sandbox.files.write("/workspace/stream.txt", input);
+    await sandbox.files.write("stream.txt", input);
     await expect(
-      new Response(await sandbox.files.stream("/workspace/stream.txt")).text()
+      new Response(await sandbox.files.stream("stream.txt")).text()
     ).resolves.toBe("stream");
 
     expect(uploadSeen).toEqual({
       path: "/workspace/stream.txt",
       source: input,
     });
-    expect(downloaded).toBe(true);
+    expect(downloadSeen).toBe("/workspace/stream.txt");
   } finally {
     client.create = original;
   }

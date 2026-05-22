@@ -252,6 +252,16 @@ export const text = async (input: Input): Promise<string> => {
   return typeof value === "string" ? value : new TextDecoder().decode(value);
 };
 
+/** resolve a sandbox path against the sandbox cwd */
+export const sandboxPath = (cwd: string, value?: string): string => {
+  const input = value === undefined || value.length === 0 ? cwd : value;
+  if (input.startsWith("/")) {
+    return new URL(input, "file:///").pathname;
+  }
+  const base = cwd.endsWith("/") ? cwd : `${cwd}/`;
+  return new URL(`${base}${input}`, "file:///").pathname;
+};
+
 const read = async (value: ReadableStream<Uint8Array>): Promise<Uint8Array> => {
   const output = await bytes(value);
   return typeof output === "string" ? new TextEncoder().encode(output) : output;

@@ -3,9 +3,10 @@ import {
   bytes,
   command,
   duration,
-  sandboxError,
   port,
   result,
+  sandboxError,
+  sandboxPath,
   unsupported,
 } from "@sandbox-sdk/core";
 import type {
@@ -456,9 +457,13 @@ const createSandbox = (
   capabilities,
   cwd,
   files: {
-    exists: (path) => wrap(() => raw.files.exists(path), "exists"),
+    exists: (path) =>
+      wrap(() => raw.files.exists(sandboxPath(cwd, path)), "exists"),
     list: async (path = cwd) => {
-      const entries = await wrap(() => raw.files.list(path), "list");
+      const entries = await wrap(
+        () => raw.files.list(sandboxPath(cwd, path)),
+        "list"
+      );
       return entries
         .map((entry): Entry => {
           const item: Entry = {
@@ -474,14 +479,18 @@ const createSandbox = (
     },
     mkdir: async (path) => {
       await wrap(
-        () => raw.files.makeDir(path, user === undefined ? {} : { user }),
+        () =>
+          raw.files.makeDir(
+            sandboxPath(cwd, path),
+            user === undefined ? {} : { user }
+          ),
         "mkdir"
       );
     },
     read: (path) =>
       wrap(
         () =>
-          raw.files.read(path, {
+          raw.files.read(sandboxPath(cwd, path), {
             format: "bytes",
             ...(user === undefined ? {} : { user }),
           }),
@@ -489,14 +498,18 @@ const createSandbox = (
       ),
     remove: async (path) => {
       await wrap(
-        () => raw.files.remove(path, user === undefined ? {} : { user }),
+        () =>
+          raw.files.remove(
+            sandboxPath(cwd, path),
+            user === undefined ? {} : { user }
+          ),
         "remove"
       );
     },
     stream: (path) =>
       wrap(
         () =>
-          raw.files.read(path, {
+          raw.files.read(sandboxPath(cwd, path), {
             format: "stream",
             ...(user === undefined ? {} : { user }),
           }),
@@ -505,7 +518,7 @@ const createSandbox = (
     text: (path) =>
       wrap(
         () =>
-          raw.files.read(path, {
+          raw.files.read(sandboxPath(cwd, path), {
             format: "text",
             ...(user === undefined ? {} : { user }),
           }),
@@ -515,7 +528,7 @@ const createSandbox = (
       await wrap(
         async () =>
           raw.files.write(
-            path,
+            sandboxPath(cwd, path),
             await content(input),
             user === undefined ? {} : { user }
           ),

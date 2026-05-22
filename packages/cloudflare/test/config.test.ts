@@ -115,7 +115,9 @@ test("cloudflare reports missing durable object binding", async () => {
 test("cloudflare maps create options before provider calls", async () => {
   getSeen = undefined;
   mkdirSeen = undefined;
+  readSeen = undefined;
   setEnvSeen = undefined;
+  writeSeen = undefined;
 
   const sandbox = await create({
     adapter: cloudflare({
@@ -141,6 +143,19 @@ test("cloudflare maps create options before provider calls", async () => {
     expect(mkdirSeen).toEqual({
       options: { recursive: true },
       path: "/work",
+    });
+    await sandbox.files.write("data.bin", "value");
+    expect(writeSeen).toEqual({
+      content: "value",
+      options: { encoding: "utf-8" },
+      path: "/work/data.bin",
+    });
+    await expect(
+      new Response(await sandbox.files.stream("data.bin")).text()
+    ).resolves.toBe("streamed");
+    expect(readSeen).toEqual({
+      options: { encoding: "base64" },
+      path: "/work/data.bin",
     });
   } finally {
     await sandbox.stop();

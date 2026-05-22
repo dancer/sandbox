@@ -14,9 +14,10 @@ import {
   bytes,
   command,
   duration,
-  sandboxError,
   port,
   result,
+  sandboxError,
+  sandboxPath,
   unsupported,
 } from "@sandbox-sdk/core";
 import type {
@@ -543,17 +544,18 @@ const createSandbox = (raw: Raw, cwd: string): Sandbox<Raw> => ({
   capabilities,
   cwd,
   files: {
-    exists: (path) => wrap(() => exists(raw, path), "exists"),
-    list: (path = cwd) => wrap(() => list(raw, path), "list"),
-    mkdir: (path) => wrap(() => mkdir(raw, path), "mkdir"),
-    read: (path) => wrap(() => read(raw, path), "read"),
+    exists: (path) => wrap(() => exists(raw, sandboxPath(cwd, path)), "exists"),
+    list: (path = cwd) => wrap(() => list(raw, sandboxPath(cwd, path)), "list"),
+    mkdir: (path) => wrap(() => mkdir(raw, sandboxPath(cwd, path)), "mkdir"),
+    read: (path) => wrap(() => read(raw, sandboxPath(cwd, path)), "read"),
     remove: async (path) => {
-      await wrap(() => raw.fs.rm(path, true), "remove");
+      await wrap(() => raw.fs.rm(sandboxPath(cwd, path), true), "remove");
     },
     stream: async (path) =>
-      readable(await wrap(() => read(raw, path), "stream")),
-    text: (path) => wrap(() => raw.fs.read(path), "text"),
-    write: (path, input) => wrap(() => write(raw, path, input), "write"),
+      readable(await wrap(() => read(raw, sandboxPath(cwd, path)), "stream")),
+    text: (path) => wrap(() => raw.fs.read(sandboxPath(cwd, path)), "text"),
+    write: (path, input) =>
+      wrap(() => write(raw, sandboxPath(cwd, path), input), "write"),
   },
   id: raw.metadata.name,
   ports: {

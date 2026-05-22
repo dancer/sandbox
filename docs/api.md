@@ -668,6 +668,14 @@ export declare const bytes: (input: Input) => Promise<Uint8Array | string>;
 export declare const text: (input: Input) => Promise<string>;
 ```
 
+#### `sandboxPath`
+
+resolve a sandbox path against the sandbox cwd
+
+```ts
+export declare const sandboxPath: (cwd: string, value?: string) => string;
+```
+
 #### `fromSandboxRuntime`
 
 lift a stream-first low-level sandbox into the public sandbox api

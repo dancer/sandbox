@@ -6,9 +6,10 @@ import {
   bytes,
   command,
   duration,
-  sandboxError,
   port,
   result,
+  sandboxError,
+  sandboxPath,
   timeout,
   unsupported,
 } from "@sandbox-sdk/core";
@@ -463,15 +464,27 @@ const createSandbox = (
   capabilities,
   cwd,
   files: {
-    exists: (path) => wrap(() => exists(raw.client, path), "exists"),
-    list: (path = cwd) => wrap(() => list(raw.client, path), "list"),
-    mkdir: (path) => wrap(() => mkdir(raw.client, path), "mkdir"),
-    read: (path) => wrap(() => raw.client.fs.readFile(path), "read"),
-    remove: (path) => wrap(() => raw.client.fs.remove(path, true), "remove"),
+    exists: (path) =>
+      wrap(() => exists(raw.client, sandboxPath(cwd, path)), "exists"),
+    list: (path = cwd) =>
+      wrap(() => list(raw.client, sandboxPath(cwd, path)), "list"),
+    mkdir: (path) =>
+      wrap(() => mkdir(raw.client, sandboxPath(cwd, path)), "mkdir"),
+    read: (path) =>
+      wrap(() => raw.client.fs.readFile(sandboxPath(cwd, path)), "read"),
+    remove: (path) =>
+      wrap(() => raw.client.fs.remove(sandboxPath(cwd, path), true), "remove"),
     stream: async (path) =>
-      readable(await wrap(() => raw.client.fs.readFile(path), "stream")),
-    text: (path) => wrap(() => raw.client.fs.readTextFile(path), "text"),
-    write: (path, input) => wrap(() => write(raw.client, path, input), "write"),
+      readable(
+        await wrap(
+          () => raw.client.fs.readFile(sandboxPath(cwd, path)),
+          "stream"
+        )
+      ),
+    text: (path) =>
+      wrap(() => raw.client.fs.readTextFile(sandboxPath(cwd, path)), "text"),
+    write: (path, input) =>
+      wrap(() => write(raw.client, sandboxPath(cwd, path), input), "write"),
   },
   id: raw.sandbox.id,
   ports: {

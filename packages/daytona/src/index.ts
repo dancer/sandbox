@@ -19,10 +19,11 @@ import {
   bytes,
   command,
   duration,
-  sandboxError,
   port,
   quote,
   result,
+  sandboxError,
+  sandboxPath,
   unsupported,
 } from "@sandbox-sdk/core";
 import type {
@@ -577,7 +578,7 @@ const createSandbox = (
   files: {
     exists: async (path) => {
       try {
-        await raw.fs.getFileDetails(path);
+        await raw.fs.getFileDetails(sandboxPath(cwd, path));
         return true;
       } catch (error) {
         if (missing(error)) {
@@ -592,8 +593,9 @@ const createSandbox = (
       }
     },
     list: async (path = cwd) => {
-      const base = path.replace(/\/$/u, "");
-      const entries = await wrap(() => raw.fs.listFiles(path), "list");
+      const target = sandboxPath(cwd, path);
+      const base = target.replace(/\/$/u, "");
+      const entries = await wrap(() => raw.fs.listFiles(target), "list");
       return entries
         .map(
           (entry): Entry => ({
@@ -606,22 +608,39 @@ const createSandbox = (
         .toSorted((left, right) => left.path.localeCompare(right.path));
     },
     mkdir: async (path) => {
-      await wrap(() => raw.fs.createFolder(path, "755"), "mkdir");
+      await wrap(
+        () => raw.fs.createFolder(sandboxPath(cwd, path), "755"),
+        "mkdir"
+      );
     },
     read: async (path) =>
-      new Uint8Array(await wrap(() => raw.fs.downloadFile(path), "read")),
+      new Uint8Array(
+        await wrap(() => raw.fs.downloadFile(sandboxPath(cwd, path)), "read")
+      ),
     remove: async (path) => {
-      await wrap(() => raw.fs.deleteFile(path, true), "remove");
+      await wrap(
+        () => raw.fs.deleteFile(sandboxPath(cwd, path), true),
+        "remove"
+      );
     },
     stream: async (path) =>
-      web(await wrap(() => raw.fs.downloadFileStream(path), "stream")),
+      web(
+        await wrap(
+          () => raw.fs.downloadFileStream(sandboxPath(cwd, path)),
+          "stream"
+        )
+      ),
     text: async (path) => {
-      const output = await wrap(() => raw.fs.downloadFile(path), "text");
+      const output = await wrap(
+        () => raw.fs.downloadFile(sandboxPath(cwd, path)),
+        "text"
+      );
       return output.toString("utf-8");
     },
     write: async (path, input) => {
       await wrap(
-        async () => raw.fs.uploadFileStream(await upload(input), path),
+        async () =>
+          raw.fs.uploadFileStream(await upload(input), sandboxPath(cwd, path)),
         "write"
       );
     },

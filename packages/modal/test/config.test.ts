@@ -398,7 +398,7 @@ test("modal writes readable streams in chunks", async () => {
     cwd: "/work",
   });
 
-  await sandbox.files.write("/work/stream.txt", input);
+  await sandbox.files.write("stream.txt", input);
 
   expect(openSeen).toEqual({ mode: "w", path: "/work/stream.txt" });
   expect(directories).toEqual([

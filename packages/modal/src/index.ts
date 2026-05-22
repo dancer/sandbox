@@ -8,6 +8,7 @@ import {
   sandboxError,
   port,
   result,
+  sandboxPath,
   unsupported,
 } from "@sandbox-sdk/core";
 import type {
@@ -432,7 +433,7 @@ const createSandbox = (
   files: {
     exists: async (path) => {
       try {
-        await raw.filesystem.stat(path);
+        await raw.filesystem.stat(sandboxPath(cwd, path));
         return true;
       } catch (error) {
         if (error instanceof ModalSdk.SandboxFilesystemNotFoundError) {
@@ -441,24 +442,36 @@ const createSandbox = (
         throw sandboxError(provider, "exists failed", "provider", error);
       }
     },
-    list: (path = cwd) => wrap(() => list(raw, path), "list"),
+    list: (path = cwd) => wrap(() => list(raw, sandboxPath(cwd, path)), "list"),
     mkdir: async (path) => {
       await wrap(
-        () => raw.filesystem.makeDirectory(path, { createParents: true }),
+        () =>
+          raw.filesystem.makeDirectory(sandboxPath(cwd, path), {
+            createParents: true,
+          }),
         "mkdir"
       );
     },
-    read: (path) => wrap(() => raw.filesystem.readBytes(path), "read"),
+    read: (path) =>
+      wrap(() => raw.filesystem.readBytes(sandboxPath(cwd, path)), "read"),
     remove: async (path) => {
       await wrap(
-        () => raw.filesystem.remove(path, { recursive: true }),
+        () =>
+          raw.filesystem.remove(sandboxPath(cwd, path), { recursive: true }),
         "remove"
       );
     },
     stream: async (path) =>
-      readable(await wrap(() => raw.filesystem.readBytes(path), "stream")),
-    text: (path) => wrap(() => raw.filesystem.readText(path), "text"),
-    write: (path, input) => wrap(() => write(raw, path, input), "write"),
+      readable(
+        await wrap(
+          () => raw.filesystem.readBytes(sandboxPath(cwd, path)),
+          "stream"
+        )
+      ),
+    text: (path) =>
+      wrap(() => raw.filesystem.readText(sandboxPath(cwd, path)), "text"),
+    write: (path, input) =>
+      wrap(() => write(raw, sandboxPath(cwd, path), input), "write"),
   },
   id: raw.sandboxId,
   ports: {

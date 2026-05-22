@@ -1,13 +1,14 @@
-import { dirname, isAbsolute, join } from "node:path/posix";
+import { dirname } from "node:path/posix";
 
 import {
   SandboxError,
   abort,
   bytes,
   duration,
-  sandboxError,
   port,
   result,
+  sandboxError,
+  sandboxPath,
   timeout,
 } from "@sandbox-sdk/core";
 import type {
@@ -549,7 +550,10 @@ const read = async (
   path: string,
   cwd: string
 ): Promise<Uint8Array> => {
-  const output = await raw.readFileToBuffer({ cwd, path });
+  const output = await raw.readFileToBuffer({
+    cwd,
+    path: sandboxPath(cwd, path),
+  });
   if (output === null) {
     throw sandboxError(provider, "Path not found", "not_found");
   }
@@ -561,7 +565,7 @@ const streamFile = async (
   path: string,
   cwd: string
 ): Promise<ReadableStream<Uint8Array>> => {
-  const output = await raw.readFile({ cwd, path });
+  const output = await raw.readFile({ cwd, path: sandboxPath(cwd, path) });
   if (output === null) {
     throw sandboxError(provider, "Path not found", "not_found");
   }
@@ -572,9 +576,6 @@ const parent = (path: string): string | undefined => {
   const directory = dirname(path);
   return directory === "." || directory === "/" ? undefined : directory;
 };
-
-const absolute = (path: string, cwd: string): string =>
-  isAbsolute(path) ? path : join(cwd, path);
 
 const execute = async (
   raw: Raw,
@@ -723,9 +724,9 @@ const createSandbox = (
     cwd,
     files: {
       exists: (path) =>
-        wrap(() => raw.fs.exists(absolute(path, cwd)), "exists"),
+        wrap(() => raw.fs.exists(sandboxPath(cwd, path)), "exists"),
       list: async (path = cwd) => {
-        const target = absolute(path, cwd);
+        const target = sandboxPath(cwd, path);
         const entries = await wrap(
           () => raw.fs.readdir(target, { withFileTypes: true }),
           "list"
@@ -741,7 +742,7 @@ const createSandbox = (
       },
       mkdir: async (path) => {
         await wrap(
-          () => raw.fs.mkdir(absolute(path, cwd), { recursive: true }),
+          () => raw.fs.mkdir(sandboxPath(cwd, path), { recursive: true }),
           "mkdir"
         );
       },
@@ -749,7 +750,7 @@ const createSandbox = (
       remove: async (path) => {
         await wrap(
           () =>
-            raw.fs.rm(absolute(path, cwd), { force: true, recursive: true }),
+            raw.fs.rm(sandboxPath(cwd, path), { force: true, recursive: true }),
           "remove"
         );
       },
@@ -760,7 +761,7 @@ const createSandbox = (
         ),
       write: async (path: string, input: Input) => {
         await wrap(async () => {
-          const target = absolute(path, cwd);
+          const target = sandboxPath(cwd, path);
           const directory = parent(target);
           if (directory !== undefined) {
             await raw.fs.mkdir(directory, { recursive: true });

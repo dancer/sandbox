@@ -136,6 +136,7 @@ test("blaxel maps create options and normalized operations", async () => {
   const original = SandboxInstance.create;
   let createSeen: unknown;
   let safeSeen: unknown;
+  const fileSeen: unknown[] = [];
   const mkdirSeen: string[] = [];
   const processSeen: unknown[] = [];
   let previewSeen: unknown;
@@ -143,8 +144,9 @@ test("blaxel maps create options and normalized operations", async () => {
   const raw = {
     delete: () => Promise.resolve(),
     fs: {
-      ls: () =>
-        Promise.resolve({
+      ls: (path: string) => {
+        fileSeen.push({ method: "ls", path });
+        return Promise.resolve({
           files: [
             {
               group: "group",
@@ -159,16 +161,32 @@ test("blaxel maps create options and normalized operations", async () => {
           name: "work",
           path: "/work",
           subdirectories: [{ name: "src", path: "/work/src" }],
-        }),
+        });
+      },
       mkdir: (path: string) => {
         mkdirSeen.push(path);
         return Promise.resolve({});
       },
-      read: () => Promise.resolve("text"),
-      readBinary: () => Promise.resolve(new Blob(["text"])),
-      rm: () => Promise.resolve({}),
-      write: () => Promise.resolve({}),
-      writeBinary: () => Promise.resolve({}),
+      read: (path: string) => {
+        fileSeen.push({ method: "read", path });
+        return Promise.resolve("text");
+      },
+      readBinary: (path: string) => {
+        fileSeen.push({ method: "readBinary", path });
+        return Promise.resolve(new Blob(["text"]));
+      },
+      rm: (path: string) => {
+        fileSeen.push({ method: "rm", path });
+        return Promise.resolve({});
+      },
+      write: (path: string, value: string) => {
+        fileSeen.push({ method: "write", path, value });
+        return Promise.resolve({});
+      },
+      writeBinary: (path: string) => {
+        fileSeen.push({ method: "writeBinary", path });
+        return Promise.resolve({});
+      },
     },
     metadata: { name: "sandbox" },
     previews: {
@@ -270,6 +288,19 @@ test("blaxel maps create options and normalized operations", async () => {
       metadata: { name: "sandbox-sdk-8080" },
       spec: { port: 8080, public: true },
     });
+
+    await sandbox.files.write("data.txt", "value");
+    await expect(sandbox.files.text("data.txt")).resolves.toBe("text");
+    await expect(sandbox.files.read("data.txt")).resolves.toEqual(
+      new TextEncoder().encode("text")
+    );
+    await sandbox.files.remove("data.txt");
+    expect(fileSeen).toEqual([
+      { method: "write", path: "/work/data.txt", value: "value" },
+      { method: "read", path: "/work/data.txt" },
+      { method: "readBinary", path: "/work/data.txt" },
+      { method: "rm", path: "/work/data.txt" },
+    ]);
 
     await expect(
       sandbox.process.exec("echo", ["hello world"], {

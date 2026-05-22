@@ -10,6 +10,7 @@ import {
   duration,
   port,
   sandboxError,
+  sandboxPath,
   result,
   unsupported,
 } from "@sandbox-sdk/core";
@@ -531,12 +532,16 @@ const createSandbox = <ProviderRaw>(
     cwd,
     files: {
       exists: async (path) => {
-        const output = await wrap(() => raw.exists(path), "exists");
+        const output = await wrap(
+          () => raw.exists(sandboxPath(cwd, path)),
+          "exists"
+        );
         return output.exists;
       },
       list: async (path = cwd) => {
+        const target = sandboxPath(cwd, path);
         const entries = await wrap(
-          () => raw.listFiles(path, options.list),
+          () => raw.listFiles(target, options.list),
           "list"
         );
         return entries.files
@@ -551,42 +556,45 @@ const createSandbox = <ProviderRaw>(
           .toSorted((left, right) => left.path.localeCompare(right.path));
       },
       mkdir: async (path) => {
-        await wrap(() => raw.mkdir(path, { recursive: true }), "mkdir");
+        await wrap(
+          () => raw.mkdir(sandboxPath(cwd, path), { recursive: true }),
+          "mkdir"
+        );
       },
       read: async (path) => {
         const output = await wrap(
-          () => raw.readFile(path, { encoding: "base64" }),
+          () => raw.readFile(sandboxPath(cwd, path), { encoding: "base64" }),
           "read"
         );
         return binary(output.content);
       },
       remove: async (path) => {
-        await wrap(() => raw.deleteFile(path), "remove");
+        await wrap(() => raw.deleteFile(sandboxPath(cwd, path)), "remove");
       },
       stream: async (path) => {
         if (direct) {
           const output = await wrap(
-            () => raw.readFile(path, { encoding: "none" }),
+            () => raw.readFile(sandboxPath(cwd, path), { encoding: "none" }),
             "stream"
           );
           return output.content;
         }
 
         const output = await wrap(
-          () => raw.readFile(path, { encoding: "base64" }),
+          () => raw.readFile(sandboxPath(cwd, path), { encoding: "base64" }),
           "stream"
         );
         return stream(binary(output.content));
       },
       text: async (path) => {
         const output = await wrap(
-          () => raw.readFile(path, { encoding: "utf-8" }),
+          () => raw.readFile(sandboxPath(cwd, path), { encoding: "utf-8" }),
           "text"
         );
         return output.content;
       },
       write: (path, input) =>
-        wrap(() => write(raw, path, input, direct), "write"),
+        wrap(() => write(raw, sandboxPath(cwd, path), input, direct), "write"),
     },
     id: options.id ?? "default",
     ports: {

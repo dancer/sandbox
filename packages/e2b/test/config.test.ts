@@ -309,7 +309,7 @@ test("e2b maps create and command options without running a real provider", asyn
         controller.close();
       },
     });
-    await sandbox.files.write("/work/data.bin", input);
+    await sandbox.files.write("data.bin", input);
     expect(writeSeen).toEqual({
       input,
       options: { user: "runner" },
@@ -317,7 +317,7 @@ test("e2b maps create and command options without running a real provider", asyn
     });
 
     await expect(
-      new Response(await sandbox.files.stream("/work/data.bin")).text()
+      new Response(await sandbox.files.stream("data.bin")).text()
     ).resolves.toBe("streamed");
     expect(readSeen).toEqual({
       options: { format: "stream", user: "runner" },
