@@ -53,6 +53,8 @@ export type Modal = Readonly<
     cwd?: string;
     /** default environment variables applied when creating a sandbox */
     env?: Readonly<Record<string, string>>;
+    /** experimental Modal sandbox create options forwarded to the native sdk */
+    experimentalOptions?: CreateParams["experimentalOptions"];
     /** Modal GPU reservation such as `T4` or `A100-80GB:4` */
     gpu?: CreateParams["gpu"];
     /** extra encrypted HTTP/2 tunnel ports forwarded to Modal */
@@ -282,6 +284,7 @@ const createOptions = (
   set(output, "cpu", options.cpu);
   set(output, "cpuLimit", options.cpuLimit);
   set(output, "customDomain", options.customDomain);
+  set(output, "experimentalOptions", options.experimentalOptions);
   set(output, "gpu", options.gpu);
   set(output, "h2Ports", options.h2Ports);
   set(output, "idleTimeoutMs", idle);

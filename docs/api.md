@@ -1943,6 +1943,8 @@ export type Modal = Readonly<
     cwd?: string;
     /** default environment variables applied when creating a sandbox */
     env?: Readonly<Record<string, string>>;
+    /** experimental Modal sandbox create options forwarded to the native sdk */
+    experimentalOptions?: CreateParams["experimentalOptions"];
     /** Modal GPU reservation such as `T4` or `A100-80GB:4` */
     gpu?: CreateParams["gpu"];
     /** extra encrypted HTTP/2 tunnel ports forwarded to Modal */
