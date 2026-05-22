@@ -335,6 +335,38 @@ const auth = (
   ...credentials(options),
 });
 
+const retention = (
+  value: KeepLastSnapshots | undefined
+): VercelCreate["keepLastSnapshots"] => {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (!Number.isInteger(value.count) || value.count < 1 || value.count > 10) {
+    throw sandboxError(
+      provider,
+      "keepLastSnapshots.count must be an integer from 1 to 10",
+      "configuration"
+    );
+  }
+  const output: NonNullable<VercelCreate["keepLastSnapshots"]> = {
+    count: value.count,
+  };
+  if (value.deleteEvicted !== undefined) {
+    output.deleteEvicted = value.deleteEvicted;
+  }
+  if (value.expiration !== undefined) {
+    const expiration = duration(
+      value.expiration,
+      provider,
+      "keepLastSnapshots.expiration"
+    );
+    if (expiration !== undefined) {
+      output.expiration = expiration;
+    }
+  }
+  return output;
+};
+
 const createInput = (
   options: Vercel,
   input: NonNullable<Parameters<Adapter<Raw>["create"]>[0]>,
@@ -342,10 +374,15 @@ const createInput = (
 ): VercelCreate => {
   const snapshot = input.snapshot ?? input.template;
   const lifetime = duration(input.timeout ?? options.timeout, provider);
+  const snapshotExpiration = duration(
+    options.snapshotExpiration,
+    provider,
+    "snapshotExpiration"
+  );
   return {
     ...auth(options),
     env: { ...options.env, ...input.env },
-    keepLastSnapshots: options.keepLastSnapshots,
+    keepLastSnapshots: retention(options.keepLastSnapshots),
     name: input.id ?? options.name,
     networkPolicy: options.networkPolicy,
     onResume: options.onResume,
@@ -354,7 +391,7 @@ const createInput = (
     resources: options.resources,
     runtime: options.runtime,
     signal: options.signal,
-    snapshotExpiration: options.snapshotExpiration,
+    snapshotExpiration,
     source:
       snapshot === undefined
         ? options.source

@@ -501,6 +501,48 @@ test("vercel rejects invalid create timeouts before provider calls", async () =>
   }
 });
 
+test("vercel rejects invalid snapshot retention before provider calls", async () => {
+  const original = VercelSandbox.create;
+  let called = false;
+
+  VercelSandbox.create = (() => {
+    called = true;
+    return Promise.reject(new Error("provider called"));
+  }) as typeof VercelSandbox.create;
+
+  try {
+    await expect(
+      create({
+        adapter: vercel({
+          keepLastSnapshots: { count: 0 },
+          projectId: "project",
+          teamId: "team",
+          token: "token",
+        }),
+      })
+    ).rejects.toMatchObject({
+      code: "configuration",
+      provider: "vercel",
+    });
+    await expect(
+      create({
+        adapter: vercel({
+          projectId: "project",
+          snapshotExpiration: -1,
+          teamId: "team",
+          token: "token",
+        }),
+      })
+    ).rejects.toMatchObject({
+      code: "configuration",
+      provider: "vercel",
+    });
+    expect(called).toBe(false);
+  } finally {
+    VercelSandbox.create = original;
+  }
+});
+
 test("vercel maps create options and updates dynamic ports", async () => {
   const original = VercelSandbox.create;
   let createSeen: unknown;
@@ -555,6 +597,11 @@ test("vercel maps create options and updates dynamic ports", async () => {
     const sandbox = await create({
       adapter: vercel({
         env: { A: "1" },
+        keepLastSnapshots: {
+          count: 3,
+          deleteEvicted: false,
+          expiration: 43_200_000,
+        },
         ports: [3000],
         projectId: "project",
         resources: { vcpus: 2 },
@@ -577,6 +624,11 @@ test("vercel maps create options and updates dynamic ports", async () => {
     expect(sandbox.cwd).toBe("/work");
     expect(createSeen).toMatchObject({
       env: { A: "1", B: "2" },
+      keepLastSnapshots: {
+        count: 3,
+        deleteEvicted: false,
+        expiration: 43_200_000,
+      },
       ports: [8080],
       projectId: "project",
       resources: { vcpus: 2 },
