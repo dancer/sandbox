@@ -413,11 +413,28 @@ const stream = (
   });
 };
 
-const readable = (value: Uint8Array): ReadableStream<Uint8Array> =>
+const fileStream = (
+  source: NodeJS.ReadableStream
+): ReadableStream<Uint8Array> =>
   new ReadableStream({
-    start: (controller) => {
-      controller.enqueue(value);
-      controller.close();
+    cancel() {
+      const value = source as NodeJS.ReadableStream & {
+        destroy?: () => void;
+      };
+      value.destroy?.();
+    },
+    start(controller) {
+      source.on("data", (chunk: string | Uint8Array) => {
+        controller.enqueue(
+          typeof chunk === "string" ? new TextEncoder().encode(chunk) : chunk
+        );
+      });
+      source.on("end", () => {
+        controller.close();
+      });
+      source.on("error", (error) => {
+        controller.error(error);
+      });
     },
   });
 
@@ -485,6 +502,18 @@ const read = async (
     throw sandboxError(provider, "Path not found", "not_found");
   }
   return new Uint8Array(output);
+};
+
+const streamFile = async (
+  raw: Raw,
+  path: string,
+  cwd: string
+): Promise<ReadableStream<Uint8Array>> => {
+  const output = await raw.readFile({ cwd, path });
+  if (output === null) {
+    throw sandboxError(provider, "Path not found", "not_found");
+  }
+  return fileStream(output);
 };
 
 const execute = async (
@@ -630,8 +659,7 @@ const createSandbox = (
           "remove"
         );
       },
-      stream: async (path) =>
-        readable(await wrap(() => read(raw, path, cwd), "read")),
+      stream: (path) => wrap(() => streamFile(raw, path, cwd), "read"),
       text: async (path) =>
         new TextDecoder().decode(
           await wrap(() => read(raw, path, cwd), "read")

@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { Buffer } from "node:buffer";
+import { Readable } from "node:stream";
 
 import { create } from "@sandbox-sdk/core";
 import { Sandbox as VercelSandbox } from "@vercel/sandbox";
@@ -507,6 +508,50 @@ test("vercel maps create options and updates dynamic ports", async () => {
     );
     expect(restoreSeen).toEqual({ currentSnapshotId: "snapshot-id" });
     expect(stopCalled).toBe(true);
+  } finally {
+    VercelSandbox.create = original;
+  }
+});
+
+test("vercel uses native file streams", async () => {
+  const original = VercelSandbox.create;
+  let buffered = false;
+  let streamed: unknown;
+  const raw = {
+    fs: {
+      mkdir: () => Promise.resolve(),
+    },
+    name: "sandbox",
+    readFile: (input: unknown) => {
+      streamed = input;
+      return Promise.resolve(Readable.from(["native-stream"]));
+    },
+    readFileToBuffer: () => {
+      buffered = true;
+      return Promise.resolve(Buffer.from("buffered"));
+    },
+    stop: () => Promise.resolve(),
+  } as unknown as VercelSandbox;
+
+  VercelSandbox.create = (() =>
+    Promise.resolve(raw)) as typeof VercelSandbox.create;
+
+  try {
+    const sandbox = await create({
+      adapter: vercel({
+        projectId: "project",
+        teamId: "team",
+        token: "token",
+      }),
+      cwd: "/work",
+    });
+    const output = await new Response(
+      await sandbox.files.stream("/work/file.txt")
+    ).text();
+
+    expect(output).toBe("native-stream");
+    expect(streamed).toEqual({ cwd: "/work", path: "/work/file.txt" });
+    expect(buffered).toBe(false);
   } finally {
     VercelSandbox.create = original;
   }
