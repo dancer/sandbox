@@ -1,10 +1,10 @@
-import { gateway } from "@ai-sdk/gateway";
 import { aisdk, tools } from "@sandbox-sdk/ai";
 import { withSandbox } from "@sandbox-sdk/core";
 import { vercel } from "@sandbox-sdk/vercel";
 import { generateText, stepCountIs } from "ai";
+import type { LanguageModel } from "ai";
 
-const model = "openai/gpt-5.4-nano";
+const model = "openai/gpt-5.4-nano" satisfies LanguageModel;
 
 const text = await withSandbox(
   {
@@ -21,7 +21,7 @@ const text = await withSandbox(
     });
 
     const result = await generateText({
-      model: gateway(model),
+      model,
       ...aisdk(kit),
       prompt:
         "write hello from gateway to /vercel/sandbox/hello.txt, read it back, and reply with the file contents only",

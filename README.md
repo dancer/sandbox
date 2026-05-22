@@ -172,6 +172,16 @@ await generateText({
 });
 ```
 
+With Vercel AI Gateway and AI SDK v6, use a `provider/model` string directly:
+
+```ts
+await generateText({
+  model: "openai/gpt-5.4-nano",
+  ...ai,
+  prompt: "run the tests",
+});
+```
+
 OpenAI Agents SDK can use the dedicated subpath. It imports the real
 `@openai/agents` `tool()` helper and keeps side-effect tools approval-gated by
 default:

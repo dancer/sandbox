@@ -55,7 +55,7 @@ const sandbox = await create({ adapter: local() });
 const kit = aisdk(tools(sandbox));
 
 const result = await generateText({
-  model: yourModel,
+  model: "openai/gpt-5.4-nano",
   ...kit,
   prompt: "Write a TypeScript program that prints fib(10), then run it.",
 });`;
@@ -183,7 +183,8 @@ export const AiTools = () => (
         <code>experimental_sandbox</code>. The same tool definitions work with
         v6 and v7 style calls, including <code>generateText</code>,{" "}
         <code>streamText</code>, and agent loops that forward the sandbox to
-        tool execution.
+        tool execution. With AI Gateway, pass a <code>provider/model</code>{" "}
+        string directly as <code>model</code>.
       </p>
       <CodeBlock code={AI_SDK_EXAMPLE} lang="tsx" />
     </section>
