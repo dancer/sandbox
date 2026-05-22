@@ -609,3 +609,71 @@ test("codesandbox aborts signal-backed exec by killing the background command", 
   });
   expect(killed).toBe(true);
 });
+
+test("codesandbox kills spawned commands on abort", async () => {
+  let killed = false;
+  const background = {
+    command: "sleep 10",
+    kill: () => {
+      killed = true;
+      return Promise.resolve();
+    },
+    name: "background",
+    onOutput: () => ({ dispose: () => {} }),
+    open: () => Promise.resolve(""),
+    waitUntilComplete: async () => {
+      for (;;) {
+        if (killed) {
+          return "";
+        }
+        await Bun.sleep(1);
+      }
+    },
+  };
+  const client = {
+    commands: {
+      run: () => Promise.resolve("ok"),
+      runBackground: () => Promise.resolve(background),
+    },
+    disconnect: () => Promise.resolve(),
+    fs: {
+      mkdir: () => Promise.resolve(),
+      readFile: () => Promise.resolve(new Uint8Array()),
+      readTextFile: () => Promise.resolve(""),
+      readdir: () => Promise.resolve([]),
+      remove: () => Promise.resolve(),
+      stat: () => Promise.resolve({ mtime: 0, size: 0 }),
+      writeFile: () => Promise.resolve(),
+      writeTextFile: () => Promise.resolve(),
+    },
+    ports: {
+      waitForPort: () =>
+        Promise.resolve({ host: "https://preview", port: 3000 }),
+    },
+    workspacePath: "/project/sandbox",
+  };
+  const sandbox = {
+    connect: () => Promise.resolve(client),
+    id: "sandbox",
+  };
+  const sdk = {
+    sandboxes: {
+      create: () => Promise.resolve(sandbox),
+      delete: () => Promise.resolve(),
+      hibernate: () => Promise.resolve(),
+      resume: () => Promise.resolve(sandbox),
+      shutdown: () => Promise.resolve(),
+    },
+  };
+
+  const current = await create({ adapter: codesandbox({ client: sdk }) });
+  const controller = new AbortController();
+  const running = await current.process.spawnShell("sleep 10", {
+    signal: controller.signal,
+  });
+
+  controller.abort("stopped");
+  await running.result;
+
+  expect(killed).toBe(true);
+});

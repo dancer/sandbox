@@ -314,19 +314,30 @@ const spawn = async (
       }
     })();
 
-    options.signal?.addEventListener(
-      "abort",
-      () => {
-        void process.kill();
-      },
-      { once: true }
-    );
+    const cancel = (): void => {
+      void process.kill();
+    };
+    if (options.signal?.aborted) {
+      cancel();
+    } else {
+      options.signal?.addEventListener("abort", cancel, { once: true });
+    }
+    const kill = async (): Promise<void> => {
+      options.signal?.removeEventListener("abort", cancel);
+      await process.kill();
+    };
 
     return {
       id: process.name ?? process.command,
-      kill: () => process.kill(),
+      kill,
       output,
-      result: final,
+      result: (async () => {
+        try {
+          return await final;
+        } finally {
+          options.signal?.removeEventListener("abort", cancel);
+        }
+      })(),
     };
   } catch (error) {
     if (options.signal?.aborted) {

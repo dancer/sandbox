@@ -442,30 +442,38 @@ const spawn = async (
       }
     })();
 
-    options.signal?.addEventListener(
-      "abort",
-      () => {
-        void (async () => {
-          try {
-            await raw.process.kill(id);
-          } finally {
-            close();
-            logs.close();
-          }
-        })();
-      },
-      { once: true }
-    );
+    const cancel = (): void => {
+      void (async () => {
+        try {
+          await raw.process.kill(id);
+        } finally {
+          close();
+          logs.close();
+        }
+      })();
+    };
+    if (options.signal?.aborted) {
+      cancel();
+    } else {
+      options.signal?.addEventListener("abort", cancel, { once: true });
+    }
 
     return {
       id,
       kill: async () => {
+        options.signal?.removeEventListener("abort", cancel);
         await raw.process.kill(id);
         close();
         logs.close();
       },
       output: logs.output,
-      result: process,
+      result: (async () => {
+        try {
+          return await process;
+        } finally {
+          options.signal?.removeEventListener("abort", cancel);
+        }
+      })(),
       stderr: logs.stderr,
       stdout: logs.stdout,
     };

@@ -480,28 +480,36 @@ const spawnLine = async (
       );
     })();
 
-    options.signal?.addEventListener(
-      "abort",
-      () => {
-        void (async () => {
-          try {
-            await raw.process.deleteSession(session);
-          } finally {
-            logs.close();
-          }
-        })();
-      },
-      { once: true }
-    );
+    const cancel = (): void => {
+      void (async () => {
+        try {
+          await raw.process.deleteSession(session);
+        } finally {
+          logs.close();
+        }
+      })();
+    };
+    if (options.signal?.aborted) {
+      cancel();
+    } else {
+      options.signal?.addEventListener("abort", cancel, { once: true });
+    }
 
     return {
       id,
       kill: async () => {
+        options.signal?.removeEventListener("abort", cancel);
         await raw.process.deleteSession(session);
         logs.close();
       },
       output: logs.output,
-      result: final,
+      result: (async () => {
+        try {
+          return await final;
+        } finally {
+          options.signal?.removeEventListener("abort", cancel);
+        }
+      })(),
       stderr: logs.stderr,
       stdout: logs.stdout,
     };

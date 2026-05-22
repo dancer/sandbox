@@ -359,6 +359,61 @@ test("daytona maps background process APIs", async () => {
   }
 });
 
+test("daytona deletes spawned sessions on abort", async () => {
+  type Client = InstanceType<typeof DaytonaClient>;
+  type Create = Client["create"];
+
+  const client = DaytonaClient.prototype as Client;
+  const original = client.create;
+  let deleted = false;
+  const raw = {
+    fs: {
+      createFolder: () => Promise.resolve(),
+    },
+    getWorkDir: () => Promise.resolve("/workspace"),
+    id: "sandbox",
+    process: {
+      createSession: () => Promise.resolve(),
+      deleteSession: () => {
+        deleted = true;
+        return Promise.resolve();
+      },
+      executeSessionCommand: () => Promise.resolve({ cmdId: "command" }),
+      getSessionCommand: () => Promise.resolve({ exitCode: 130 }),
+      getSessionCommandLogs: async () => {
+        for (;;) {
+          if (deleted) {
+            return { stderr: "", stdout: "" };
+          }
+          await Bun.sleep(1);
+        }
+      },
+    },
+    stop: () => Promise.resolve(),
+  };
+  const controller = new AbortController();
+
+  client.create = (() => Promise.resolve(raw)) as Create;
+
+  try {
+    const sandbox = await create({
+      adapter: daytona({
+        apiKey: "key",
+      }),
+    });
+    const running = await sandbox.process.spawnShell("sleep 10", {
+      signal: controller.signal,
+    });
+
+    controller.abort("stopped");
+    await running.result;
+
+    expect(deleted).toBe(true);
+  } finally {
+    client.create = original;
+  }
+});
+
 test("daytona uses provider streaming file APIs", async () => {
   type Client = InstanceType<typeof DaytonaClient>;
   type Create = Client["create"];
