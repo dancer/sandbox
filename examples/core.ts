@@ -16,16 +16,16 @@ import type {
   Result,
   Running,
   Sandbox,
-  SimpleInsecureFiles,
-  SimpleInsecureProcess,
-  SimpleInsecureSandbox,
+  SandboxRuntimeFiles,
+  SandboxRuntimeProcess,
+  SandboxRuntime,
   Snapshot,
   Snapshots,
   Spawn,
   Timer,
   Url,
 } from "@sandbox-sdk/core";
-import { duration, fromSimpleInsecureSandbox, port } from "@sandbox-sdk/core";
+import { duration, fromSandboxRuntime, port } from "@sandbox-sdk/core";
 
 export type CoreTypes = Readonly<{
   adapter: Adapter;
@@ -45,9 +45,9 @@ export type CoreTypes = Readonly<{
   result: Result;
   running: Running;
   sandbox: Sandbox;
-  simpleFiles: SimpleInsecureFiles;
-  simpleProcess: SimpleInsecureProcess;
-  simpleSandbox: SimpleInsecureSandbox;
+  runtimeFiles: SandboxRuntimeFiles;
+  runtimeProcess: SandboxRuntimeProcess;
+  runtimeSandbox: SandboxRuntime;
   snapshot: Snapshot;
   snapshots: Snapshots;
   spawn: Spawn;
@@ -71,6 +71,5 @@ export const validated = {
 export const readStream = async (files: Files): Promise<string> =>
   new Response(await files.stream("/workspace/readme.md")).text();
 
-export const liftSimple = <Raw>(
-  sandbox: SimpleInsecureSandbox<Raw>
-): Sandbox<Raw> => fromSimpleInsecureSandbox(sandbox);
+export const liftRuntime = <Raw>(sandbox: SandboxRuntime<Raw>): Sandbox<Raw> =>
+  fromSandboxRuntime(sandbox);

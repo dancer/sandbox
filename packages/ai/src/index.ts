@@ -58,7 +58,7 @@ export type Policy<Input, ToolName extends Name = Name> = (
   context: Context<ToolName>
 ) => Promise<void> | void;
 
-/** options for creating AI-ready sandbox tools and prompt context */
+/** options for creating agent-ready sandbox tools and prompt context */
 export type Options = Readonly<{
   /**
    * tools exposed to the model
@@ -92,23 +92,23 @@ export type Options = Readonly<{
   timeout?: number;
 }>;
 
-/** AI tool kit with prompt context and a minimal agent sandbox shape */
+/** AI toolkit with prompt context and a minimal agent sandbox shape */
 export type Kit = Readonly<{
   /** prompt context describing the sandbox, capabilities, and limits */
   description: string;
   /** minimal sandbox object for agent integrations that accept an executeCommand shape */
   sandbox: AgentSandbox;
-  /** AI SDK compatible tools keyed by enabled tool name */
+  /** aisdk compatible tools keyed by enabled tool name */
   tools: Tools;
 }>;
 
-/** options ready to spread into AI SDK v6/v7 generateText, streamText, or ToolLoopAgent */
-export type Aisdk = Readonly<{
-  /** AI SDK sandbox object forwarded to tool execution */
+/** options ready to spread into aisdk v6/v7 generateText, streamText, or ToolLoopAgent */
+export type AisdkOptions = Readonly<{
+  /** aisdk sandbox object forwarded to tool execution */
   experimental_sandbox: AgentSandbox;
   /** prompt context describing the sandbox, available tools, and safety limits */
   system: string;
-  /** AI SDK compatible tool set */
+  /** aisdk compatible tool set */
   tools: Tools;
 }>;
 
@@ -226,8 +226,8 @@ export type PreviewResult = Readonly<{
   url: string;
 }>;
 
-/** create AI SDK v6/v7 call options from a sandbox tool kit */
-export const aisdk = (kit: Kit): Aisdk => ({
+/** create aisdk v6/v7 call options from a sandbox tool kit */
+export const aisdk = (kit: Kit): AisdkOptions => ({
   experimental_sandbox: kit.sandbox,
   system: kit.description,
   tools: kit.tools,
@@ -404,7 +404,7 @@ const agent = (
   workingDirectory: cwd,
 });
 
-/** create AI SDK compatible tools and prompt context for a sandbox */
+/** create aisdk compatible tools and prompt context for a sandbox */
 export const tools = (sandbox: Sandbox, options: Options = {}): Kit => {
   const cwd = options.cwd ?? sandbox.cwd;
   const timeout = options.timeout ?? 30_000;

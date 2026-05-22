@@ -28,12 +28,12 @@ export { cloudflareBridge } from "./bridge.js";
 export type {
   CloudflareBridge,
   CloudflareBridgeJson,
+  CloudflareBridgeMount,
+  CloudflareBridgePersist,
+  CloudflareBridgePty,
+  CloudflareBridgePtyConnection,
   CloudflareBridgeRaw,
-  Mount as CloudflareBridgeMount,
-  Persist as CloudflareBridgePersist,
-  Pty as CloudflareBridgePty,
-  PtyConnection as CloudflareBridgePtyConnection,
-  Session as CloudflareBridgeSession,
+  CloudflareBridgeSession,
 } from "./bridge.js";
 export type { Sandbox as CloudflareSandbox } from "@cloudflare/sandbox";
 

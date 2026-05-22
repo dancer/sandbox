@@ -226,7 +226,7 @@ export type Sandbox<Raw = unknown> = Readonly<{
 }>;
 
 /** stream-first filesystem contract for low-level provider adapters */
-export type SimpleInsecureFiles = Readonly<{
+export type SandboxRuntimeFiles = Readonly<{
   /** read a file as a byte stream */
   read(path: string): Promise<ReadableStream<Uint8Array>>;
   /** write text, bytes, blobs, array buffers, or readable streams */
@@ -242,7 +242,7 @@ export type SimpleInsecureFiles = Readonly<{
 }>;
 
 /** process contract for low-level provider adapters */
-export type SimpleInsecureProcess = Readonly<{
+export type SandboxRuntimeProcess = Readonly<{
   /** start an executable with explicit argv arguments and stream output */
   spawn(
     command: string,
@@ -254,19 +254,19 @@ export type SimpleInsecureProcess = Readonly<{
 }>;
 
 /** low-level vendor contract that keeps large I/O stream-first */
-export type SimpleInsecureSandbox<Raw = unknown> = Readonly<{
+export type SandboxRuntime<Raw = unknown> = Readonly<{
   /** advertised runtime feature support */
   capabilities: Capabilities;
   /** default sandbox working directory */
   cwd: string;
   /** stream-first filesystem operations scoped to the sandbox */
-  files: SimpleInsecureFiles;
+  files: SandboxRuntimeFiles;
   /** provider sandbox id */
   id: string;
   /** preview URL operations */
   ports: Ports;
   /** process operations scoped to the sandbox */
-  process: SimpleInsecureProcess;
+  process: SandboxRuntimeProcess;
   /** provider name */
   provider: string;
   /** raw provider object for advanced provider-specific usage */

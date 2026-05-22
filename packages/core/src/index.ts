@@ -11,7 +11,7 @@ import type {
   Result,
   Running,
   Sandbox,
-  SimpleInsecureSandbox,
+  SandboxRuntime,
   Timer,
 } from "./types.js";
 
@@ -34,9 +34,9 @@ export type {
   Result,
   Running,
   Sandbox,
-  SimpleInsecureFiles,
-  SimpleInsecureProcess,
-  SimpleInsecureSandbox,
+  SandboxRuntimeFiles,
+  SandboxRuntimeProcess,
+  SandboxRuntime,
   Snapshot,
   Snapshots,
   Spawn,
@@ -307,8 +307,8 @@ const guarded = <Value>(
 };
 
 /** lift a stream-first low-level sandbox into the public sandbox api */
-export const fromSimpleInsecureSandbox = <Raw = unknown>(
-  input: SimpleInsecureSandbox<Raw>
+export const fromSandboxRuntime = <Raw = unknown>(
+  input: SandboxRuntime<Raw>
 ): Sandbox<Raw> => ({
   capabilities: input.capabilities,
   cwd: input.cwd,

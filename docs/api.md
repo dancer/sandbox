@@ -327,12 +327,12 @@ export type Sandbox<Raw = unknown> = Readonly<{
 }>;
 ```
 
-#### `SimpleInsecureFiles`
+#### `SandboxRuntimeFiles`
 
 stream-first filesystem contract for low-level provider adapters
 
 ```ts
-export type SimpleInsecureFiles = Readonly<{
+export type SandboxRuntimeFiles = Readonly<{
   /** read a file as a byte stream */
   read(path: string): Promise<ReadableStream<Uint8Array>>;
   /** write text, bytes, blobs, array buffers, or readable streams */
@@ -348,12 +348,12 @@ export type SimpleInsecureFiles = Readonly<{
 }>;
 ```
 
-#### `SimpleInsecureProcess`
+#### `SandboxRuntimeProcess`
 
 process contract for low-level provider adapters
 
 ```ts
-export type SimpleInsecureProcess = Readonly<{
+export type SandboxRuntimeProcess = Readonly<{
   /** start an executable with explicit argv arguments and stream output */
   spawn(
     command: string,
@@ -365,24 +365,24 @@ export type SimpleInsecureProcess = Readonly<{
 }>;
 ```
 
-#### `SimpleInsecureSandbox`
+#### `SandboxRuntime`
 
 low-level vendor contract that keeps large I/O stream-first
 
 ```ts
-export type SimpleInsecureSandbox<Raw = unknown> = Readonly<{
+export type SandboxRuntime<Raw = unknown> = Readonly<{
   /** advertised runtime feature support */
   capabilities: Capabilities;
   /** default sandbox working directory */
   cwd: string;
   /** stream-first filesystem operations scoped to the sandbox */
-  files: SimpleInsecureFiles;
+  files: SandboxRuntimeFiles;
   /** provider sandbox id */
   id: string;
   /** preview URL operations */
   ports: Ports;
   /** process operations scoped to the sandbox */
-  process: SimpleInsecureProcess;
+  process: SandboxRuntimeProcess;
   /** provider name */
   provider: string;
   /** raw provider object for advanced provider-specific usage */
@@ -664,13 +664,13 @@ export declare const bytes: (input: Input) => Promise<Uint8Array | string>;
 export declare const text: (input: Input) => Promise<string>;
 ```
 
-#### `fromSimpleInsecureSandbox`
+#### `fromSandboxRuntime`
 
 lift a stream-first low-level sandbox into the public sandbox api
 
 ```ts
-export declare const fromSimpleInsecureSandbox: <Raw = unknown>(
-  input: SimpleInsecureSandbox<Raw>
+export declare const fromSandboxRuntime: <Raw = unknown>(
+  input: SandboxRuntime<Raw>
 ) => Sandbox<Raw>;
 ```
 
@@ -877,7 +877,7 @@ export type Policy<Input, ToolName extends Name = Name> = (
 
 #### `Options`
 
-options for creating AI-ready sandbox tools and prompt context
+options for creating agent-ready sandbox tools and prompt context
 
 ```ts
 export type Options = Readonly<{
@@ -916,7 +916,7 @@ export type Options = Readonly<{
 
 #### `Kit`
 
-AI tool kit with prompt context and a minimal agent sandbox shape
+AI toolkit with prompt context and a minimal agent sandbox shape
 
 ```ts
 export type Kit = Readonly<{
@@ -924,22 +924,22 @@ export type Kit = Readonly<{
   description: string;
   /** minimal sandbox object for agent integrations that accept an executeCommand shape */
   sandbox: AgentSandbox;
-  /** AI SDK compatible tools keyed by enabled tool name */
+  /** aisdk compatible tools keyed by enabled tool name */
   tools: Tools;
 }>;
 ```
 
-#### `Aisdk`
+#### `AisdkOptions`
 
-options ready to spread into AI SDK v6/v7 generateText, streamText, or ToolLoopAgent
+options ready to spread into aisdk v6/v7 generateText, streamText, or ToolLoopAgent
 
 ```ts
-export type Aisdk = Readonly<{
-  /** AI SDK sandbox object forwarded to tool execution */
+export type AisdkOptions = Readonly<{
+  /** aisdk sandbox object forwarded to tool execution */
   experimental_sandbox: AgentSandbox;
   /** prompt context describing the sandbox, available tools, and safety limits */
   system: string;
-  /** AI SDK compatible tool set */
+  /** aisdk compatible tool set */
   tools: Tools;
 }>;
 ```
@@ -1118,15 +1118,15 @@ export type PreviewResult = Readonly<{
 
 #### `aisdk`
 
-create AI SDK v6/v7 call options from a sandbox tool kit
+create aisdk v6/v7 call options from a sandbox tool kit
 
 ```ts
-export declare const aisdk: (kit: Kit) => Aisdk;
+export declare const aisdk: (kit: Kit) => AisdkOptions;
 ```
 
 #### `tools`
 
-create AI SDK compatible tools and prompt context for a sandbox
+create aisdk compatible tools and prompt context for a sandbox
 
 ```ts
 export declare const tools: (sandbox: Sandbox, options?: Options) => Kit;
@@ -1244,27 +1244,27 @@ Agent tool helpers for Sandbox SDK
 
 ### types
 
-#### `OpenAiTools`
+#### `OpenAITools`
 
 ```ts
-export type OpenAiTools = Readonly<Partial<Record<Name, FunctionTool>>>;
+export type OpenAITools = Readonly<Partial<Record<Name, FunctionTool>>>;
 ```
 
-#### `OpenAi`
+#### `OpenAI`
 
 ```ts
-export type OpenAi = Readonly<{
+export type OpenAI = Readonly<{
   /** instructions ready for new Agent({ instructions }) */
   instructions: string;
   /** tools ready for new Agent({ tools: Object.values(openai.tools) }) */
-  tools: OpenAiTools;
+  tools: OpenAITools;
 }>;
 ```
 
-#### `OpenAiOptions`
+#### `OpenAIOptions`
 
 ```ts
-export type OpenAiOptions = Readonly<{
+export type OpenAIOptions = Readonly<{
   /**
    * prefix for tool names sent to the model
    *
@@ -1289,8 +1289,8 @@ create OpenAI Agents SDK tools from a sandbox tool kit
 ```ts
 export declare const openai: (
   kit: Kit,
-  { prefix, requireApproval }?: OpenAiOptions
-) => OpenAi;
+  { prefix, requireApproval }?: OpenAIOptions
+) => OpenAI;
 ```
 
 ## @sandbox-sdk/blaxel
@@ -1409,21 +1409,21 @@ export type CloudflareBridgeRaw = Readonly<{
   fetch: typeof fetch;
   health(): Promise<CloudflareBridgeJson>;
   hydrate(id: string, archive: Input): Promise<void>;
-  mount(id: string, input: Mount): Promise<void>;
+  mount(id: string, input: CloudflareBridgeMount): Promise<void>;
   openapi(): Promise<CloudflareBridgeJson>;
   pool: Readonly<{
     prime(): Promise<void>;
     shutdownPrewarmed(): Promise<void>;
     stats(): Promise<CloudflareBridgeJson>;
   }>;
-  persist(id: string, options?: Persist): Promise<Uint8Array>;
-  pty(id: string, options?: Pty): PtyConnection;
+  persist(id: string, options?: CloudflareBridgePersist): Promise<Uint8Array>;
+  pty(id: string, options?: CloudflareBridgePty): CloudflareBridgePtyConnection;
   request(path: string, init?: RequestInit): Promise<Response>;
   running(id: string): Promise<boolean>;
   session: Readonly<{
     create(
       id: string,
-      options?: Session
+      options?: CloudflareBridgeSession
     ): Promise<
       Readonly<{
         id: string;
@@ -1467,12 +1467,12 @@ export type CloudflareBridge = Readonly<{
 }>;
 ```
 
-#### `PtyConnection`
+#### `CloudflareBridgePtyConnection`
 
 connection details for the bridge PTY WebSocket route
 
 ```ts
-export type PtyConnection = Readonly<{
+export type CloudflareBridgePtyConnection = Readonly<{
   /** headers to pass when the WebSocket client supports custom headers */
   headers: Readonly<Record<string, string>>;
   /** WebSocket URL for `/v1/sandbox/:id/pty` */
@@ -1480,23 +1480,23 @@ export type PtyConnection = Readonly<{
 }>;
 ```
 
-#### `Persist`
+#### `CloudflareBridgePersist`
 
 options for `sandbox.raw.persist()`
 
 ```ts
-export type Persist = Readonly<{
+export type CloudflareBridgePersist = Readonly<{
   /** workspace-relative paths to exclude from the tar archive */
   excludes?: readonly string[];
 }>;
 ```
 
-#### `Session`
+#### `CloudflareBridgeSession`
 
 options for creating a bridge execution session
 
 ```ts
-export type Session = Readonly<{
+export type CloudflareBridgeSession = Readonly<{
   /** custom session id */
   id?: string;
   /** initial working directory */
@@ -1506,12 +1506,12 @@ export type Session = Readonly<{
 }>;
 ```
 
-#### `Mount`
+#### `CloudflareBridgeMount`
 
 options for mounting an object-storage bucket through the bridge
 
 ```ts
-export type Mount = Readonly<{
+export type CloudflareBridgeMount = Readonly<{
   /** bucket name or Worker R2 binding name */
   bucket: string;
   /** absolute mount path inside the sandbox */
@@ -1521,12 +1521,12 @@ export type Mount = Readonly<{
 }>;
 ```
 
-#### `Pty`
+#### `CloudflareBridgePty`
 
 options for the raw bridge PTY WebSocket route
 
 ```ts
-export type Pty = Readonly<{
+export type CloudflareBridgePty = Readonly<{
   /** terminal width in columns */
   cols?: number;
   /** terminal height in rows */

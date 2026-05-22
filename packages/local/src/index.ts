@@ -25,7 +25,7 @@ import {
   abort,
   bytes,
   duration,
-  fromSimpleInsecureSandbox,
+  fromSandboxRuntime,
   port,
 } from "@sandbox-sdk/core";
 import type {
@@ -33,7 +33,7 @@ import type {
   Entry,
   Exec,
   Result,
-  SimpleInsecureSandbox,
+  SandboxRuntime,
   Snapshot,
 } from "@sandbox-sdk/core";
 
@@ -312,7 +312,7 @@ export const local = (options: Local = {}): Adapter<Raw> => ({
     const env = { ...hostEnv(options.inheritEnv), ...input.env };
     await mkdir(safe(root, cwd), { recursive: true });
 
-    const sandbox: SimpleInsecureSandbox<Raw> = {
+    const sandbox: SandboxRuntime<Raw> = {
       capabilities: this.capabilities,
       cwd,
       files: {
@@ -437,7 +437,7 @@ export const local = (options: Local = {}): Adapter<Raw> => ({
       },
     };
 
-    return fromSimpleInsecureSandbox(sandbox);
+    return fromSandboxRuntime(sandbox);
   },
   provider: "local",
 });

@@ -1,8 +1,4 @@
-import {
-  bytes,
-  fromSimpleInsecureSandbox,
-  sandboxError,
-} from "@sandbox-sdk/core";
+import { bytes, fromSandboxRuntime, sandboxError } from "@sandbox-sdk/core";
 import type { Adapter, Sandbox } from "@sandbox-sdk/core";
 
 import {
@@ -29,11 +25,11 @@ export type {
   CloudflareBridge,
   CloudflareBridgeJson,
   CloudflareBridgeRaw,
-  Mount,
-  Persist,
-  Pty,
-  PtyConnection,
-  Session,
+  CloudflareBridgeMount,
+  CloudflareBridgePersist,
+  CloudflareBridgePty,
+  CloudflareBridgePtyConnection,
+  CloudflareBridgeSession,
 } from "./bridge-client.js";
 
 const execJson = async (
@@ -87,7 +83,7 @@ export const cloudflareBridge = (
     const session = createdSession?.id;
     const headers = session === undefined ? {} : { "session-id": session };
 
-    return fromSimpleInsecureSandbox({
+    return fromSandboxRuntime({
       capabilities: bridgeCapabilities,
       cwd,
       files: {

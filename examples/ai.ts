@@ -1,6 +1,6 @@
 import { aisdk, tools } from "@sandbox-sdk/ai";
 import type {
-  Aisdk,
+  AisdkOptions,
   Exec,
   ExecResult,
   Preview,
@@ -12,7 +12,7 @@ import type {
 import { claude } from "@sandbox-sdk/ai/claude";
 import type { ClaudeTools } from "@sandbox-sdk/ai/claude";
 import { openai } from "@sandbox-sdk/ai/openai";
-import type { OpenAi } from "@sandbox-sdk/ai/openai";
+import type { OpenAI } from "@sandbox-sdk/ai/openai";
 import { create } from "@sandbox-sdk/core";
 import { local } from "@sandbox-sdk/local";
 
@@ -39,12 +39,12 @@ export const createKit = async () => {
 };
 
 export type AiTypes = Readonly<{
-  ai: Aisdk;
+  ai: AisdkOptions;
   claude: ClaudeTools;
   exec: Exec;
   execResult: ExecResult;
   execTool: Tool<Exec, ExecResult>;
-  openai: OpenAi;
+  openai: OpenAI;
   preview: Preview;
   previewResult: PreviewResult;
   schema: Schema<Exec>;

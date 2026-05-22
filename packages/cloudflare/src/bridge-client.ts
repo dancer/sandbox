@@ -35,19 +35,22 @@ export type CloudflareBridgeRaw = Readonly<{
   fetch: typeof fetch;
   health(): Promise<CloudflareBridgeJson>;
   hydrate(id: string, archive: Input): Promise<void>;
-  mount(id: string, input: Mount): Promise<void>;
+  mount(id: string, input: CloudflareBridgeMount): Promise<void>;
   openapi(): Promise<CloudflareBridgeJson>;
   pool: Readonly<{
     prime(): Promise<void>;
     shutdownPrewarmed(): Promise<void>;
     stats(): Promise<CloudflareBridgeJson>;
   }>;
-  persist(id: string, options?: Persist): Promise<Uint8Array>;
-  pty(id: string, options?: Pty): PtyConnection;
+  persist(id: string, options?: CloudflareBridgePersist): Promise<Uint8Array>;
+  pty(id: string, options?: CloudflareBridgePty): CloudflareBridgePtyConnection;
   request(path: string, init?: RequestInit): Promise<Response>;
   running(id: string): Promise<boolean>;
   session: Readonly<{
-    create(id: string, options?: Session): Promise<Readonly<{ id: string }>>;
+    create(
+      id: string,
+      options?: CloudflareBridgeSession
+    ): Promise<Readonly<{ id: string }>>;
     delete(id: string, session: string): Promise<void>;
   }>;
   unmount(id: string, mountPath: string): Promise<void>;
@@ -81,7 +84,7 @@ export type CloudflareBridge = Readonly<{
 }>;
 
 /** connection details for the bridge PTY WebSocket route */
-export type PtyConnection = Readonly<{
+export type CloudflareBridgePtyConnection = Readonly<{
   /** headers to pass when the WebSocket client supports custom headers */
   headers: Readonly<Record<string, string>>;
   /** WebSocket URL for `/v1/sandbox/:id/pty` */
@@ -89,13 +92,13 @@ export type PtyConnection = Readonly<{
 }>;
 
 /** options for `sandbox.raw.persist()` */
-export type Persist = Readonly<{
+export type CloudflareBridgePersist = Readonly<{
   /** workspace-relative paths to exclude from the tar archive */
   excludes?: readonly string[];
 }>;
 
 /** options for creating a bridge execution session */
-export type Session = Readonly<{
+export type CloudflareBridgeSession = Readonly<{
   /** custom session id */
   id?: string;
   /** initial working directory */
@@ -105,7 +108,7 @@ export type Session = Readonly<{
 }>;
 
 /** options for mounting an object-storage bucket through the bridge */
-export type Mount = Readonly<{
+export type CloudflareBridgeMount = Readonly<{
   /** bucket name or Worker R2 binding name */
   bucket: string;
   /** absolute mount path inside the sandbox */
@@ -115,7 +118,7 @@ export type Mount = Readonly<{
 }>;
 
 /** options for the raw bridge PTY WebSocket route */
-export type Pty = Readonly<{
+export type CloudflareBridgePty = Readonly<{
   /** terminal width in columns */
   cols?: number;
   /** terminal height in rows */
@@ -250,8 +253,8 @@ const pty = (
   url: string,
   token: string | undefined,
   id: string,
-  options: Pty = {}
-): PtyConnection => {
+  options: CloudflareBridgePty = {}
+): CloudflareBridgePtyConnection => {
   const target = new URL(`${url}/v1/sandbox/${encodeURIComponent(id)}/pty`);
   target.protocol = target.protocol === "https:" ? "wss:" : "ws:";
   const cols = ptyNumber("cols", options.cols);

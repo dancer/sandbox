@@ -5,16 +5,16 @@ import type { JsonSchema, Kit, Name } from "./index.js";
 import { approval, entries, instructions, message } from "./shared.js";
 import type { Approval } from "./shared.js";
 
-export type OpenAiTools = Readonly<Partial<Record<Name, FunctionTool>>>;
+export type OpenAITools = Readonly<Partial<Record<Name, FunctionTool>>>;
 
-export type OpenAi = Readonly<{
+export type OpenAI = Readonly<{
   /** instructions ready for new Agent({ instructions }) */
   instructions: string;
   /** tools ready for new Agent({ tools: Object.values(openai.tools) }) */
-  tools: OpenAiTools;
+  tools: OpenAITools;
 }>;
 
-export type OpenAiOptions = Readonly<{
+export type OpenAIOptions = Readonly<{
   /**
    * prefix for tool names sent to the model
    *
@@ -29,7 +29,7 @@ export type OpenAiOptions = Readonly<{
   requireApproval?: Approval;
 }>;
 
-type OpenAiParameters = Readonly<{
+type OpenAIParameters = Readonly<{
   additionalProperties: false;
   properties: Record<string, Record<string, unknown>>;
   required: string[];
@@ -39,7 +39,7 @@ type OpenAiParameters = Readonly<{
 const name = (prefix: string, value: Name): string =>
   prefix.length === 0 ? value : `${prefix}_${value}`;
 
-const parameters = (schema: JsonSchema): OpenAiParameters => ({
+const parameters = (schema: JsonSchema): OpenAIParameters => ({
   additionalProperties: false,
   properties: schema.properties as Record<string, Record<string, unknown>>,
   required: Array.isArray(schema.required) ? schema.required.map(String) : [],
@@ -49,8 +49,8 @@ const parameters = (schema: JsonSchema): OpenAiParameters => ({
 /** create OpenAI Agents SDK tools from a sandbox tool kit */
 export const openai = (
   kit: Kit,
-  { prefix = "sandbox", requireApproval }: OpenAiOptions = {}
-): OpenAi => ({
+  { prefix = "sandbox", requireApproval }: OpenAIOptions = {}
+): OpenAI => ({
   instructions: instructions(kit),
   tools: Object.fromEntries(
     entries(kit.tools).map((entry) => [
@@ -65,5 +65,5 @@ export const openai = (
         strict: true,
       }),
     ])
-  ) as OpenAiTools,
+  ) as OpenAITools,
 });

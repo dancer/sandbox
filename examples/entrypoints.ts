@@ -1,6 +1,6 @@
 import type {
   AgentSandbox,
-  Aisdk,
+  AisdkOptions,
   Command,
   CommandResult,
   Context,
@@ -29,9 +29,9 @@ import type {
   ClaudeTool,
 } from "@sandbox-sdk/ai/claude";
 import type {
-  OpenAi,
-  OpenAiOptions,
-  OpenAiTools,
+  OpenAI,
+  OpenAIOptions,
+  OpenAITools,
 } from "@sandbox-sdk/ai/openai";
 import type { Blaxel, BlaxelRaw } from "@sandbox-sdk/blaxel";
 import type {
@@ -59,9 +59,9 @@ import type {
   Result,
   Running,
   Sandbox,
-  SimpleInsecureFiles,
-  SimpleInsecureProcess,
-  SimpleInsecureSandbox,
+  SandboxRuntimeFiles,
+  SandboxRuntimeProcess,
+  SandboxRuntime,
   Snapshot,
   Snapshots,
   Spawn,
@@ -93,7 +93,7 @@ export type EntrypointTypes = Readonly<{
   aiPreviewResult: PreviewResult;
   aiSchema: Schema;
   aiSchemaResult: SchemaResult;
-  aiSdk: Aisdk;
+  aisdk: AisdkOptions;
   aiTextResult: TextResult;
   aiTool: Tool<Path, TextResult>;
   aiTools: Tools;
@@ -126,9 +126,9 @@ export type EntrypointTypes = Readonly<{
   modal: Modal;
   modalRaw: ModalRaw;
   mode: Mode;
-  openai: OpenAi;
-  openaiOptions: OpenAiOptions;
-  openaiTools: OpenAiTools;
+  openai: OpenAI;
+  openaiOptions: OpenAIOptions;
+  openaiTools: OpenAITools;
   options: Options;
   port: Port;
   ports: Ports;
@@ -136,9 +136,9 @@ export type EntrypointTypes = Readonly<{
   result: Result;
   running: Running;
   sandbox: Sandbox;
-  simpleFiles: SimpleInsecureFiles;
-  simpleProcess: SimpleInsecureProcess;
-  simpleSandbox: SimpleInsecureSandbox;
+  runtimeFiles: SandboxRuntimeFiles;
+  runtimeProcess: SandboxRuntimeProcess;
+  runtimeSandbox: SandboxRuntime;
   snapshot: Snapshot;
   snapshots: Snapshots;
   spawn: Spawn;

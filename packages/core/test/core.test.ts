@@ -9,7 +9,7 @@ import {
   command,
   create,
   duration,
-  fromSimpleInsecureSandbox,
+  fromSandboxRuntime,
   isSandboxError,
   port,
   rawCapabilityMode,
@@ -23,12 +23,7 @@ import {
   unsupported,
   withSandbox,
 } from "../src/index";
-import type {
-  Adapter,
-  Options,
-  Sandbox,
-  SimpleInsecureSandbox,
-} from "../src/index";
+import type { Adapter, Options, Sandbox, SandboxRuntime } from "../src/index";
 
 const encode = (value: string): Uint8Array => new TextEncoder().encode(value);
 
@@ -207,9 +202,9 @@ test("withSandbox preserves work and cleanup errors", async () => {
   throw new Error("expected aggregate error");
 });
 
-test("fromSimpleInsecureSandbox lifts stream-first files", async () => {
+test("fromSandboxRuntime lifts stream-first files", async () => {
   let written: { path: string; value: unknown } | undefined;
-  const current = fromSimpleInsecureSandbox({
+  const current = fromSandboxRuntime({
     ...sandbox({ files: true }),
     files: {
       exists: (path) => Promise.resolve(path === "/workspace/file.txt"),
@@ -227,7 +222,7 @@ test("fromSimpleInsecureSandbox lifts stream-first files", async () => {
       spawn: () => Promise.reject(new Error("not used")),
       spawnShell: () => Promise.reject(new Error("not used")),
     },
-  } satisfies SimpleInsecureSandbox);
+  } satisfies SandboxRuntime);
 
   expect(
     await new Response(await current.files.stream("/file.txt")).text()
@@ -247,7 +242,7 @@ test("fromSimpleInsecureSandbox lifts stream-first files", async () => {
   });
 });
 
-test("fromSimpleInsecureSandbox derives exec from spawn output", async () => {
+test("fromSandboxRuntime derives exec from spawn output", async () => {
   const seen: unknown[] = [];
   const running = (id: string, output: string) => ({
     id,
@@ -255,7 +250,7 @@ test("fromSimpleInsecureSandbox derives exec from spawn output", async () => {
     output: readable(output),
     result: Promise.resolve(result(0)),
   });
-  const current = fromSimpleInsecureSandbox({
+  const current = fromSandboxRuntime({
     ...sandbox({ processExec: true, processSpawn: true }),
     files: {
       exists: () => Promise.reject(new Error("not used")),
@@ -275,7 +270,7 @@ test("fromSimpleInsecureSandbox derives exec from spawn output", async () => {
         return Promise.resolve(running("shell", "shell output"));
       },
     },
-  } satisfies SimpleInsecureSandbox);
+  } satisfies SandboxRuntime);
 
   expect(
     await current.process.exec("bun", ["test"], { cwd: "/workspace" })
@@ -295,8 +290,8 @@ test("fromSimpleInsecureSandbox derives exec from spawn output", async () => {
   ]);
 });
 
-test("fromSimpleInsecureSandbox preserves explicit stderr", async () => {
-  const current = fromSimpleInsecureSandbox({
+test("fromSandboxRuntime preserves explicit stderr", async () => {
+  const current = fromSandboxRuntime({
     ...sandbox({ processExec: true, processSpawn: true }),
     files: {
       exists: () => Promise.reject(new Error("not used")),
@@ -316,7 +311,7 @@ test("fromSimpleInsecureSandbox preserves explicit stderr", async () => {
         }),
       spawnShell: () => Promise.reject(new Error("not used")),
     },
-  } satisfies SimpleInsecureSandbox);
+  } satisfies SandboxRuntime);
 
   expect(await current.process.exec("false")).toMatchObject({
     code: 7,
@@ -326,8 +321,8 @@ test("fromSimpleInsecureSandbox preserves explicit stderr", async () => {
   });
 });
 
-test("fromSimpleInsecureSandbox gates unsupported capabilities", async () => {
-  const current = fromSimpleInsecureSandbox({
+test("fromSandboxRuntime gates unsupported capabilities", async () => {
+  const current = fromSandboxRuntime({
     ...sandbox({}),
     files: {
       exists: () => Promise.reject(new Error("not used")),
@@ -341,7 +336,7 @@ test("fromSimpleInsecureSandbox gates unsupported capabilities", async () => {
       spawn: () => Promise.reject(new Error("not used")),
       spawnShell: () => Promise.reject(new Error("not used")),
     },
-  } satisfies SimpleInsecureSandbox);
+  } satisfies SandboxRuntime);
 
   await expect(current.files.text("/file.txt")).rejects.toMatchObject({
     code: "unsupported",
@@ -361,8 +356,8 @@ test("fromSimpleInsecureSandbox gates unsupported capabilities", async () => {
   });
 });
 
-test("fromSimpleInsecureSandbox normalizes provider failures", async () => {
-  const current = fromSimpleInsecureSandbox({
+test("fromSandboxRuntime normalizes provider failures", async () => {
+  const current = fromSandboxRuntime({
     ...sandbox({ files: true }),
     files: {
       exists: () => Promise.reject(new Error("missing")),
@@ -376,7 +371,7 @@ test("fromSimpleInsecureSandbox normalizes provider failures", async () => {
       spawn: () => Promise.reject(new Error("not used")),
       spawnShell: () => Promise.reject(new Error("not used")),
     },
-  } satisfies SimpleInsecureSandbox);
+  } satisfies SandboxRuntime);
 
   await expect(current.files.text("/file.txt")).rejects.toMatchObject({
     code: "provider",
@@ -385,10 +380,10 @@ test("fromSimpleInsecureSandbox normalizes provider failures", async () => {
   });
 });
 
-test("fromSimpleInsecureSandbox preserves ports snapshots raw and stop", async () => {
+test("fromSandboxRuntime preserves ports snapshots raw and stop", async () => {
   let stopped = 0;
   const raw = { native: true };
-  const current = fromSimpleInsecureSandbox({
+  const current = fromSandboxRuntime({
     ...sandbox({
       ports: "dynamic",
       snapshotCreate: "filesystem",
@@ -419,7 +414,7 @@ test("fromSimpleInsecureSandbox preserves ports snapshots raw and stop", async (
       stopped += 1;
       return Promise.resolve();
     },
-  } satisfies SimpleInsecureSandbox<typeof raw>);
+  } satisfies SandboxRuntime<typeof raw>);
 
   expect(current.raw).toBe(raw);
   expect(await current.ports.expose(3000)).toEqual({
