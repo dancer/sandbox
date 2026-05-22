@@ -1,7 +1,18 @@
 import { expect } from "bun:test";
 
-import type { Coverage, PortResult, Result, TunnelResult } from "./fixture";
-import { portsCoverage, tunnelsCoverage, workflowCoverage } from "./fixture";
+import type {
+  Coverage,
+  PortResult,
+  RawResult,
+  Result,
+  TunnelResult,
+} from "./fixture";
+import {
+  portsCoverage,
+  rawCoverage,
+  tunnelsCoverage,
+  workflowCoverage,
+} from "./fixture";
 
 export const coverage = (payload: Coverage): void => {
   expect(payload.provider).toBe("cloudflare");
@@ -24,6 +35,13 @@ export const tunnelCoverage = (payload: Coverage): void => {
   expect(payload.uncovered).toEqual(tunnelsCoverage.uncovered);
 };
 
+export const rawCoverageCheck = (payload: Coverage): void => {
+  expect(payload.provider).toBe("cloudflare");
+  expect(payload.fixture).toBe("raw");
+  expect(payload.features).toEqual(rawCoverage.features);
+  expect(payload.uncovered).toEqual(rawCoverage.uncovered);
+};
+
 export const workflow = ({ body, response }: Result): void => {
   expect(response.ok).toBe(true);
   expect(body.error).toBeUndefined();
@@ -33,10 +51,14 @@ export const workflow = ({ body, response }: Result): void => {
   expect(body.capabilities.processExec).toBe(true);
   expect(body.capabilities.processSpawn).toBe("separate");
   expect(body.capabilities.raw).toMatchObject({
+    backup: "configured",
+    buckets: "configured",
+    desktop: "configured",
     pty: true,
     tunnels: "dynamic",
     watching: true,
   });
+  expect(body.capabilities.raw).not.toHaveProperty("network");
   expect(body.capabilities.snapshotCreate).toBe(false);
   expect(body.file).toEqual({
     exists: true,
@@ -99,11 +121,50 @@ export const tunnels = ({ body, response }: TunnelResult): void => {
   expect(body.ok).toBe(true);
   expect(body.provider).toBe("cloudflare");
   expect(body.capabilities.raw).toMatchObject({
+    backup: "configured",
+    buckets: "configured",
+    desktop: "configured",
     pty: true,
     tunnels: "dynamic",
     watching: true,
   });
+  expect(body.capabilities.raw).not.toHaveProperty("network");
   expect(body.tunnel.port).toBe(8080);
   expect(body.tunnel.url).toMatch(/^https:\/\/.+\.trycloudflare\.com$/u);
   expect(body.tunnel.hostname).toMatch(/^[a-z0-9-]+\.trycloudflare\.com$/u);
+};
+
+export const raw = ({ body, response }: RawResult): void => {
+  expect(response.ok).toBe(true);
+  expect(body.error).toBeUndefined();
+  expect(body.ok).toBe(true);
+  expect(body.provider).toBe("cloudflare");
+  expect(body.capabilities.raw).toMatchObject({
+    backup: "configured",
+    buckets: "configured",
+    desktop: "configured",
+    interpreter: true,
+    sessions: true,
+    watching: true,
+  });
+  expect(body.capabilities.raw).not.toHaveProperty("network");
+  expect(body.session).toEqual({
+    deleted: true,
+    output: "raw-session",
+  });
+  expect(body.code).toEqual({
+    contextDeleted: true,
+    contextListed: true,
+    result: "3",
+  });
+  expect(body.watch.changed).toBe(true);
+  expect(body.watch.before).toBeString();
+  expect(body.watch.after).toBeString();
+  expect(body.raw).toEqual({
+    backup: true,
+    buckets: true,
+    desktop: true,
+    git: true,
+    pty: true,
+  });
 };

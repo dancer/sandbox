@@ -68,6 +68,7 @@ capability mode details when a feature exists but has provider-specific shape
 export type Mode =
   | boolean
   | "combined"
+  | "configured"
   | "create-time"
   | "derived"
   | "disk"

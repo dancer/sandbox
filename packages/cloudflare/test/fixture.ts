@@ -70,6 +70,35 @@ export type TunnelPayload = Readonly<{
   }>;
 }>;
 
+export type RawPayload = Readonly<{
+  capabilities: Record<string, unknown>;
+  code: Readonly<{
+    contextDeleted: boolean;
+    contextListed: boolean;
+    result: string;
+  }>;
+  error?: string;
+  id: string;
+  ok: boolean;
+  provider: string;
+  raw: Readonly<{
+    backup: boolean;
+    buckets: boolean;
+    desktop: boolean;
+    git: boolean;
+    pty: boolean;
+  }>;
+  session: Readonly<{
+    deleted: boolean;
+    output: string;
+  }>;
+  watch: Readonly<{
+    after: string;
+    before: string;
+    changed: boolean;
+  }>;
+}>;
+
 export type Result = Readonly<{
   body: Payload;
   response: Response;
@@ -82,6 +111,11 @@ export type PortResult = Readonly<{
 
 export type TunnelResult = Readonly<{
   body: TunnelPayload;
+  response: Response;
+}>;
+
+export type RawResult = Readonly<{
+  body: RawPayload;
   response: Response;
 }>;
 
@@ -166,9 +200,41 @@ export const tunnelsCoverage: Coverage = {
   ],
 };
 
+export const rawCoverage: Coverage = {
+  features: [
+    "capabilities",
+    "raw.createSession",
+    "raw.session.exec",
+    "raw.deleteSession",
+    "raw.createCodeContext",
+    "raw.runCode",
+    "raw.listCodeContexts",
+    "raw.deleteCodeContext",
+    "raw.checkChanges",
+    "raw.git.method",
+    "raw.session.terminal.method",
+    "raw.createBackup.method",
+    "raw.mountBucket.method",
+    "raw.desktop.status.method",
+    "sandbox.stop",
+  ],
+  fixture: "raw",
+  provider: "cloudflare",
+  uncovered: [
+    "raw.createBackup",
+    "raw.restoreBackup",
+    "raw.mountBucket",
+    "raw.unmountBucket",
+    "raw.terminal.websocket",
+    "raw.gitCheckout",
+    "raw.desktop.runtime",
+  ],
+};
+
 const liveRoute = "/sandbox-sdk/live";
 const portsRoute = "/sandbox-sdk/ports";
 const tunnelsRoute = "/sandbox-sdk/tunnels";
+const rawRoute = "/sandbox-sdk/raw";
 const cleanupRoute = "/sandbox-sdk/cleanup";
 const attempts = 2;
 const timeout = 90_000;
@@ -345,6 +411,25 @@ export const executeTunnels = async (): Promise<TunnelResult> => {
   }
 };
 
+export const executeRaw = async (): Promise<RawResult> => {
+  const response = await request(rawRoute, {
+    headers: headers(),
+    method: "POST",
+  });
+
+  try {
+    return {
+      body: (await response.json()) as RawPayload,
+      response,
+    };
+  } catch (error) {
+    throw new Error(
+      `cloudflare raw verification returned non-json response with status ${response.status}`,
+      { cause: error }
+    );
+  }
+};
+
 export const workflowFixture = (input: Result): Fixture<Payload> => ({
   body: {
     ...input.body,
@@ -383,6 +468,20 @@ export const tunnelsFixture = (
     },
   },
   coverage: tunnelsCoverage,
+  status: input.response.status,
+});
+
+export const rawFixture = (input: RawResult): Fixture<RawPayload> => ({
+  body: {
+    ...input.body,
+    id: "sandbox",
+    watch: {
+      ...input.body.watch,
+      after: "version-after",
+      before: "version-before",
+    },
+  },
+  coverage: rawCoverage,
   status: input.response.status,
 });
 

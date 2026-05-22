@@ -3,7 +3,7 @@ import { expect, test } from "bun:test";
 import { blaxel } from "@sandbox-sdk/blaxel";
 import { cloudflare } from "@sandbox-sdk/cloudflare";
 import { codesandbox } from "@sandbox-sdk/codesandbox";
-import { supports, supportsRaw } from "@sandbox-sdk/core";
+import { rawCapabilityMode, supports, supportsRaw } from "@sandbox-sdk/core";
 import { daytona } from "@sandbox-sdk/daytona";
 import { e2b } from "@sandbox-sdk/e2b";
 import { local } from "@sandbox-sdk/local";
@@ -66,12 +66,11 @@ test("adapters expose capability-honest feature modes", () => {
     processExec: true,
     processSpawn: "separate",
     raw: {
-      backup: true,
-      buckets: true,
-      desktop: true,
+      backup: "configured",
+      buckets: "configured",
+      desktop: "configured",
       git: true,
       interpreter: true,
-      network: true,
       pty: true,
       sessions: true,
       tunnels: "dynamic",
@@ -176,8 +175,11 @@ test("raw capabilities are separate from normalized capabilities", () => {
 
   expect(supports(current, "ports")).toBe(true);
   expect(supportsRaw(current, "desktop")).toBe(true);
+  expect(rawCapabilityMode(current, "desktop")).toBe("configured");
   expect(supportsRaw(current, "git")).toBe(true);
   expect(supportsRaw(current, "backup")).toBe(true);
+  expect(rawCapabilityMode(current, "backup")).toBe("configured");
+  expect(supportsRaw(current, "network")).toBe(false);
   expect(supportsRaw(current, "interpreter")).toBe(true);
   expect(supportsRaw(current, "pty")).toBe(true);
   expect(supportsRaw(current, "sessions")).toBe(true);

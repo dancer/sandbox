@@ -444,7 +444,7 @@ test("capability helpers handle boolean and mode capabilities", () => {
     processExec: true,
     processSpawn: false,
     raw: {
-      backup: true,
+      backup: "configured",
       desktop: true,
       git: true,
       lifecycle: "dynamic",
@@ -472,6 +472,7 @@ test("capability helpers handle boolean and mode capabilities", () => {
   expect(requireRawCapability(current, "desktop")).toBe(true);
   expect(supportsRaw(current, "git")).toBe(true);
   expect(supportsRaw(current, "backup")).toBe(true);
+  expect(rawCapabilityMode(current, "backup")).toBe("configured");
   expect(rawCapabilityMode(current, "lifecycle")).toBe("dynamic");
   expect(rawCapabilityMode(current, "tunnels")).toBe("dynamic");
   expect(supportsRaw(current, "pty")).toBe(false);

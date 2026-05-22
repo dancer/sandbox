@@ -1,0 +1,82 @@
+{
+  "body": {
+    "capabilities": {
+      "environment": true,
+      "files": true,
+      "ports": "dynamic",
+      "process": true,
+      "processExec": true,
+      "processSpawn": "separate",
+      "raw": {
+        "backup": "configured",
+        "buckets": "configured",
+        "desktop": "configured",
+        "git": true,
+        "interpreter": true,
+        "pty": true,
+        "sessions": true,
+        "tunnels": "dynamic",
+        "watching": true
+      },
+      "snapshotCreate": false,
+      "snapshotRestore": false,
+      "snapshots": false,
+      "streaming": "separate"
+    },
+    "code": {
+      "contextDeleted": true,
+      "contextListed": true,
+      "result": "3"
+    },
+    "id": "sandbox",
+    "ok": true,
+    "provider": "cloudflare",
+    "raw": {
+      "backup": true,
+      "buckets": true,
+      "desktop": true,
+      "git": true,
+      "pty": true
+    },
+    "session": {
+      "deleted": true,
+      "output": "raw-session"
+    },
+    "watch": {
+      "after": "version-after",
+      "before": "version-before",
+      "changed": true
+    }
+  },
+  "coverage": {
+    "features": [
+      "capabilities",
+      "raw.createSession",
+      "raw.session.exec",
+      "raw.deleteSession",
+      "raw.createCodeContext",
+      "raw.runCode",
+      "raw.listCodeContexts",
+      "raw.deleteCodeContext",
+      "raw.checkChanges",
+      "raw.git.method",
+      "raw.session.terminal.method",
+      "raw.createBackup.method",
+      "raw.mountBucket.method",
+      "raw.desktop.status.method",
+      "sandbox.stop"
+    ],
+    "fixture": "raw",
+    "provider": "cloudflare",
+    "uncovered": [
+      "raw.createBackup",
+      "raw.restoreBackup",
+      "raw.mountBucket",
+      "raw.unmountBucket",
+      "raw.terminal.websocket",
+      "raw.gitCheckout",
+      "raw.desktop.runtime"
+    ]
+  },
+  "status": 200
+}

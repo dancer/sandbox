@@ -42,6 +42,7 @@ export type RawCapability =
 export type Mode =
   | boolean
   | "combined"
+  | "configured"
   | "create-time"
   | "derived"
   | "disk"

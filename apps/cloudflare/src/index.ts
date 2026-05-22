@@ -1,20 +1,17 @@
 import type { Sandbox as CloudflareSandbox } from "@cloudflare/sandbox";
 import { proxyToSandbox } from "@cloudflare/sandbox";
-import { cloudflare } from "@sandbox-sdk/cloudflare";
-import { create } from "@sandbox-sdk/core";
 import type { Result, Sandbox as CoreSandbox } from "@sandbox-sdk/core";
 
-export { Sandbox } from "@cloudflare/sandbox";
+import { handleRaw } from "./raw";
+import type { Env } from "./shared";
+import { ignore, instance, json } from "./shared";
 
-type Env = Readonly<{
-  Sandbox: DurableObjectNamespace<CloudflareSandbox>;
-  SANDBOX_SDK_PREVIEW_HOST?: string;
-  SANDBOX_SDK_TOKEN?: string;
-}>;
+export { Sandbox } from "@cloudflare/sandbox";
 
 const liveRoute = "/sandbox-sdk/live";
 const portsRoute = "/sandbox-sdk/ports";
 const tunnelsRoute = "/sandbox-sdk/tunnels";
+const rawRoute = "/sandbox-sdk/raw";
 const cleanupRoute = "/sandbox-sdk/cleanup";
 const message = "hello from cloudflare";
 const port = 8080;
@@ -22,14 +19,6 @@ const portMessage = "hello from cloudflare port";
 const portToken = "verify";
 const waitMs = 500;
 const serverFile = "server.js";
-const options = {
-  containerTimeouts: {
-    instanceGetTimeoutMS: 120_000,
-    portReadyTimeoutMS: 120_000,
-  },
-  sleepAfter: "30s",
-  transport: "rpc",
-} as const;
 const server = `const http = require("http");
 const fs = require("fs");
 
@@ -39,11 +28,6 @@ http
   })
   .listen(8080, "0.0.0.0");
 `;
-
-const json = (body: unknown, status = 200): Response =>
-  Response.json(body, {
-    status,
-  });
 
 const token = (env: Env): string | undefined => {
   const value = env.SANDBOX_SDK_TOKEN?.trim();
@@ -69,8 +53,6 @@ const buffer = (value: string): ArrayBuffer => {
 };
 
 const decode = (value: Uint8Array): string => new TextDecoder().decode(value);
-
-const ignore = (): undefined => undefined;
 
 const body = async (request: Request): Promise<{ hostname?: string }> => {
   if (request.headers.get("content-type")?.includes("application/json")) {
@@ -127,22 +109,6 @@ const waitLocal = async (
 
   throw new Error("port server did not become ready");
 };
-
-const instance = (
-  env: Env,
-  cwd: string,
-  id: string,
-  host?: string
-): Promise<CoreSandbox> =>
-  create({
-    adapter: cloudflare({
-      binding: env.Sandbox,
-      ...(host === undefined ? {} : { hostname: host }),
-      id,
-      options,
-    }),
-    cwd,
-  });
 
 const handlePorts = async (
   request: Request,
@@ -267,15 +233,8 @@ const handleLive = async (env: Env, url: URL): Promise<Response> => {
   let sandbox: CoreSandbox | undefined;
 
   try {
-    sandbox = await create({
-      adapter: cloudflare({
-        binding: env.Sandbox,
-        hostname: url.hostname,
-        id,
-        options,
-      }),
-      cwd,
-      env: { SANDBOX_SDK_CREATE: "create-env" },
+    sandbox = await instance(env, cwd, id, url.hostname, {
+      SANDBOX_SDK_CREATE: "create-env",
     });
     await sandbox.files.mkdir(cwd);
     await sandbox.files.write(file, message);
@@ -379,6 +338,7 @@ const guard = (request: Request, env: Env, url: URL): Response | undefined => {
     url.pathname !== liveRoute &&
     url.pathname !== portsRoute &&
     url.pathname !== tunnelsRoute &&
+    url.pathname !== rawRoute &&
     url.pathname !== cleanupRoute
   ) {
     return json({ error: "not_found", ok: false }, 404);
@@ -413,6 +373,10 @@ export default {
 
     if (url.pathname === tunnelsRoute) {
       return handleTunnels(env);
+    }
+
+    if (url.pathname === rawRoute) {
+      return handleRaw(env);
     }
 
     if (url.pathname === cleanupRoute) {

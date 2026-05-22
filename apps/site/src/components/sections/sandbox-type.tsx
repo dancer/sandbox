@@ -50,6 +50,7 @@ type RawCapability =
 type Mode =
   | boolean
   | "combined"
+  | "configured"
   | "create-time"
   | "derived"
   | "disk"
