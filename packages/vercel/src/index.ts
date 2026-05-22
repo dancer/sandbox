@@ -1,3 +1,5 @@
+import { dirname } from "node:path/posix";
+
 import {
   SandboxError,
   abort,
@@ -516,6 +518,11 @@ const streamFile = async (
   return fileStream(output);
 };
 
+const parent = (path: string): string | undefined => {
+  const directory = dirname(path);
+  return directory === "." || directory === "/" ? undefined : directory;
+};
+
 const execute = async (
   raw: Raw,
   cwd: string,
@@ -665,10 +672,13 @@ const createSandbox = (
           await wrap(() => read(raw, path, cwd), "read")
         ),
       write: async (path: string, input: Input) => {
-        await wrap(
-          async () => raw.writeFiles([{ content: await bytes(input), path }]),
-          "write"
-        );
+        await wrap(async () => {
+          const directory = parent(path);
+          if (directory !== undefined) {
+            await raw.fs.mkdir(directory, { recursive: true });
+          }
+          await raw.writeFiles([{ content: await bytes(input), path }]);
+        }, "write");
       },
     },
     id: raw.name,

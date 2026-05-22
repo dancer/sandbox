@@ -557,6 +557,55 @@ test("vercel uses native file streams", async () => {
   }
 });
 
+test("vercel creates parent directories before file writes", async () => {
+  const original = VercelSandbox.create;
+  let mkdirSeen: unknown;
+  let writeSeen: unknown;
+  const raw = {
+    fs: {
+      mkdir: (path: string, options: unknown) => {
+        mkdirSeen = { options, path };
+        return Promise.resolve();
+      },
+    },
+    name: "sandbox",
+    stop: () => Promise.resolve(),
+    writeFiles: (input: unknown) => {
+      writeSeen = input;
+      return Promise.resolve();
+    },
+  } as unknown as VercelSandbox;
+
+  VercelSandbox.create = (() =>
+    Promise.resolve(raw)) as typeof VercelSandbox.create;
+
+  try {
+    const sandbox = await create({
+      adapter: vercel({
+        projectId: "project",
+        teamId: "team",
+        token: "token",
+      }),
+      cwd: "/work",
+    });
+
+    await sandbox.files.write("/work/src/index.ts", "content");
+
+    expect(mkdirSeen).toEqual({
+      options: { recursive: true },
+      path: "/work/src",
+    });
+    expect(writeSeen).toEqual([
+      {
+        content: "content",
+        path: "/work/src/index.ts",
+      },
+    ]);
+  } finally {
+    VercelSandbox.create = original;
+  }
+});
+
 test("vercel normalizes provider command errors", async () => {
   const original = VercelSandbox.create;
   const raw = {
