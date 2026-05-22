@@ -291,7 +291,7 @@ const streams = (): Readonly<{
   };
 };
 
-const execute = async (
+const executeBuffered = async (
   raw: Raw,
   cwd: string,
   line: string,
@@ -309,19 +309,9 @@ const execute = async (
     });
     return complete(response);
   } catch (error) {
-    if (options.signal?.aborted) {
-      abort(provider, error);
-    }
     throw sandboxError(provider, "Command failed", "process", error);
   }
 };
-
-const shell = (
-  raw: Raw,
-  cwd: string,
-  script: string,
-  options: Exec
-): Promise<Result> => execute(raw, cwd, script, options);
 
 const mkdir = async (raw: Raw, path: string): Promise<void> => {
   await raw.fs.mkdir(path);
@@ -486,6 +476,31 @@ const spawn = async (
     throw sandboxError(provider, "Command failed", "process", error);
   }
 };
+
+const execute = async (
+  raw: Raw,
+  cwd: string,
+  line: string,
+  options: Exec
+): Promise<Result> => {
+  const { signal } = options;
+  if (signal !== undefined) {
+    const running = await spawn(raw, cwd, line, options);
+    const output = await running.result;
+    if (signal.aborted) {
+      abort(provider, signal.reason);
+    }
+    return output;
+  }
+  return executeBuffered(raw, cwd, line, options);
+};
+
+const shell = (
+  raw: Raw,
+  cwd: string,
+  script: string,
+  options: Exec
+): Promise<Result> => execute(raw, cwd, script, options);
 
 const createOptions = (
   options: Blaxel,

@@ -397,3 +397,63 @@ test("e2b kills spawned processes on abort", async () => {
     E2BSandbox.create = original;
   }
 });
+
+test("e2b kills signal-backed exec processes on abort", async () => {
+  const original = E2BSandbox.create;
+  let killed = false;
+  const wait = async (): Promise<{
+    exitCode: number;
+    stderr: string;
+    stdout: string;
+  }> => {
+    for (;;) {
+      if (killed) {
+        return { exitCode: 130, stderr: "", stdout: "" };
+      }
+      await sleep(1);
+    }
+  };
+  const raw = {
+    commands: {
+      run: () =>
+        Promise.resolve({
+          kill: () => {
+            killed = true;
+            return Promise.resolve(true);
+          },
+          pid: 123,
+          wait,
+        }),
+    },
+    files: {
+      makeDir: () => Promise.resolve(),
+    },
+    kill: () => Promise.resolve(),
+    sandboxId: "sandbox",
+  } as unknown as E2BSandbox;
+  const controller = new AbortController();
+
+  E2BSandbox.create = (() => Promise.resolve(raw)) as typeof E2BSandbox.create;
+
+  try {
+    const sandbox = await create({
+      adapter: e2b({
+        apiKey: "key",
+      }),
+    });
+    const output = sandbox.process.exec("sleep", ["10"], {
+      signal: controller.signal,
+    });
+
+    await Promise.resolve();
+    controller.abort("stopped");
+
+    await expect(output).rejects.toMatchObject({
+      code: "aborted",
+      provider: "e2b",
+    });
+    expect(killed).toBe(true);
+  } finally {
+    E2BSandbox.create = original;
+  }
+});

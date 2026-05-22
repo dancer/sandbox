@@ -396,7 +396,7 @@ const check = (signal?: AbortSignal): void => {
   }
 };
 
-const executeLine = async (
+const executeBufferedLine = async (
   raw: Raw,
   cwd: string,
   line: string,
@@ -416,14 +416,6 @@ const executeLine = async (
     throw sandboxError(provider, "Command failed", "process", error);
   }
 };
-
-const execute = (
-  raw: Raw,
-  cwd: string,
-  executable: string,
-  args: readonly string[],
-  options: Exec
-): Promise<Result> => executeLine(raw, cwd, command(executable, args), options);
 
 const runLine = (cwd: string, line: string, options: Exec | Spawn): string => {
   const values = Object.entries(options.env ?? {}).map(([name, value]) =>
@@ -521,6 +513,32 @@ const spawnLine = async (
     throw sandboxError(provider, "Command failed", "process", error);
   }
 };
+
+const executeLine = async (
+  raw: Raw,
+  cwd: string,
+  line: string,
+  options: Exec
+): Promise<Result> => {
+  const { signal } = options;
+  if (signal !== undefined) {
+    const running = await spawnLine(raw, cwd, line, options);
+    const output = await running.result;
+    if (signal.aborted) {
+      abort(provider, signal.reason);
+    }
+    return output;
+  }
+  return executeBufferedLine(raw, cwd, line, options);
+};
+
+const execute = (
+  raw: Raw,
+  cwd: string,
+  executable: string,
+  args: readonly string[],
+  options: Exec
+): Promise<Result> => executeLine(raw, cwd, command(executable, args), options);
 
 const spawn = (
   raw: Raw,

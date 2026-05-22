@@ -428,3 +428,69 @@ test("blaxel kills spawned processes on abort", async () => {
     SandboxInstance.create = original;
   }
 });
+
+test("blaxel kills signal-backed exec processes on abort", async () => {
+  const original = SandboxInstance.create;
+  let killed: string | undefined;
+  const raw = {
+    delete: () => Promise.resolve(),
+    fs: {
+      mkdir: () => Promise.resolve({}),
+    },
+    metadata: { name: "sandbox" },
+    process: {
+      exec: () => Promise.resolve(response(0, "", "")),
+      kill: (id: string) => {
+        killed = id;
+        return Promise.resolve({});
+      },
+      streamLogs: () => ({
+        close: () => {},
+        wait: async () => {
+          for (;;) {
+            if (killed !== undefined) {
+              return;
+            }
+            await Bun.sleep(1);
+          }
+        },
+      }),
+      wait: async (id: string) => {
+        for (;;) {
+          if (killed === id) {
+            return response(130, "", "");
+          }
+          await Bun.sleep(1);
+        }
+      },
+    },
+  } as unknown as SandboxInstance;
+  const controller = new AbortController();
+
+  SandboxInstance.create = (() =>
+    Promise.resolve(raw)) as typeof SandboxInstance.create;
+
+  try {
+    const sandbox = await create({
+      adapter: blaxel({
+        apiKey: "key",
+        workspace: "workspace",
+      }),
+      cwd: "/work",
+    });
+    const output = sandbox.process.exec("sleep", ["10"], {
+      signal: controller.signal,
+    });
+
+    await Promise.resolve();
+    controller.abort("stopped");
+
+    await expect(output).rejects.toMatchObject({
+      code: "aborted",
+      provider: "blaxel",
+    });
+    expect(killed).toBe("process");
+  } finally {
+    SandboxInstance.create = original;
+  }
+});

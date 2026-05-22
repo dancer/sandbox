@@ -210,7 +210,7 @@ const wrap = async <Value>(
   }
 };
 
-const executeLine = async (
+const executeBufferedLine = async (
   raw: Raw,
   cwd: string,
   user: string | undefined,
@@ -235,16 +235,6 @@ const executeLine = async (
     throw sandboxError(provider, "Command failed", "process", error);
   }
 };
-
-const execute = (
-  raw: Raw,
-  cwd: string,
-  user: string | undefined,
-  executable: string,
-  args: readonly string[],
-  options: Exec
-): Promise<Result> =>
-  executeLine(raw, cwd, user, command(executable, args), options);
 
 type Channel = "output" | "stderr" | "stdout";
 
@@ -396,6 +386,35 @@ const spawnLine = async (
     throw sandboxError(provider, "Command failed", "process", error);
   }
 };
+
+const executeLine = async (
+  raw: Raw,
+  cwd: string,
+  user: string | undefined,
+  line: string,
+  options: Exec
+): Promise<Result> => {
+  const { signal } = options;
+  if (signal !== undefined) {
+    const running = await spawnLine(raw, cwd, user, line, options);
+    const value = await running.result;
+    if (signal.aborted) {
+      abort(provider, signal.reason);
+    }
+    return value;
+  }
+  return executeBufferedLine(raw, cwd, user, line, options);
+};
+
+const execute = (
+  raw: Raw,
+  cwd: string,
+  user: string | undefined,
+  executable: string,
+  args: readonly string[],
+  options: Exec
+): Promise<Result> =>
+  executeLine(raw, cwd, user, command(executable, args), options);
 
 const spawn = (
   raw: Raw,
