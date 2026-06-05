@@ -3,6 +3,22 @@ import { Heading } from "@/components/heading";
 import { PropAccordionItem } from "@/components/prop-accordion-item";
 import { Accordion } from "@/components/ui/accordion";
 
+const EXPORTS_EXAMPLE = `import {
+  capabilityMode,
+  create,
+  isSandboxError,
+  SandboxError,
+  supports,
+  withSandbox,
+} from "@sandbox-sdk/core";
+import { local } from "@sandbox-sdk/local";
+
+const sandbox = await create({ adapter: local() });
+
+if (supports(sandbox, "ports")) {
+  await sandbox.ports.expose(3000);
+}`;
+
 const READ_EXAMPLE = `// raw bytes
 const bytes = await sandbox.files.read("data/in.bin");
 // → Uint8Array
@@ -83,6 +99,56 @@ export const ApiReference = () => (
       can do cleanly; anything provider-specific lives on{" "}
       <code>sandbox.raw</code>.
     </p>
+
+    <section>
+      <Heading as="h3" id="exports">
+        Top-level exports
+      </Heading>
+      <p>
+        These come from <code>@sandbox-sdk/core</code>. <code>create</code> and{" "}
+        <code>withSandbox</code> produce the sandbox; the capability helpers let
+        you branch on what a provider supports before calling into it.
+      </p>
+      <CodeBlock code={EXPORTS_EXAMPLE} lang="ts" />
+      <ul className="list-none! pl-0! gap-0! rounded-md border border-dotted divide-y divide-dotted">
+        <li className="px-4 py-3">
+          <code>create(options)</code>: creates or connects to a sandbox and
+          returns a typed <code>Sandbox</code>.
+        </li>
+        <li className="px-4 py-3">
+          <code>withSandbox(options, fn)</code>: runs <code>fn</code> with a
+          sandbox and stops it after success or failure.
+        </li>
+        <li className="px-4 py-3">
+          <code>supports(sandbox, capability)</code>: returns <code>true</code>{" "}
+          when a normalized capability is available.
+        </li>
+        <li className="px-4 py-3">
+          <code>capabilityMode(sandbox, capability)</code>: returns the
+          provider-specific mode for a capability, such as <code>"disk"</code>{" "}
+          versus <code>"memory"</code> snapshots.
+        </li>
+        <li className="px-4 py-3">
+          <code>supportsRaw(...)</code> / <code>rawCapabilityMode(...)</code>:
+          the same checks for powers reached through <code>sandbox.raw</code>.
+        </li>
+        <li className="px-4 py-3">
+          <code>requireCapability(...)</code> /{" "}
+          <code>requireRawCapability(...)</code>: throw{" "}
+          <code>SandboxError</code> with <code>code: "unsupported"</code> when a
+          capability is missing.
+        </li>
+        <li className="px-4 py-3">
+          <code>SandboxError</code> / <code>isSandboxError(error)</code>: the
+          normalized error class and a type guard for it.
+        </li>
+        <li className="px-4 py-3">
+          <code>fromSandboxRuntime(runtime)</code>: for adapter authors, lifts a
+          low-level <code>SandboxRuntime</code> into the public{" "}
+          <code>Sandbox</code> API.
+        </li>
+      </ul>
+    </section>
 
     <section>
       <Heading as="h3" id="files-read">

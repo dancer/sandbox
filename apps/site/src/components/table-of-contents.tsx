@@ -38,6 +38,7 @@ const sections: Section[] = [
   },
   {
     children: [
+      { id: "exports", label: "exports" },
       { id: "files-read", label: "files.read" },
       { id: "files-stream", label: "files.stream" },
       { id: "files-write", label: "files.write" },
