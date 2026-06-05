@@ -21,6 +21,8 @@ const GithubMark = ({ className }: { className?: string }) => (
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
+const llms = "/llms.txt";
+
 export const Header = () => (
   <header className="flex items-center justify-between">
     <motion.a
@@ -42,26 +44,41 @@ export const Header = () => (
         width={28}
       />
     </motion.a>
-    <motion.a
-      className="text-muted-foreground transition-colors hover:text-foreground"
-      href="https://github.com/dancer/sandbox"
-      rel="noopener noreferrer"
-      target="_blank"
-      aria-label="sandbox-sdk on GitHub"
+    <motion.div
+      className="flex items-center gap-2"
       initial={{ opacity: 0, x: 10 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.5, ease: EASE }}
     >
-      <span className="flex size-9 items-center justify-center rounded-full border border-dotted hover:bg-sidebar transition-colors sm:hidden">
-        <GithubMark className="size-4" />
-      </span>
-      <Badge
-        variant="outline"
-        className="hidden sm:inline-flex h-auto py-2 px-4 bg-transparent hover:bg-sidebar transition-colors border-dotted"
+      <a
+        className="text-muted-foreground transition-colors hover:text-foreground"
+        href={llms}
       >
-        <GithubMark className="size-3.5" />
-        dancer/sandbox
-      </Badge>
-    </motion.a>
+        <Badge
+          variant="outline"
+          className="h-auto border-dotted bg-transparent px-3 py-2 transition-colors hover:bg-sidebar"
+        >
+          llms.txt
+        </Badge>
+      </a>
+      <a
+        className="text-muted-foreground transition-colors hover:text-foreground"
+        href="https://github.com/dancer/sandbox"
+        rel="noopener noreferrer"
+        target="_blank"
+        aria-label="sandbox-sdk on GitHub"
+      >
+        <span className="flex size-9 items-center justify-center rounded-full border border-dotted transition-colors hover:bg-sidebar sm:hidden">
+          <GithubMark className="size-4" />
+        </span>
+        <Badge
+          variant="outline"
+          className="hidden h-auto border-dotted bg-transparent px-4 py-2 transition-colors hover:bg-sidebar sm:inline-flex"
+        >
+          <GithubMark className="size-3.5" />
+          dancer/sandbox
+        </Badge>
+      </a>
+    </motion.div>
   </header>
 );

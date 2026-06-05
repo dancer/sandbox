@@ -17,6 +17,8 @@ const providerLinks = [
 ];
 
 const projectLinks = [
+  { href: "/llms.txt", label: "llms.txt" },
+  { href: "/llms-full.txt", label: "llms-full.txt" },
   { href: "https://github.com/dancer/sandbox", label: "GitHub" },
   {
     href: "https://github.com/dancer/sandbox/issues",
@@ -42,14 +44,23 @@ const Column = ({
     <ul className="flex list-none flex-col gap-1.5 pl-0">
       {links.map((link) => (
         <li className="text-xs" key={link.label}>
-          <a
-            className="text-muted-foreground transition-colors hover:text-foreground"
-            href={link.href}
-            rel="noreferrer"
-            target="_blank"
-          >
-            {link.label}
-          </a>
+          {link.href.startsWith("/") ? (
+            <a
+              className="text-muted-foreground transition-colors hover:text-foreground"
+              href={link.href}
+            >
+              {link.label}
+            </a>
+          ) : (
+            <a
+              className="text-muted-foreground transition-colors hover:text-foreground"
+              href={link.href}
+              rel="noreferrer"
+              target="_blank"
+            >
+              {link.label}
+            </a>
+          )}
         </li>
       ))}
     </ul>
