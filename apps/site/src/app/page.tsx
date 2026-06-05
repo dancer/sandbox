@@ -14,6 +14,7 @@ import { Hero } from "@/components/sections/hero";
 import { Installation } from "@/components/sections/installation";
 import { QuickStart } from "@/components/sections/quick-start";
 import { SandboxType } from "@/components/sections/sandbox-type";
+import { Verification } from "@/components/sections/verification";
 import { Why } from "@/components/sections/why";
 import { TableOfContents } from "@/components/table-of-contents";
 
@@ -70,6 +71,10 @@ export default function Home() {
           <SectionDivider />
           <FadeIn>
             <CapabilityMatrix />
+          </FadeIn>
+          <SectionDivider />
+          <FadeIn>
+            <Verification />
           </FadeIn>
           <FadeIn>
             <Footer />

@@ -17,6 +17,7 @@ const sections = [
   { id: "escape-hatch", label: "Escape hatch" },
   { id: "ai-tools", label: "AI tools" },
   { id: "capability-matrix", label: "Capability matrix" },
+  { id: "verification", label: "Verification" },
 ];
 
 export const MobileTableOfContents = () => (

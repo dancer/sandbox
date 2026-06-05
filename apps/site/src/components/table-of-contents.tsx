@@ -67,6 +67,7 @@ const sections: Section[] = [
     number: 9,
   },
   { id: "capability-matrix", label: "Capability matrix", number: 10 },
+  { id: "verification", label: "Verification", number: 11 },
 ];
 
 const rowBase =
