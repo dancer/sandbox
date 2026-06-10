@@ -903,14 +903,14 @@ export type Options = Readonly<{
 
 #### `Kit`
 
-AI toolkit with prompt context and a minimal agent sandbox shape
+AI toolkit with prompt context and a minimal sandbox session shape
 
 ```ts
 export type Kit = Readonly<{
   /** prompt context describing the sandbox, capabilities, and limits */
   description: string;
-  /** minimal sandbox object for agent integrations that accept an executeCommand shape */
-  sandbox: AgentSandbox;
+  /** restricted sandbox session for agent integrations */
+  sandbox: SandboxSession;
   /** aisdk compatible tools keyed by enabled tool name */
   tools: Tools;
 }>;
@@ -923,7 +923,7 @@ options ready to spread into aisdk v6/v7 generateText, streamText, or ToolLoopAg
 ```ts
 export type AisdkOptions = Readonly<{
   /** aisdk sandbox object forwarded to tool execution */
-  experimental_sandbox: AgentSandbox;
+  experimental_sandbox: SandboxSession;
   /** ToolLoopAgent instructions describing the sandbox, available tools, and safety limits */
   instructions: string;
   /** prompt context describing the sandbox, available tools, and safety limits */
@@ -933,18 +933,16 @@ export type AisdkOptions = Readonly<{
 }>;
 ```
 
-#### `AgentSandbox`
+#### `SandboxSession`
 
-sandbox object compatible with AI SDK v7 and older executeCommand integrations
+restricted sandbox session compatible with current and older AI SDK integrations
 
 ```ts
-export type AgentSandbox = Readonly<{
+export type SandboxSession = Readonly<{
   /** advertised sandbox capabilities */
   capabilities: Sandbox["capabilities"];
   /** prompt context describing the sandbox */
   description: string;
-  /** run a shell command using the normalized sandbox process API */
-  executeCommand(input: Command): Promise<CommandResult>;
   /** provider name */
   provider: string;
   /** read one file as a byte stream, returning null when it does not exist */
@@ -953,8 +951,10 @@ export type AgentSandbox = Readonly<{
   readBinaryFile(input: File): PromiseLike<Uint8Array | null>;
   /** read one text file, returning null when it does not exist */
   readTextFile(input: TextFile): PromiseLike<string | null>;
-  /** run a command using the AI SDK v7 sandbox contract */
-  runCommand(input: Command): PromiseLike<CommandResult>;
+  /** run a shell command and return buffered stdout and stderr */
+  run(input: Command): PromiseLike<CommandResult>;
+  /** start a shell command and return a streaming process handle */
+  spawn(input: Command): PromiseLike<SandboxProcess>;
   /** default working directory */
   workingDirectory: string;
   /** write one file from a byte stream */
@@ -963,6 +963,49 @@ export type AgentSandbox = Readonly<{
   writeBinaryFile(input: BinaryFileWrite): PromiseLike<void>;
   /** write one text file */
   writeTextFile(input: TextFileWrite): PromiseLike<void>;
+  /** compatibility alias for older integrations */
+  executeCommand(input: Command): Promise<CommandResult>;
+  /** compatibility alias for older integrations */
+  runCommand(input: Command): PromiseLike<CommandResult>;
+}>;
+```
+
+#### `NetworkSandboxSession`
+
+host-owned sandbox session with infra capabilities kept away from agent tools
+
+```ts
+export type NetworkSandboxSession = Sandbox &
+  Readonly<{
+    /** return the restricted session safe to pass into agent tool execution */
+    restricted(): SandboxSession;
+  }>;
+```
+
+#### `AgentSandbox`
+
+compatibility alias for older sandbox-sdk consumers
+
+```ts
+export type AgentSandbox = SandboxSession;
+```
+
+#### `SandboxProcess`
+
+process handle compatible with the current AI SDK sandbox contract
+
+```ts
+export type SandboxProcess = Readonly<{
+  /** process stderr byte stream */
+  stderr: ReadableStream<Uint8Array>;
+  /** process stdout byte stream */
+  stdout: ReadableStream<Uint8Array>;
+  /** terminate the process */
+  kill(): PromiseLike<void>;
+  /** resolve with the process exit code */
+  wait(): PromiseLike<{
+    exitCode: number;
+  }>;
 }>;
 ```
 
@@ -999,6 +1042,8 @@ export type Command = Readonly<{
   abortSignal?: AbortSignal;
   /** shell command to run */
   command: string;
+  /** environment variables for this command */
+  env?: Readonly<Record<string, string>>;
   /** working directory inside the sandbox */
   workingDirectory?: string;
 }>;

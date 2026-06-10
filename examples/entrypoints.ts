@@ -17,6 +17,8 @@ import type {
   PreviewResult,
   Schema,
   SchemaResult,
+  SandboxProcess,
+  SandboxSession,
   TextResult,
   Tool,
   Tools,
@@ -93,6 +95,8 @@ export type EntrypointTypes = Readonly<{
   aiPreviewResult: PreviewResult;
   aiSchema: Schema;
   aiSchemaResult: SchemaResult;
+  aiSandboxProcess: SandboxProcess;
+  aiSandboxSession: SandboxSession;
   aisdk: AisdkOptions;
   aiTextResult: TextResult;
   aiTool: Tool<Path, TextResult>;
