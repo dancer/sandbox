@@ -6,6 +6,7 @@ import { local } from "@sandbox-sdk/local";
 import type { Experimental_Sandbox as ExperimentalSandbox } from "ai";
 
 import { claude } from "../src/claude";
+import type { SandboxSession } from "../src/index";
 import { aisdk, tools } from "../src/index";
 import { openai } from "../src/openai";
 
@@ -40,6 +41,9 @@ const approvalOpenAi = (value: unknown): Promise<boolean> =>
   asOpenAiTool(value).needsApproval(new RunContext(), {}, "test-call");
 
 const asClaudeTool = (value: unknown): ClaudeTool => value as ClaudeTool;
+
+const collect = (stream: ReadableStream<Uint8Array>): Promise<string> =>
+  new Response(stream).text();
 
 test("tools returns prompt context and selected tools", async () => {
   const sandbox = await create({ adapter: local(), cwd: "/workspace" });
@@ -141,15 +145,21 @@ test("tools expose an ai sdk sandbox shape", async () => {
     allow: ["read", "write", "list", "exec"],
     timeout: 10_000,
   });
-  const agent: ExperimentalSandbox = kit.sandbox;
+  const agent: SandboxSession = kit.sandbox;
+  const legacy: ExperimentalSandbox = kit.sandbox;
   const ai = aisdk(kit);
 
-  const output = await kit.sandbox.executeCommand({
+  const output = await agent.run({
     command: "printf ai",
+    env: { SANDBOX_VALUE: "ai" },
     workingDirectory: "/workspace",
   });
-  const command = await agent.runCommand({
+  const command = await legacy.runCommand({
     command: "printf run",
+    workingDirectory: "/workspace",
+  });
+  const compatibility = await kit.sandbox.executeCommand({
+    command: "printf compat",
     workingDirectory: "/workspace",
   });
 
@@ -163,12 +173,41 @@ test("tools expose an ai sdk sandbox shape", async () => {
     stderr: "",
     stdout: "run",
   });
+  expect(compatibility).toEqual({
+    exitCode: 0,
+    stderr: "",
+    stdout: "compat",
+  });
   expect(ai).toEqual({
     experimental_sandbox: kit.sandbox,
     instructions: kit.description,
     system: kit.description,
     tools: kit.tools,
   });
+
+  await sandbox.stop();
+});
+
+test("ai sdk sandbox shape spawns streaming processes", async () => {
+  const sandbox = await create({ adapter: local(), cwd: "/workspace" });
+  const agent: SandboxSession = tools(sandbox, {
+    allow: ["read", "write", "list", "exec"],
+  }).sandbox;
+
+  const process = await agent.spawn({
+    command: "printf $SANDBOX_VALUE && printf err >&2",
+    env: { SANDBOX_VALUE: "stream" },
+    workingDirectory: "/workspace",
+  });
+  const [stdout, stderr, result] = await Promise.all([
+    collect(process.stdout),
+    collect(process.stderr),
+    process.wait(),
+  ]);
+
+  expect(stdout).toBe("stream");
+  expect(stderr).toBe("err");
+  expect(result).toEqual({ exitCode: 0 });
 
   await sandbox.stop();
 });

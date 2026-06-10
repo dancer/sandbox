@@ -4,7 +4,12 @@ import {
   supports,
   supportsRaw,
 } from "@sandbox-sdk/core";
-import type { RawCapability, Result, Sandbox } from "@sandbox-sdk/core";
+import type {
+  RawCapability,
+  Result,
+  Running,
+  Sandbox,
+} from "@sandbox-sdk/core";
 import type {
   JSONSchema7,
   Schema as AisdkSchema,
@@ -89,12 +94,12 @@ export type Options = Readonly<{
   timeout?: number;
 }>;
 
-/** AI toolkit with prompt context and a minimal agent sandbox shape */
+/** AI toolkit with prompt context and a minimal sandbox session shape */
 export type Kit = Readonly<{
   /** prompt context describing the sandbox, capabilities, and limits */
   description: string;
-  /** minimal sandbox object for agent integrations that accept an executeCommand shape */
-  sandbox: AgentSandbox;
+  /** restricted sandbox session for agent integrations */
+  sandbox: SandboxSession;
   /** aisdk compatible tools keyed by enabled tool name */
   tools: Tools;
 }>;
@@ -102,7 +107,7 @@ export type Kit = Readonly<{
 /** options ready to spread into aisdk v6/v7 generateText, streamText, or ToolLoopAgent */
 export type AisdkOptions = Readonly<{
   /** aisdk sandbox object forwarded to tool execution */
-  experimental_sandbox: AgentSandbox;
+  experimental_sandbox: SandboxSession;
   /** ToolLoopAgent instructions describing the sandbox, available tools, and safety limits */
   instructions: string;
   /** prompt context describing the sandbox, available tools, and safety limits */
@@ -111,14 +116,12 @@ export type AisdkOptions = Readonly<{
   tools: Tools;
 }>;
 
-/** sandbox object compatible with AI SDK v7 and older executeCommand integrations */
-export type AgentSandbox = Readonly<{
+/** restricted sandbox session compatible with current and older AI SDK integrations */
+export type SandboxSession = Readonly<{
   /** advertised sandbox capabilities */
   capabilities: Sandbox["capabilities"];
   /** prompt context describing the sandbox */
   description: string;
-  /** run a shell command using the normalized sandbox process API */
-  executeCommand(input: Command): Promise<CommandResult>;
   /** provider name */
   provider: string;
   /** read one file as a byte stream, returning null when it does not exist */
@@ -127,8 +130,10 @@ export type AgentSandbox = Readonly<{
   readBinaryFile(input: File): PromiseLike<Uint8Array | null>;
   /** read one text file, returning null when it does not exist */
   readTextFile(input: TextFile): PromiseLike<string | null>;
-  /** run a command using the AI SDK v7 sandbox contract */
-  runCommand(input: Command): PromiseLike<CommandResult>;
+  /** run a shell command and return buffered stdout and stderr */
+  run(input: Command): PromiseLike<CommandResult>;
+  /** start a shell command and return a streaming process handle */
+  spawn(input: Command): PromiseLike<SandboxProcess>;
   /** default working directory */
   workingDirectory: string;
   /** write one file from a byte stream */
@@ -137,6 +142,32 @@ export type AgentSandbox = Readonly<{
   writeBinaryFile(input: BinaryFileWrite): PromiseLike<void>;
   /** write one text file */
   writeTextFile(input: TextFileWrite): PromiseLike<void>;
+  /** compatibility alias for older integrations */
+  executeCommand(input: Command): Promise<CommandResult>;
+  /** compatibility alias for older integrations */
+  runCommand(input: Command): PromiseLike<CommandResult>;
+}>;
+
+/** host-owned sandbox session with infra capabilities kept away from agent tools */
+export type NetworkSandboxSession = Sandbox &
+  Readonly<{
+    /** return the restricted session safe to pass into agent tool execution */
+    restricted(): SandboxSession;
+  }>;
+
+/** compatibility alias for older sandbox-sdk consumers */
+export type AgentSandbox = SandboxSession;
+
+/** process handle compatible with the current AI SDK sandbox contract */
+export type SandboxProcess = Readonly<{
+  /** process stderr byte stream */
+  stderr: ReadableStream<Uint8Array>;
+  /** process stdout byte stream */
+  stdout: ReadableStream<Uint8Array>;
+  /** terminate the process */
+  kill(): PromiseLike<void>;
+  /** resolve with the process exit code */
+  wait(): PromiseLike<{ exitCode: number }>;
 }>;
 
 type Draft = AisdkToolSet &
@@ -176,6 +207,8 @@ export type Command = Readonly<{
   abortSignal?: AbortSignal;
   /** shell command to run */
   command: string;
+  /** environment variables for this command */
+  env?: Readonly<Record<string, string>>;
   /** working directory inside the sandbox */
   workingDirectory?: string;
 }>;
@@ -393,6 +426,13 @@ const write = async (
   assertActive(input.abortSignal);
 };
 
+const emptyStream = (): ReadableStream<Uint8Array> =>
+  new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.close();
+    },
+  });
+
 const readText = async (
   sandbox: Sandbox,
   input: TextFile
@@ -412,6 +452,81 @@ const readText = async (
   } catch (error) {
     return missing<string>(error);
   }
+};
+
+const commandOptions = (
+  input: Command,
+  cwd: string,
+  timeout: number
+): {
+  cwd: string;
+  env?: Readonly<Record<string, string>>;
+  signal?: AbortSignal;
+  timeout: number;
+} => ({
+  cwd: input.workingDirectory ?? cwd,
+  ...(input.abortSignal === undefined ? {} : { signal: input.abortSignal }),
+  ...(input.env === undefined ? {} : { env: input.env }),
+  timeout,
+});
+
+const process = (running: Running): SandboxProcess => ({
+  kill: () => running.kill(),
+  stderr: running.stderr ?? emptyStream(),
+  stdout: running.stdout ?? running.output,
+  wait: async () => {
+    const output = await running.result;
+    return { exitCode: output.code };
+  },
+});
+
+const run = async (
+  sandbox: Sandbox,
+  input: Command,
+  cwd: string,
+  timeout: number,
+  beforeExec?: Policy<Exec, "exec">
+): Promise<CommandResult> => {
+  await beforeExec?.(
+    {
+      command: input.command,
+      cwd: input.workingDirectory ?? cwd,
+      ...(input.env === undefined ? {} : { env: input.env }),
+    },
+    context(sandbox, cwd, "exec")
+  );
+  const output = await sandbox.process.shell(
+    input.command,
+    commandOptions(input, cwd, timeout)
+  );
+  return {
+    exitCode: output.code,
+    stderr: output.stderr,
+    stdout: output.stdout,
+  };
+};
+
+const spawn = async (
+  sandbox: Sandbox,
+  input: Command,
+  cwd: string,
+  timeout: number,
+  beforeExec?: Policy<Exec, "exec">
+): Promise<SandboxProcess> => {
+  await beforeExec?.(
+    {
+      command: input.command,
+      cwd: input.workingDirectory ?? cwd,
+      ...(input.env === undefined ? {} : { env: input.env }),
+    },
+    context(sandbox, cwd, "exec")
+  );
+  return process(
+    await sandbox.process.spawnShell(
+      input.command,
+      commandOptions(input, cwd, timeout)
+    )
+  );
 };
 
 const schema = <Input>(
@@ -498,83 +613,55 @@ const agent = (
   cwd: string,
   timeout: number,
   beforeExec?: Policy<Exec, "exec">
-): AgentSandbox => ({
-  capabilities: sandbox.capabilities,
-  description: details,
-  executeCommand: async (input) => {
-    await beforeExec?.(
-      {
-        command: input.command,
-        cwd: input.workingDirectory ?? cwd,
-      },
-      context(sandbox, cwd, "exec")
-    );
-    const output = await sandbox.process.shell(input.command, {
-      cwd: input.workingDirectory ?? cwd,
-      ...(input.abortSignal === undefined ? {} : { signal: input.abortSignal }),
-      timeout,
-    });
-    return {
-      exitCode: output.code,
-      stderr: output.stderr,
-      stdout: output.stdout,
-    };
-  },
-  provider: sandbox.provider,
-  readBinaryFile: async (input) => {
-    assertActive(input.abortSignal);
-    try {
-      const output = await sandbox.files.read(input.path);
+): SandboxSession => {
+  const session = {
+    capabilities: sandbox.capabilities,
+    description: details,
+    provider: sandbox.provider,
+    readBinaryFile: async (input: File) => {
       assertActive(input.abortSignal);
-      return output;
-    } catch (error) {
-      return missing<Uint8Array>(error);
-    }
-  },
-  readFile: async (input) => {
-    assertActive(input.abortSignal);
-    try {
-      const output = await sandbox.files.stream(input.path);
+      try {
+        const output = await sandbox.files.read(input.path);
+        assertActive(input.abortSignal);
+        return output;
+      } catch (error) {
+        return missing<Uint8Array>(error);
+      }
+    },
+    readFile: async (input: File) => {
       assertActive(input.abortSignal);
-      return output;
-    } catch (error) {
-      return missing<ReadableStream<Uint8Array>>(error);
-    }
-  },
-  readTextFile: (input) => readText(sandbox, input),
-  runCommand: async (input) => {
-    await beforeExec?.(
-      {
-        command: input.command,
-        cwd: input.workingDirectory ?? cwd,
-      },
-      context(sandbox, cwd, "exec")
-    );
-    const output = await sandbox.process.shell(input.command, {
-      cwd: input.workingDirectory ?? cwd,
-      ...(input.abortSignal === undefined ? {} : { signal: input.abortSignal }),
-      timeout,
-    });
-    return {
-      exitCode: output.code,
-      stderr: output.stderr,
-      stdout: output.stdout,
-    };
-  },
-  workingDirectory: cwd,
-  writeBinaryFile: (input) => write(sandbox, input),
-  writeFile: (input) => write(sandbox, input),
-  writeTextFile: (input) => {
-    if (input.encoding !== undefined && !/^utf-?8$/iu.test(input.encoding)) {
-      throw sandboxError(
-        "ai",
-        "Only utf-8 text writes are supported",
-        "unsupported"
-      );
-    }
-    return write(sandbox, input);
-  },
-});
+      try {
+        const output = await sandbox.files.stream(input.path);
+        assertActive(input.abortSignal);
+        return output;
+      } catch (error) {
+        return missing<ReadableStream<Uint8Array>>(error);
+      }
+    },
+    readTextFile: (input: TextFile) => readText(sandbox, input),
+    run: (input: Command) => run(sandbox, input, cwd, timeout, beforeExec),
+    spawn: (input: Command) => spawn(sandbox, input, cwd, timeout, beforeExec),
+    workingDirectory: cwd,
+    writeBinaryFile: (input: BinaryFileWrite) => write(sandbox, input),
+    writeFile: (input: FileWrite) => write(sandbox, input),
+    writeTextFile: (input: TextFileWrite) => {
+      if (input.encoding !== undefined && !/^utf-?8$/iu.test(input.encoding)) {
+        throw sandboxError(
+          "ai",
+          "Only utf-8 text writes are supported",
+          "unsupported"
+        );
+      }
+      return write(sandbox, input);
+    },
+  } satisfies Omit<SandboxSession, "executeCommand" | "runCommand">;
+
+  return {
+    ...session,
+    executeCommand: session.run,
+    runCommand: session.run,
+  };
+};
 
 /** create aisdk compatible tools and prompt context for a sandbox */
 export const tools = (sandbox: Sandbox, options: Options = {}): Kit => {
@@ -639,7 +726,7 @@ export const tools = (sandbox: Sandbox, options: Options = {}): Kit => {
       description: "Run a shell command inside the sandbox",
       execute: async (input: Exec): Promise<ExecResult> => {
         await options.beforeExec?.(input, context(sandbox, cwd, "exec"));
-        const run = {
+        const execution = {
           cwd: input.cwd ?? cwd,
           timeout,
           ...(input.env === undefined ? {} : { env: input.env }),
@@ -647,8 +734,8 @@ export const tools = (sandbox: Sandbox, options: Options = {}): Kit => {
 
         const executed =
           input.args === undefined
-            ? await sandbox.process.shell(input.command, run)
-            : await sandbox.process.exec(input.command, input.args, run);
+            ? await sandbox.process.shell(input.command, execution)
+            : await sandbox.process.exec(input.command, input.args, execution);
 
         return result(executed, maxOutput);
       },
