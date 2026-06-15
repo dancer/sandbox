@@ -34,7 +34,7 @@ const workflow: Workflow = {
       lifecycle: "dynamic",
       mcp: "create-time",
       metrics: true,
-      network: "create-time",
+      network: "dynamic",
       pty: true,
       volumes: "create-time",
       watching: true,

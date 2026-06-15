@@ -42,7 +42,7 @@
         "git": true,
         "lifecycle": "dynamic",
         "mcp": "create-time",
-        "network": "create-time",
+        "network": "dynamic",
         "pty": true,
         "volumes": "create-time",
         "watching": true,
