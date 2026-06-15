@@ -1,5 +1,10 @@
+import { Resolver } from "node:dns/promises";
+import { once } from "node:events";
 import { mkdir } from "node:fs/promises";
+import type { IncomingMessage } from "node:http";
+import { request as httpsRequest } from "node:https";
 import { dirname } from "node:path";
+import { connect } from "node:tls";
 import { fileURLToPath } from "node:url";
 
 type Command = Readonly<{
@@ -242,18 +247,57 @@ const request = async (
   });
 };
 
-const preview = async (url: string): Promise<Response> => {
+const previewRequest = async (
+  url: URL,
+  address: string
+): Promise<PortPayload["response"]> => {
+  const client = httpsRequest({
+    createConnection: () =>
+      connect({
+        host: address,
+        port: 443,
+        servername: url.hostname,
+      }),
+    headers: { host: url.hostname },
+    hostname: url.hostname,
+    method: "GET",
+    path: `${url.pathname}${url.search}`,
+    port: 443,
+  });
+  client.setTimeout(timeout, () => {
+    client.destroy(new Error("cloudflare preview request timed out"));
+  });
+  client.end();
+
+  const [response] = (await once(client, "response")) as [IncomingMessage];
+  const chunks: Buffer[] = [];
+  for await (const chunk of response) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  const status = response.statusCode ?? 0;
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    text: Buffer.concat(chunks).toString(),
+  };
+};
+
+const preview = async (value: string): Promise<PortPayload["response"]> => {
+  const url = new URL(value);
+  const resolver = new Resolver();
+  resolver.setServers(["1.1.1.1", "1.0.0.1"]);
   let failure: unknown;
 
-  for (let attempt = 0; attempt < 20; attempt += 1) {
+  for (let attempt = 0; attempt < 60; attempt += 1) {
     try {
-      const response = await fetch(url, {
-        signal: AbortSignal.timeout(timeout),
-      });
-      if (response.ok || attempt === 19) {
-        return response;
+      const addresses = await resolver.resolve4(url.hostname);
+      for (const address of addresses) {
+        const response = await previewRequest(url, address);
+        if (response.ok) {
+          return response;
+        }
+        failure = new Error(`preview returned status ${response.status}`);
       }
-      await response.body?.cancel();
     } catch (error) {
       failure = error;
     }
@@ -301,15 +345,10 @@ export const executePorts = async (): Promise<PortResult> => {
     }
 
     try {
-      const previewResponse = await preview(body.port.url);
       return {
         body: {
           ...body,
-          response: {
-            ok: previewResponse.ok,
-            status: previewResponse.status,
-            text: await previewResponse.text(),
-          },
+          response: await preview(body.port.url),
         },
         response,
       };
