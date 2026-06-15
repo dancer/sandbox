@@ -14,10 +14,9 @@ type Env = {
 };
 
 export default {
-  async fetch(request: Request, env: Env) {
-    const { hostname } = new URL(request.url);
+  async fetch(_request: Request, env: Env) {
     const sandbox = await create({
-      adapter: cloudflare({ binding: env.Sandbox, hostname }),
+      adapter: cloudflare({ binding: env.Sandbox }),
       cwd: "/workspace",
     });
 
@@ -59,10 +58,10 @@ export const Cloudflare = () => (
     <p>
       The Worker must export <code>Sandbox</code> from{" "}
       <code>@cloudflare/sandbox</code> and bind that Durable Object in{" "}
-      <code>wrangler.jsonc</code>. Port previews require a custom domain with
-      wildcard routing in production and use ports 1024-65535 except 3000;{" "}
-      <code>.workers.dev</code> is fine for file and command validation but not
-      production preview URLs.
+      <code>wrangler.jsonc</code>. The adapter uses Cloudflare's RPC transport
+      and exposes ports through zero-config HTTPS tunnels. Set{" "}
+      <code>tunnel</code> when you need a stable named tunnel backed by your
+      Cloudflare zone.
     </p>
     <CodeBlock code={CLOUDFLARE_EXAMPLE} lang="ts" />
     <p>
@@ -88,12 +87,11 @@ export const Cloudflare = () => (
             <code>@cloudflare/sandbox</code> when <code>create()</code> runs.
           </p>
         </PropAccordionItem>
-        <PropAccordionItem name="hostname" status="optional" value="hostname">
+        <PropAccordionItem name="tunnel" status="optional" value="string">
           <p>
-            Hostname used to construct preview URLs when calling{" "}
-            <code>ports.expose()</code>. In production, this must be a custom
-            domain with wildcard routing configured for Cloudflare Sandbox
-            preview URLs.
+            DNS label used for named tunnels created by{" "}
+            <code>ports.expose()</code>. Omit it for a zero-config{" "}
+            <code>trycloudflare.com</code> quick tunnel.
           </p>
         </PropAccordionItem>
         <PropAccordionItem name="id" status="optional" value="id">

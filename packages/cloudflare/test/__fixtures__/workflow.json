@@ -10,7 +10,6 @@
       "raw": {
         "backup": "configured",
         "buckets": "configured",
-        "desktop": "configured",
         "git": true,
         "interpreter": true,
         "pty": true,

@@ -1708,16 +1708,14 @@ export type Cloudflare = Readonly<{
   cwd?: string;
   /** default environment variables written to the sandbox when it is created */
   env?: Readonly<Record<string, string>>;
-  /** custom domain used for preview URLs, required for `ports.expose` */
-  hostname?: string;
   /** stable sandbox id used when create input omits id */
   id?: string;
   /** list options forwarded to Cloudflare `listFiles` */
   list?: ListFilesOptions;
-  /** friendly preview name forwarded to Cloudflare `exposePort` */
-  name?: string;
-  /** low-level Cloudflare Sandbox options forwarded to `getSandbox` */
-  options?: SandboxOptions;
+  /** stable DNS label used for named tunnels created by `ports.expose` */
+  tunnel?: string;
+  /** low-level Cloudflare Sandbox options forwarded to `getSandbox` with RPC transport enforced */
+  options?: Omit<SandboxOptions, "transport">;
 }>;
 ```
 

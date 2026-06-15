@@ -4,17 +4,8 @@
   "main": "src/index.ts",
   "workers_dev": true,
   "preview_urls": true,
-  "routes": [
-    {
-      "pattern": "*.sandbox-sdk.sh/*",
-      "zone_name": "sandbox-sdk.sh",
-    },
-  ],
   "compatibility_date": "2026-05-13",
   "compatibility_flags": ["nodejs_compat"],
-  "vars": {
-    "SANDBOX_TRANSPORT": "rpc",
-  },
   "containers": [
     {
       "class_name": "Sandbox",

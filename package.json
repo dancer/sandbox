@@ -34,8 +34,8 @@
   },
   "devDependencies": {
     "@changesets/cli": "^2.31.0",
-    "@cloudflare/sandbox": "^0.10.2",
-    "@cloudflare/workers-types": "^4.20260522.1",
+    "@cloudflare/sandbox": "^0.12.1",
+    "@cloudflare/workers-types": "^4.20260615.1",
     "@sandbox-sdk/ai": "workspace:*",
     "@sandbox-sdk/blaxel": "workspace:*",
     "@sandbox-sdk/cloudflare": "workspace:*",

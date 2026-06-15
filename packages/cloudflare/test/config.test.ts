@@ -6,8 +6,6 @@ import { create } from "@sandbox-sdk/core";
 
 import { cloudflare } from "../src/index";
 
-let exposeCalls = 0;
-let exposeSeen: unknown;
 let executeSeen: unknown;
 let getSeen: unknown;
 let killedSignal: unknown;
@@ -15,6 +13,8 @@ let mkdirSeen: unknown;
 let readSeen: unknown;
 let setEnvSeen: unknown;
 let startProcessSeen: unknown;
+let tunnelCalls = 0;
+let tunnelSeen: unknown;
 let writeSeen: unknown;
 
 const sse = (
@@ -42,11 +42,6 @@ const raw = {
       stderr: "",
       stdout: "ok",
     });
-  },
-  exposePort: (port: number, options: unknown) => {
-    exposeCalls += 1;
-    exposeSeen = { options, port };
-    return Promise.resolve({ url: "https://preview.example.com" });
   },
   getProcessLogs: () =>
     Promise.resolve({
@@ -88,6 +83,17 @@ const raw = {
   },
   streamProcessLogs: () =>
     Promise.resolve(sse(["stdout", "out"], ["stderr", "err"])),
+  tunnels: {
+    get: (port: number, options: unknown) => {
+      tunnelCalls += 1;
+      tunnelSeen = { options, port };
+      return Promise.resolve({
+        hostname: "sandbox.trycloudflare.com",
+        port,
+        url: "https://sandbox.trycloudflare.com",
+      });
+    },
+  },
   writeFile: (path: string, content: unknown, options?: unknown) => {
     writeSeen = { content, options, path };
     return Promise.resolve();
@@ -137,7 +143,7 @@ test("cloudflare maps create options before provider calls", async () => {
     expect(getSeen).toEqual([
       binding,
       "input-id",
-      { normalizeId: true, sleepAfter: "1m" },
+      { normalizeId: true, sleepAfter: "1m", transport: "rpc" },
     ]);
     expect(setEnvSeen).toEqual({ A: "1", B: "2" });
     expect(mkdirSeen).toEqual({
@@ -154,7 +160,7 @@ test("cloudflare maps create options before provider calls", async () => {
       new Response(await sandbox.files.stream("data.bin")).text()
     ).resolves.toBe("streamed");
     expect(readSeen).toEqual({
-      options: { encoding: "base64" },
+      options: { encoding: "none" },
       path: "/work/data.bin",
     });
   } finally {
@@ -269,32 +275,11 @@ test("cloudflare kills spawned processes on abort", async () => {
   }
 });
 
-test("cloudflare rejects workers dev preview hosts before provider calls", async () => {
-  exposeCalls = 0;
+test("cloudflare rejects reserved tunnel ports before provider calls", async () => {
+  tunnelCalls = 0;
   const sandbox = await create({
     adapter: cloudflare({
       binding,
-      hostname: "example.workers.dev",
-    }),
-  });
-
-  try {
-    await expect(sandbox.ports.expose(8080)).rejects.toMatchObject({
-      code: "unsupported",
-      provider: "cloudflare",
-    });
-    expect(exposeCalls).toBe(0);
-  } finally {
-    await sandbox.stop();
-  }
-});
-
-test("cloudflare rejects reserved preview ports before provider calls", async () => {
-  exposeCalls = 0;
-  const sandbox = await create({
-    adapter: cloudflare({
-      binding,
-      hostname: "example.com",
     }),
   });
 
@@ -303,18 +288,17 @@ test("cloudflare rejects reserved preview ports before provider calls", async ()
       code: "unsupported",
       provider: "cloudflare",
     });
-    expect(exposeCalls).toBe(0);
+    expect(tunnelCalls).toBe(0);
   } finally {
     await sandbox.stop();
   }
 });
 
-test("cloudflare rejects invalid preview ports before provider calls", async () => {
-  exposeCalls = 0;
+test("cloudflare rejects invalid tunnel ports before provider calls", async () => {
+  tunnelCalls = 0;
   const sandbox = await create({
     adapter: cloudflare({
       binding,
-      hostname: "example.com",
     }),
   });
 
@@ -323,18 +307,17 @@ test("cloudflare rejects invalid preview ports before provider calls", async () 
       code: "configuration",
       provider: "cloudflare",
     });
-    expect(exposeCalls).toBe(0);
+    expect(tunnelCalls).toBe(0);
   } finally {
     await sandbox.stop();
   }
 });
 
-test("cloudflare rejects low preview ports before provider calls", async () => {
-  exposeCalls = 0;
+test("cloudflare rejects low tunnel ports before provider calls", async () => {
+  tunnelCalls = 0;
   const sandbox = await create({
     adapter: cloudflare({
       binding,
-      hostname: "example.com",
     }),
   });
 
@@ -343,37 +326,29 @@ test("cloudflare rejects low preview ports before provider calls", async () => {
       code: "configuration",
       provider: "cloudflare",
     });
-    expect(exposeCalls).toBe(0);
+    expect(tunnelCalls).toBe(0);
   } finally {
     await sandbox.stop();
   }
 });
 
-test("cloudflare allows preview ports over the system range", async () => {
-  exposeCalls = 0;
-  exposeSeen = undefined;
+test("cloudflare exposes quick tunnels by default", async () => {
+  tunnelCalls = 0;
+  tunnelSeen = undefined;
   const sandbox = await create({
     adapter: cloudflare({
       binding,
-      hostname: "example.com",
-      name: "api",
     }),
   });
 
   try {
-    await expect(
-      sandbox.ports.expose(8080, { token: "verify" })
-    ).resolves.toEqual({
+    await expect(sandbox.ports.expose(8080)).resolves.toEqual({
       port: 8080,
-      url: "https://preview.example.com",
+      url: "https://sandbox.trycloudflare.com",
     });
-    expect(exposeCalls).toBe(1);
-    expect(exposeSeen).toEqual({
-      options: {
-        hostname: "example.com",
-        name: "api",
-        token: "verify",
-      },
+    expect(tunnelCalls).toBe(1);
+    expect(tunnelSeen).toEqual({
+      options: undefined,
       port: 8080,
     });
   } finally {
@@ -381,63 +356,58 @@ test("cloudflare allows preview ports over the system range", async () => {
   }
 });
 
-test("cloudflare rejects invalid preview tokens before provider calls", async () => {
-  for (const token of ["", "API", "api-v1", "abcdefghijklmnopq"]) {
-    exposeCalls = 0;
-    const sandbox = await create({
-      adapter: cloudflare({
-        binding,
-        hostname: "example.com",
-      }),
-    });
+test("cloudflare forwards configured named tunnels", async () => {
+  tunnelCalls = 0;
+  tunnelSeen = undefined;
+  const sandbox = await create({
+    adapter: cloudflare({
+      binding,
+      tunnel: "api",
+    }),
+  });
 
-    try {
-      await expect(sandbox.ports.expose(8080, { token })).rejects.toMatchObject(
-        {
-          code: "configuration",
-          provider: "cloudflare",
-        }
-      );
-      expect(exposeCalls).toBe(0);
-    } finally {
-      await sandbox.stop();
+  try {
+    await sandbox.ports.expose(8080, { protocol: "https" });
+    expect(tunnelCalls).toBe(1);
+    expect(tunnelSeen).toEqual({
+      options: { name: "api" },
+      port: 8080,
+    });
+  } finally {
+    await sandbox.stop();
+  }
+});
+
+test("cloudflare rejects unsupported normalized tunnel options", async () => {
+  tunnelCalls = 0;
+  const sandbox = await create({
+    adapter: cloudflare({ binding }),
+  });
+
+  try {
+    for (const options of [
+      { host: "example.com" },
+      { protocol: "http" as const },
+      { protocol: "tcp" as const },
+      { token: "verify" },
+    ]) {
+      await expect(sandbox.ports.expose(8080, options)).rejects.toMatchObject({
+        code: "unsupported",
+        provider: "cloudflare",
+      });
     }
-  }
-});
-
-test("cloudflare writes readable streams through base64 content", async () => {
-  writeSeen = undefined;
-  const sandbox = await create({
-    adapter: cloudflare({
-      binding,
-    }),
-  });
-  const input = new ReadableStream<Uint8Array>({
-    start(controller) {
-      controller.enqueue(new Uint8Array([1, 2, 3]));
-      controller.close();
-    },
-  });
-
-  try {
-    await sandbox.files.write("/workspace/data.bin", input);
-    expect(writeSeen).toEqual({
-      content: "AQID",
-      options: { encoding: "base64" },
-      path: "/workspace/data.bin",
-    });
+    expect(tunnelCalls).toBe(0);
   } finally {
     await sandbox.stop();
   }
 });
 
-test("cloudflare uses readable streams directly with rpc transport", async () => {
+test("cloudflare uses readable streams directly", async () => {
   readSeen = undefined;
   writeSeen = undefined;
   const sandbox = await create({
     adapter: cloudflare({
       binding,
-      options: { transport: "rpc" },
     }),
   });
   const input = new ReadableStream<Uint8Array>({

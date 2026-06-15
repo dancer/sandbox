@@ -71,7 +71,6 @@ test("adapters expose capability-honest feature modes", () => {
     raw: {
       backup: "configured",
       buckets: "configured",
-      desktop: "configured",
       git: true,
       interpreter: true,
       pty: true,
@@ -199,8 +198,8 @@ test("raw capabilities are separate from normalized capabilities", () => {
   });
 
   expect(supports(current, "ports")).toBe(true);
-  expect(supportsRaw(current, "desktop")).toBe(true);
-  expect(rawCapabilityMode(current, "desktop")).toBe("configured");
+  expect(supportsRaw(current, "desktop")).toBe(false);
+  expect(rawCapabilityMode(current, "desktop")).toBeUndefined();
   expect(supportsRaw(current, "git")).toBe(true);
   expect(supportsRaw(current, "backup")).toBe(true);
   expect(rawCapabilityMode(current, "backup")).toBe("configured");

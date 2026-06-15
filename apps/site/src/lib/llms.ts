@@ -91,10 +91,10 @@ Blaxel perpetual sandboxes via \`@blaxel/core\`. Maps Blaxel files, process exec
 
 ## Cloudflare (@sandbox-sdk/cloudflare)
 
-Cloudflare via \`@cloudflare/sandbox\`. Backed by a Durable Object running a Linux container, so the adapter takes a binding from \`env\` rather than an API key. The Worker must export \`Sandbox\` from \`@cloudflare/sandbox\` and bind that Durable Object in \`wrangler.jsonc\`. Port previews require a custom domain with wildcard routing in production. For non-Worker runtimes, deploy Cloudflare's HTTP bridge and use \`cloudflareBridge()\`.
+Cloudflare via \`@cloudflare/sandbox\`. Backed by a Durable Object running a Linux container, so the adapter takes a binding from \`env\` rather than an API key. The Worker must export \`Sandbox\` from \`@cloudflare/sandbox\` and bind that Durable Object in \`wrangler.jsonc\`. The adapter enforces RPC transport and \`ports.expose()\` returns a zero-config HTTPS quick tunnel by default. For non-Worker runtimes, deploy Cloudflare's HTTP bridge and use \`cloudflareBridge()\`.
 
-- \`binding\` (required), \`hostname\`, \`id\`.
-- Credentials: \`CLOUDFLARE_SANDBOX_WORKER_URL\` and \`CLOUDFLARE_SANDBOX_TOKEN\`. Add \`CLOUDFLARE_SANDBOX_PREVIEW_HOST\` for port previews.
+- \`binding\` (required), \`id\`, \`tunnel\`.
+- Credentials: \`CLOUDFLARE_SANDBOX_WORKER_URL\` and \`CLOUDFLARE_SANDBOX_TOKEN\`.
 
 ## CodeSandbox (@sandbox-sdk/codesandbox)
 

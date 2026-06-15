@@ -9,12 +9,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@cloudflare/sandbox": "^0.10.2",
+    "@cloudflare/sandbox": "^0.12.1",
     "@sandbox-sdk/cloudflare": "workspace:*",
     "@sandbox-sdk/core": "workspace:*"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260522.1",
+    "@cloudflare/workers-types": "^4.20260615.1",
     "typescript": "^6.0.3"
   }
 }

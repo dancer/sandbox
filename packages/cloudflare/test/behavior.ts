@@ -1,18 +1,7 @@
 import { expect } from "bun:test";
 
-import type {
-  Coverage,
-  PortResult,
-  RawResult,
-  Result,
-  TunnelResult,
-} from "./fixture";
-import {
-  portsCoverage,
-  rawCoverage,
-  tunnelsCoverage,
-  workflowCoverage,
-} from "./fixture";
+import type { Coverage, PortResult, RawResult, Result } from "./fixture";
+import { portsCoverage, rawCoverage, workflowCoverage } from "./fixture";
 
 export const coverage = (payload: Coverage): void => {
   expect(payload.provider).toBe("cloudflare");
@@ -26,13 +15,6 @@ export const portCoverage = (payload: Coverage): void => {
   expect(payload.fixture).toBe("ports");
   expect(payload.features).toEqual(portsCoverage.features);
   expect(payload.uncovered).toEqual(portsCoverage.uncovered);
-};
-
-export const tunnelCoverage = (payload: Coverage): void => {
-  expect(payload.provider).toBe("cloudflare");
-  expect(payload.fixture).toBe("tunnels");
-  expect(payload.features).toEqual(tunnelsCoverage.features);
-  expect(payload.uncovered).toEqual(tunnelsCoverage.uncovered);
 };
 
 export const rawCoverageCheck = (payload: Coverage): void => {
@@ -53,7 +35,6 @@ export const workflow = ({ body, response }: Result): void => {
   expect(body.capabilities.raw).toMatchObject({
     backup: "configured",
     buckets: "configured",
-    desktop: "configured",
     pty: true,
     tunnels: "dynamic",
     watching: true,
@@ -117,25 +98,6 @@ export const ports = ({ body, response }: PortResult): void => {
   expect(body.response.text).toContain("hello from cloudflare port");
 };
 
-export const tunnels = ({ body, response }: TunnelResult): void => {
-  expect(response.ok).toBe(true);
-  expect(body.error).toBeUndefined();
-  expect(body.ok).toBe(true);
-  expect(body.provider).toBe("cloudflare");
-  expect(body.capabilities.raw).toMatchObject({
-    backup: "configured",
-    buckets: "configured",
-    desktop: "configured",
-    pty: true,
-    tunnels: "dynamic",
-    watching: true,
-  });
-  expect(body.capabilities.raw).not.toHaveProperty("network");
-  expect(body.tunnel.port).toBe(8080);
-  expect(body.tunnel.url).toMatch(/^https:\/\/.+\.trycloudflare\.com$/u);
-  expect(body.tunnel.hostname).toMatch(/^[a-z0-9-]+\.trycloudflare\.com$/u);
-};
-
 export const raw = ({ body, response }: RawResult): void => {
   expect(response.ok).toBe(true);
   expect(body.error).toBeUndefined();
@@ -144,7 +106,6 @@ export const raw = ({ body, response }: RawResult): void => {
   expect(body.capabilities.raw).toMatchObject({
     backup: "configured",
     buckets: "configured",
-    desktop: "configured",
     interpreter: true,
     sessions: true,
     watching: true,
@@ -165,7 +126,6 @@ export const raw = ({ body, response }: RawResult): void => {
   expect(body.raw).toEqual({
     backup: true,
     buckets: true,
-    desktop: true,
     git: true,
     pty: true,
   });

@@ -43,7 +43,6 @@ export const handleRaw = async (env: Env): Promise<Response> => {
     const rawMethods = {
       backup: typeof raw.createBackup === "function",
       buckets: typeof raw.mountBucket === "function",
-      desktop: typeof raw.desktop.status === "function",
       git: typeof raw.gitCheckout === "function",
       pty: typeof session.terminal === "function",
     };
@@ -59,7 +58,6 @@ export const handleRaw = async (env: Env): Promise<Response> => {
       result === "3",
       rawMethods.backup,
       rawMethods.buckets,
-      rawMethods.desktop,
       rawMethods.git,
       rawMethods.pty,
     ].every(Boolean);

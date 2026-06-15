@@ -1,5 +1,3 @@
-import type { Sandbox as CloudflareSandbox } from "@cloudflare/sandbox";
-import { proxyToSandbox } from "@cloudflare/sandbox";
 import type { Result, Sandbox as CoreSandbox } from "@sandbox-sdk/core";
 
 import { handleRaw } from "./raw";
@@ -10,13 +8,11 @@ export { Sandbox } from "@cloudflare/sandbox";
 
 const liveRoute = "/sandbox-sdk/live";
 const portsRoute = "/sandbox-sdk/ports";
-const tunnelsRoute = "/sandbox-sdk/tunnels";
 const rawRoute = "/sandbox-sdk/raw";
 const cleanupRoute = "/sandbox-sdk/cleanup";
 const message = "hello from cloudflare";
 const port = 8080;
 const portMessage = "hello from cloudflare port";
-const portToken = "verify";
 const waitMs = 500;
 const serverFile = "server.js";
 const server = `const http = require("http");
@@ -54,34 +50,6 @@ const buffer = (value: string): ArrayBuffer => {
 
 const decode = (value: Uint8Array): string => new TextDecoder().decode(value);
 
-const body = async (request: Request): Promise<{ hostname?: string }> => {
-  if (request.headers.get("content-type")?.includes("application/json")) {
-    return (await request.json()) as { hostname?: string };
-  }
-  return {};
-};
-
-const custom = (value: string | undefined): string | undefined => {
-  const host = value?.trim();
-  if (!host || host.endsWith(".workers.dev")) {
-    return;
-  }
-  return host;
-};
-
-const hostname = async (
-  request: Request,
-  env: Env,
-  url: URL
-): Promise<string | undefined> => {
-  const input = await body(request);
-  return (
-    custom(input.hostname) ??
-    custom(env.SANDBOX_SDK_PREVIEW_HOST) ??
-    custom(url.hostname)
-  );
-};
-
 const failure = (error: unknown): Response =>
   json(
     {
@@ -110,16 +78,7 @@ const waitLocal = async (
   throw new Error("port server did not become ready");
 };
 
-const handlePorts = async (
-  request: Request,
-  env: Env,
-  url: URL
-): Promise<Response> => {
-  const host = await hostname(request, env, url);
-  if (host === undefined) {
-    return json({ error: "missing_preview_host", ok: false }, 422);
-  }
-
+const handlePorts = async (env: Env): Promise<Response> => {
   const id = crypto.randomUUID();
   const cwd = `/workspace/${id}`;
   const file = `${cwd}/index.html`;
@@ -129,12 +88,12 @@ const handlePorts = async (
   let local: Result | undefined;
 
   try {
-    sandbox = await instance(env, cwd, id, host);
+    sandbox = await instance(env, cwd, id);
     await sandbox.files.write(file, portMessage);
     await sandbox.files.write(serverPath, server);
     await sandbox.process.spawnShell(`node ${serverFile}`, { cwd });
     local = await waitLocal(sandbox, cwd);
-    preview = await sandbox.ports.expose(port, { token: portToken });
+    preview = await sandbox.ports.expose(port);
 
     return json({
       capabilities: sandbox.capabilities,
@@ -158,51 +117,6 @@ const handlePorts = async (
   }
 };
 
-const handleTunnels = async (env: Env): Promise<Response> => {
-  const id = crypto.randomUUID();
-  const cwd = `/workspace/${id}`;
-  const file = `${cwd}/index.html`;
-  const serverPath = `${cwd}/${serverFile}`;
-  let sandbox: CoreSandbox | undefined;
-  let local: Result | undefined;
-
-  try {
-    sandbox = await instance(env, cwd, id);
-    await sandbox.files.write(file, portMessage);
-    await sandbox.files.write(serverPath, server);
-    await sandbox.process.spawnShell(`node ${serverFile}`, { cwd });
-    local = await waitLocal(sandbox, cwd);
-    const raw = sandbox.raw as CloudflareSandbox<unknown>;
-    const tunnel = await raw.tunnels.get(port);
-
-    return json({
-      capabilities: sandbox.capabilities,
-      id,
-      local,
-      ok:
-        local.ok &&
-        tunnel.port === port &&
-        tunnel.url.startsWith("https://") &&
-        tunnel.hostname.endsWith(".trycloudflare.com"),
-      provider: sandbox.provider,
-      tunnel: {
-        hostname: tunnel.hostname,
-        port: tunnel.port,
-        url: tunnel.url,
-      },
-    });
-  } catch (error) {
-    return json(
-      {
-        error: error instanceof Error ? error.message : "unknown",
-        local,
-        ok: false,
-      },
-      500
-    );
-  }
-};
-
 const handleCleanup = async (request: Request, env: Env): Promise<Response> => {
   const input = (await request.json()) as { id?: string };
   if (!input.id) {
@@ -218,7 +132,7 @@ const handleCleanup = async (request: Request, env: Env): Promise<Response> => {
   }
 };
 
-const handleLive = async (env: Env, url: URL): Promise<Response> => {
+const handleLive = async (env: Env): Promise<Response> => {
   const id = crypto.randomUUID();
   const cwd = `/workspace/${id}`;
   const file = `${cwd}/message.txt`;
@@ -233,7 +147,7 @@ const handleLive = async (env: Env, url: URL): Promise<Response> => {
   let sandbox: CoreSandbox | undefined;
 
   try {
-    sandbox = await instance(env, cwd, id, url.hostname, {
+    sandbox = await instance(env, cwd, id, {
       SANDBOX_SDK_CREATE: "create-env",
     });
     await sandbox.files.mkdir(cwd);
@@ -343,7 +257,6 @@ const guard = (request: Request, env: Env, url: URL): Response | undefined => {
   if (
     url.pathname !== liveRoute &&
     url.pathname !== portsRoute &&
-    url.pathname !== tunnelsRoute &&
     url.pathname !== rawRoute &&
     url.pathname !== cleanupRoute
   ) {
@@ -361,12 +274,7 @@ const guard = (request: Request, env: Env, url: URL): Response | undefined => {
 };
 
 export default {
-  async fetch(request, env): Promise<Response> {
-    const proxy = await proxyToSandbox(request, env);
-    if (proxy) {
-      return proxy;
-    }
-
+  fetch(request, env): Promise<Response> | Response {
     const url = new URL(request.url);
     const blocked = guard(request, env, url);
     if (blocked) {
@@ -374,11 +282,7 @@ export default {
     }
 
     if (url.pathname === portsRoute) {
-      return handlePorts(request, env, url);
-    }
-
-    if (url.pathname === tunnelsRoute) {
-      return handleTunnels(env);
+      return handlePorts(env);
     }
 
     if (url.pathname === rawRoute) {
@@ -389,6 +293,6 @@ export default {
       return handleCleanup(request, env);
     }
 
-    return handleLive(env, url);
+    return handleLive(env);
   },
 } satisfies ExportedHandler<Env>;

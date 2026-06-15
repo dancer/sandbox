@@ -131,7 +131,7 @@ async function tuneNetwork(sandbox: Sandbox<VercelRaw>) {
 Use `supportsRaw(sandbox, "...")` and `raw` for features that do not have one
 clean cross-provider meaning:
 Cloudflare sessions, code contexts, quick tunnels, and configured backups,
-bucket mounts, and desktop images; Vercel network policy and timeout extension;
+and bucket mounts; Vercel network policy and timeout extension;
 Vercel named sandbox list, get, getOrCreate, fork, dynamic updates, sessions,
 snapshot lists, snapshot trees, proxy helpers, and native filesystem helpers;
 E2B Git, MCP, PTY, create-time network settings, and mounted volumes; Daytona
@@ -262,27 +262,16 @@ WebSocket ownership contract as the Worker binding adapter.
 `apps/cloudflare` is a deployable Worker fixture for the Cloudflare live test.
 It exports the Sandbox Durable Object class, binds it in `wrangler.jsonc`, and
 validates file operations, command execution, shell execution, background
-process spawning, preview ports, and raw quick tunnels through the shared
-adapter.
+process spawning, and reachable quick tunnels through the shared adapter.
 
-Cloudflare's native stream write path currently requires the provider SDK's RPC
-transport. `@sandbox-sdk/cloudflare` normalizes non-string writes through base64
-content so `files.write()` works on the default transport without app-specific
-Cloudflare transport knowledge.
-
-Cloudflare port previews need custom-domain wildcard routing in production.
-Deploying to `.workers.dev` is enough for the live validation endpoint, but not
-for production `ports.expose()` preview URLs.
-Preview ports must follow Cloudflare's provider rules: ports in 1024-65535,
-excluding reserved port 3000.
-Set `CLOUDFLARE_SANDBOX_PREVIEW_HOST` to run the optional Cloudflare port
-verification test against a custom preview host.
-
-The verifier uses `SANDBOX_TRANSPORT=rpc` because Cloudflare quick tunnels live
-on the native `sandbox.raw.tunnels` API and require RPC transport upstream.
-Use the zone apex as the preview host when possible so generated preview
-subdomains are covered by the normal wildcard certificate. Subdomain preview
-hosts need matching wildcard TLS coverage.
+`@sandbox-sdk/cloudflare` enforces Cloudflare's RPC transport so stream writes,
+stream reads, sessions, and tunnels work without app-specific transport
+configuration. `ports.expose()` returns a zero-config HTTPS quick tunnel by
+default. Set the adapter `tunnel` option to request a stable named tunnel when
+the Worker has the upstream Cloudflare account and zone credentials configured.
+Quick tunnels are public and ephemeral, so do not treat the generated URL as
+authentication. Add authentication inside the exposed service when its content
+is sensitive. Ports must be in 1024-65535, excluding reserved port 3000.
 
 ## API Reference
 
@@ -320,7 +309,7 @@ The CodeSandbox live verifier runs with Node because the upstream
 CodeSandbox config and replay tests.
 
 - Blaxel: `BL_WORKSPACE` with `BL_API_KEY` or `BL_CLIENT_CREDENTIALS`, or Blaxel CLI config; set `BL_REGION` when you need a specific region
-- Cloudflare: deploy `apps/cloudflare` and set `CLOUDFLARE_SANDBOX_WORKER_URL` and `CLOUDFLARE_SANDBOX_TOKEN`; set `CLOUDFLARE_SANDBOX_PREVIEW_HOST` to verify `ports.expose()`
+- Cloudflare: deploy `apps/cloudflare` and set `CLOUDFLARE_SANDBOX_WORKER_URL` and `CLOUDFLARE_SANDBOX_TOKEN`
 - CodeSandbox: `CSB_API_KEY`
 - Daytona: `DAYTONA_API_KEY`
 - E2B: `E2B_API_KEY` or `E2B_ACCESS_TOKEN`

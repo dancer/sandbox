@@ -57,20 +57,6 @@ export type PortPayload = Readonly<{
   }>;
 }>;
 
-export type TunnelPayload = Readonly<{
-  capabilities: Record<string, unknown>;
-  error?: string;
-  id: string;
-  local: Command;
-  ok: boolean;
-  provider: string;
-  tunnel: Readonly<{
-    hostname: string;
-    port: number;
-    url: string;
-  }>;
-}>;
-
 export type RawPayload = Readonly<{
   capabilities: Record<string, unknown>;
   code: Readonly<{
@@ -85,7 +71,6 @@ export type RawPayload = Readonly<{
   raw: Readonly<{
     backup: boolean;
     buckets: boolean;
-    desktop: boolean;
     git: boolean;
     pty: boolean;
   }>;
@@ -107,11 +92,6 @@ export type Result = Readonly<{
 
 export type PortResult = Readonly<{
   body: PortPayload;
-  response: Response;
-}>;
-
-export type TunnelResult = Readonly<{
-  body: TunnelPayload;
   response: Response;
 }>;
 
@@ -183,26 +163,6 @@ export const portsCoverage: Coverage = {
   ],
 };
 
-export const tunnelsCoverage: Coverage = {
-  features: [
-    "capabilities",
-    "process.spawnShell",
-    "raw.tunnels.get",
-    "tunnel.url",
-    "process.kill",
-    "sandbox.stop",
-  ],
-  fixture: "tunnels",
-  provider: "cloudflare",
-  uncovered: [
-    "files.list",
-    "ports.expose",
-    "process.exec",
-    "snapshots.create",
-    "snapshots.restore",
-  ],
-};
-
 export const rawCoverage: Coverage = {
   features: [
     "capabilities",
@@ -218,7 +178,6 @@ export const rawCoverage: Coverage = {
     "raw.session.terminal.method",
     "raw.createBackup.method",
     "raw.mountBucket.method",
-    "raw.desktop.status.method",
     "sandbox.stop",
   ],
   fixture: "raw",
@@ -230,13 +189,11 @@ export const rawCoverage: Coverage = {
     "raw.unmountBucket",
     "raw.terminal.websocket",
     "raw.gitCheckout",
-    "raw.desktop.runtime",
   ],
 };
 
 const liveRoute = "/sandbox-sdk/live";
 const portsRoute = "/sandbox-sdk/ports";
-const tunnelsRoute = "/sandbox-sdk/tunnels";
 const rawRoute = "/sandbox-sdk/raw";
 const cleanupRoute = "/sandbox-sdk/cleanup";
 const attempts = 2;
@@ -312,9 +269,6 @@ export const enabled = (): boolean =>
   env("CLOUDFLARE_SANDBOX_WORKER_URL") !== undefined &&
   env("CLOUDFLARE_SANDBOX_TOKEN") !== undefined;
 
-export const portsEnabled = (): boolean =>
-  enabled() && env("CLOUDFLARE_SANDBOX_PREVIEW_HOST") !== undefined;
-
 export const execute = async (): Promise<Result> => {
   const response = await request(liveRoute, {
     headers: headers(),
@@ -336,9 +290,6 @@ export const execute = async (): Promise<Result> => {
 
 export const executePorts = async (): Promise<PortResult> => {
   const response = await request(portsRoute, {
-    body: JSON.stringify({
-      hostname: required("CLOUDFLARE_SANDBOX_PREVIEW_HOST"),
-    }),
     headers: headers(),
     method: "POST",
   });
@@ -373,39 +324,6 @@ export const executePorts = async (): Promise<PortResult> => {
     if (error instanceof Error && error.message.includes("json")) {
       throw new Error(
         `cloudflare port verification returned non-json response with status ${response.status}`,
-        { cause: error }
-      );
-    }
-
-    throw error;
-  }
-};
-
-export const executeTunnels = async (): Promise<TunnelResult> => {
-  const response = await request(tunnelsRoute, {
-    headers: headers(),
-    method: "POST",
-  });
-
-  try {
-    const body = (await response.json()) as TunnelPayload;
-    if (!response.ok) {
-      return { body, response };
-    }
-
-    try {
-      return { body, response };
-    } finally {
-      await request(cleanupRoute, {
-        body: JSON.stringify({ id: body.id }),
-        headers: headers(),
-        method: "POST",
-      });
-    }
-  } catch (error) {
-    if (error instanceof Error && error.message.includes("json")) {
-      throw new Error(
-        `cloudflare tunnel verification returned non-json response with status ${response.status}`,
         { cause: error }
       );
     }
@@ -453,26 +371,10 @@ export const portsFixture = (input: PortResult): Fixture<PortPayload> => ({
     id: "sandbox",
     port: {
       ...input.body.port,
-      url: "https://8080-sandbox-fixture-preview.example.com",
-    },
-  },
-  coverage: portsCoverage,
-  status: input.response.status,
-});
-
-export const tunnelsFixture = (
-  input: TunnelResult
-): Fixture<TunnelPayload> => ({
-  body: {
-    ...input.body,
-    id: "sandbox",
-    tunnel: {
-      ...input.body.tunnel,
-      hostname: "sandbox-fixture.trycloudflare.com",
       url: "https://sandbox-fixture.trycloudflare.com",
     },
   },
-  coverage: tunnelsCoverage,
+  coverage: portsCoverage,
   status: input.response.status,
 });
 

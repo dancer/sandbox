@@ -63,16 +63,14 @@ export type Cloudflare = Readonly<{
   cwd?: string;
   /** default environment variables written to the sandbox when it is created */
   env?: Readonly<Record<string, string>>;
-  /** custom domain used for preview URLs, required for `ports.expose` */
-  hostname?: string;
   /** stable sandbox id used when create input omits id */
   id?: string;
   /** list options forwarded to Cloudflare `listFiles` */
   list?: ListFilesOptions;
-  /** friendly preview name forwarded to Cloudflare `exposePort` */
-  name?: string;
-  /** low-level Cloudflare Sandbox options forwarded to `getSandbox` */
-  options?: SandboxOptions;
+  /** stable DNS label used for named tunnels created by `ports.expose` */
+  tunnel?: string;
+  /** low-level Cloudflare Sandbox options forwarded to `getSandbox` with RPC transport enforced */
+  options?: Omit<SandboxOptions, "transport">;
 }>;
 
 const provider = "cloudflare";
@@ -87,7 +85,6 @@ const capabilities: Capabilities = {
   raw: {
     backup: "configured",
     buckets: "configured",
-    desktop: "configured",
     git: true,
     interpreter: true,
     pty: true,
@@ -124,27 +121,15 @@ const base64 = (input: Uint8Array): string => {
   return btoa(chunks.join(""));
 };
 
-const stream = (content: Uint8Array): ReadableStream<Uint8Array> =>
-  new ReadableStream({
-    start(controller) {
-      controller.enqueue(content);
-      controller.close();
-    },
-  });
-
 const readable = (input: Input): input is ReadableStream<Uint8Array> =>
   input instanceof ReadableStream;
-
-const rpc = (options: Cloudflare): boolean =>
-  options.options?.transport === "rpc";
 
 const write = async (
   raw: Native,
   path: string,
-  input: Input,
-  direct: boolean
+  input: Input
 ): Promise<void> => {
-  if (direct && readable(input)) {
+  if (readable(input)) {
     await raw.writeFile(path, input);
     return;
   }
@@ -192,34 +177,6 @@ const validatePort = (value: number): number => {
     provider,
     "Cloudflare preview ports must be integers from 1024 to 65535, excluding 3000",
     target === 3000 ? "unsupported" : "configuration"
-  );
-};
-
-const validateToken = (value?: string): void => {
-  if (value === undefined) {
-    return;
-  }
-
-  if (/^[a-z0-9_]{1,16}$/u.test(value)) {
-    return;
-  }
-
-  throw sandboxError(
-    provider,
-    "Cloudflare preview tokens must be 1 to 16 lowercase letters, numbers, or underscores",
-    "configuration"
-  );
-};
-
-const validateHostname = (value: string): void => {
-  if (!value.endsWith(".workers.dev")) {
-    return;
-  }
-
-  throw sandboxError(
-    provider,
-    "Cloudflare preview URLs require a custom domain because workers.dev does not support wildcard subdomains",
-    "unsupported"
   );
 };
 
@@ -524,126 +481,114 @@ const createSandbox = <ProviderRaw>(
   raw: Native,
   cwd: string,
   options: Cloudflare
-): Sandbox<ProviderRaw> => {
-  const direct = rpc(options);
-
-  return {
-    capabilities,
-    cwd,
-    files: {
-      exists: async (path) => {
-        const output = await wrap(
-          () => raw.exists(sandboxPath(cwd, path)),
-          "exists"
-        );
-        return output.exists;
-      },
-      list: async (path = cwd) => {
-        const target = sandboxPath(cwd, path);
-        const entries = await wrap(
-          () => raw.listFiles(target, options.list),
-          "list"
-        );
-        return entries.files
-          .map(
-            (entry): Entry => ({
-              kind: entry.type === "directory" ? "directory" : "file",
-              modified: new Date(entry.modifiedAt),
-              path: entry.absolutePath,
-              size: entry.size,
-            })
-          )
-          .toSorted((left, right) => left.path.localeCompare(right.path));
-      },
-      mkdir: async (path) => {
-        await wrap(
-          () => raw.mkdir(sandboxPath(cwd, path), { recursive: true }),
-          "mkdir"
-        );
-      },
-      read: async (path) => {
-        const output = await wrap(
-          () => raw.readFile(sandboxPath(cwd, path), { encoding: "base64" }),
-          "read"
-        );
-        return binary(output.content);
-      },
-      remove: async (path) => {
-        await wrap(() => raw.deleteFile(sandboxPath(cwd, path)), "remove");
-      },
-      stream: async (path) => {
-        if (direct) {
-          const output = await wrap(
-            () => raw.readFile(sandboxPath(cwd, path), { encoding: "none" }),
-            "stream"
-          );
-          return output.content;
-        }
-
-        const output = await wrap(
-          () => raw.readFile(sandboxPath(cwd, path), { encoding: "base64" }),
-          "stream"
-        );
-        return stream(binary(output.content));
-      },
-      text: async (path) => {
-        const output = await wrap(
-          () => raw.readFile(sandboxPath(cwd, path), { encoding: "utf-8" }),
-          "text"
-        );
-        return output.content;
-      },
-      write: (path, input) =>
-        wrap(() => write(raw, sandboxPath(cwd, path), input, direct), "write"),
+): Sandbox<ProviderRaw> => ({
+  capabilities,
+  cwd,
+  files: {
+    exists: async (path) => {
+      const output = await wrap(
+        () => raw.exists(sandboxPath(cwd, path)),
+        "exists"
+      );
+      return output.exists;
     },
-    id: options.id ?? "default",
-    ports: {
-      expose: async (value, input) => {
-        const target = validatePort(value);
-        const hostname = input?.host ?? options.hostname;
-        if (!hostname) {
-          throw sandboxError(
-            provider,
-            "Cloudflare preview URLs require a hostname",
-            "unsupported"
-          );
-        }
-        validateHostname(hostname);
-        validateToken(input?.token);
-        const output = await wrap(
-          () =>
-            raw.exposePort(target, {
-              hostname,
-              ...(options.name === undefined ? {} : { name: options.name }),
-              ...(input?.token === undefined ? {} : { token: input.token }),
-            }),
-          "port exposure"
+    list: async (path = cwd) => {
+      const target = sandboxPath(cwd, path);
+      const entries = await wrap(
+        () => raw.listFiles(target, options.list),
+        "list"
+      );
+      return entries.files
+        .map(
+          (entry): Entry => ({
+            kind: entry.type === "directory" ? "directory" : "file",
+            modified: new Date(entry.modifiedAt),
+            path: entry.absolutePath,
+            size: entry.size,
+          })
+        )
+        .toSorted((left, right) => left.path.localeCompare(right.path));
+    },
+    mkdir: async (path) => {
+      await wrap(
+        () => raw.mkdir(sandboxPath(cwd, path), { recursive: true }),
+        "mkdir"
+      );
+    },
+    read: async (path) => {
+      const output = await wrap(
+        () => raw.readFile(sandboxPath(cwd, path), { encoding: "base64" }),
+        "read"
+      );
+      return binary(output.content);
+    },
+    remove: async (path) => {
+      await wrap(() => raw.deleteFile(sandboxPath(cwd, path)), "remove");
+    },
+    stream: async (path) => {
+      const output = await wrap(
+        () => raw.readFile(sandboxPath(cwd, path), { encoding: "none" }),
+        "stream"
+      );
+      return output.content;
+    },
+    text: async (path) => {
+      const output = await wrap(
+        () => raw.readFile(sandboxPath(cwd, path), { encoding: "utf-8" }),
+        "text"
+      );
+      return output.content;
+    },
+    write: (path, input) =>
+      wrap(() => write(raw, sandboxPath(cwd, path), input), "write"),
+  },
+  id: options.id ?? "default",
+  ports: {
+    expose: async (value, input) => {
+      const target = validatePort(value);
+      if (
+        input?.host !== undefined ||
+        input?.token !== undefined ||
+        (input?.protocol !== undefined && input.protocol !== "https")
+      ) {
+        throw sandboxError(
+          provider,
+          "Cloudflare tunnels only support the default HTTPS URL through ports.expose. Use sandbox.raw for provider-specific networking.",
+          "unsupported"
         );
-        return {
-          port: target,
-          url: output.url,
-        };
-      },
+      }
+      const output = await wrap(
+        () =>
+          raw.tunnels.get(
+            target,
+            options.tunnel === undefined ? undefined : { name: options.tunnel }
+          ),
+        "port exposure"
+      );
+      return {
+        port: target,
+        url: output.url,
+      };
     },
-    process: {
-      exec: (executable, args = [], run = {}) =>
-        execute(raw, cwd, executable, args, run),
-      shell: (script, run = {}) => executeLine(raw, cwd, script, run),
-      spawn: (executable, args = [], run = {}) =>
-        spawn(raw, cwd, executable, args, run),
-      spawnShell: (script, run = {}) => spawnLine(raw, cwd, script, run),
-    },
-    provider,
-    raw: raw as ProviderRaw,
-    snapshots: {
-      create: () => rejectUnsupported("snapshots"),
-      restore: () => rejectUnsupported("snapshots"),
-    },
-    stop: async () => {
-      await wrap(() => raw.destroy(), "stop");
-    },
-  };
-};
+  },
+  process: {
+    exec: (executable, args = [], run = {}) =>
+      execute(raw, cwd, executable, args, run),
+    shell: (script, run = {}) => executeLine(raw, cwd, script, run),
+    spawn: (executable, args = [], run = {}) =>
+      spawn(raw, cwd, executable, args, run),
+    spawnShell: (script, run = {}) => spawnLine(raw, cwd, script, run),
+  },
+  provider,
+  raw: raw as ProviderRaw,
+  snapshots: {
+    create: () => rejectUnsupported("snapshots"),
+    restore: () => rejectUnsupported("snapshots"),
+  },
+  stop: async () => {
+    await wrap(() => raw.destroy(), "stop");
+  },
+});
 
 /** create a Cloudflare Sandbox adapter from a Worker binding */
 export const cloudflare = <ProviderRaw = unknown>(
@@ -661,6 +606,7 @@ export const cloudflare = <ProviderRaw = unknown>(
       {
         normalizeId: true,
         ...options.options,
+        transport: "rpc",
       }
     );
     const env = { ...options.env, ...input.env };

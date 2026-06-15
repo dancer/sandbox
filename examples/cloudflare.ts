@@ -9,12 +9,10 @@ type Env = Readonly<{
 }>;
 
 export default {
-  async fetch(request, env): Promise<Response> {
-    const { hostname } = new URL(request.url);
+  async fetch(_request, env): Promise<Response> {
     const sandbox = await create({
       adapter: cloudflare({
         binding: env.Sandbox,
-        hostname,
       }),
       cwd: "/workspace",
     });

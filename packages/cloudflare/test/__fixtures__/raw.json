@@ -10,7 +10,6 @@
       "raw": {
         "backup": "configured",
         "buckets": "configured",
-        "desktop": "configured",
         "git": true,
         "interpreter": true,
         "pty": true,
@@ -34,7 +33,6 @@
     "raw": {
       "backup": true,
       "buckets": true,
-      "desktop": true,
       "git": true,
       "pty": true
     },
@@ -63,7 +61,6 @@
       "raw.session.terminal.method",
       "raw.createBackup.method",
       "raw.mountBucket.method",
-      "raw.desktop.status.method",
       "sandbox.stop"
     ],
     "fixture": "raw",
@@ -74,8 +71,7 @@
       "raw.mountBucket",
       "raw.unmountBucket",
       "raw.terminal.websocket",
-      "raw.gitCheckout",
-      "raw.desktop.runtime"
+      "raw.gitCheckout"
     ]
   },
   "status": 200

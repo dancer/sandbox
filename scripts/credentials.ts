@@ -128,18 +128,6 @@ const validUrl = (value: string): boolean => {
   }
 };
 
-const validHost = (value: string): boolean => {
-  if (value.includes("/") || value.endsWith(".workers.dev")) {
-    return false;
-  }
-  try {
-    const url = new URL(`https://${value}`);
-    return url.hostname.length > 0;
-  } catch {
-    return false;
-  }
-};
-
 const value = (name: string, context: Context): string | undefined =>
   envValue(name, context);
 
@@ -214,7 +202,6 @@ const blaxelRow = (context: Context): Row => {
 const cloudflareRow = (context: Context): Row => {
   const worker = value("CLOUDFLARE_SANDBOX_WORKER_URL", context);
   const token = has("CLOUDFLARE_SANDBOX_TOKEN", context);
-  const host = value("CLOUDFLARE_SANDBOX_PREVIEW_HOST", context);
   const workflow = worker !== undefined && token;
   const workflowPartial = worker !== undefined || token;
 
@@ -234,23 +221,7 @@ const cloudflareRow = (context: Context): Row => {
         : missing("CLOUDFLARE_SANDBOX_WORKER_URL and CLOUDFLARE_SANDBOX_TOKEN")
     );
   }
-  if (host !== undefined && !validHost(host)) {
-    return row(
-      "cloudflare",
-      "bun run verify:cloudflare",
-      partial(
-        "workflow ready, CLOUDFLARE_SANDBOX_PREVIEW_HOST must be a custom hostname without protocol"
-      )
-    );
-  }
-  if (host !== undefined) {
-    return row("cloudflare", "bun run verify:cloudflare", ready());
-  }
-  return row(
-    "cloudflare",
-    "bun run verify:cloudflare",
-    partial("workflow ready, add CLOUDFLARE_SANDBOX_PREVIEW_HOST for ports")
-  );
+  return row("cloudflare", "bun run verify:cloudflare", ready());
 };
 
 const daytonaRow = (context: Context): Row =>

@@ -10,7 +10,6 @@
       "raw": {
         "backup": "configured",
         "buckets": "configured",
-        "desktop": "configured",
         "git": true,
         "interpreter": true,
         "pty": true,
@@ -33,7 +32,7 @@
     "ok": true,
     "port": {
       "port": 8080,
-      "url": "https://8080-sandbox-fixture-preview.example.com"
+      "url": "https://sandbox-fixture.trycloudflare.com"
     },
     "provider": "cloudflare",
     "response": {

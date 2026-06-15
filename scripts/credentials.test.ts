@@ -56,54 +56,26 @@ describe("credentialRows", () => {
     expect(rows.every((entry) => entry.status === "ready")).toBe(true);
   });
 
-  test("reports Cloudflare workflow as partial until preview host is present", () => {
+  test("reports Cloudflare ready with worker credentials", () => {
     expect(
       row("cloudflare", {
         CLOUDFLARE_SANDBOX_TOKEN: "token",
         CLOUDFLARE_SANDBOX_WORKER_URL: "https://verify.example.com",
       })
     ).toMatchObject({
-      details: "workflow ready, add CLOUDFLARE_SANDBOX_PREVIEW_HOST for ports",
-      status: "partial",
+      details: "ready",
+      status: "ready",
     });
   });
 
-  test("reports partial Cloudflare workflow before preview host validation", () => {
+  test("reports partial Cloudflare credentials without a worker url", () => {
     expect(
       row("cloudflare", {
-        CLOUDFLARE_SANDBOX_PREVIEW_HOST: "verify.sandbox-sdk.workers.dev",
         CLOUDFLARE_SANDBOX_TOKEN: "token",
       })
     ).toMatchObject({
       details: "CLOUDFLARE_SANDBOX_WORKER_URL with CLOUDFLARE_SANDBOX_TOKEN",
       status: "partial",
-    });
-  });
-
-  test("rejects workers.dev as a Cloudflare preview host", () => {
-    expect(
-      row("cloudflare", {
-        CLOUDFLARE_SANDBOX_PREVIEW_HOST: "verify.sandbox-sdk.workers.dev",
-        CLOUDFLARE_SANDBOX_TOKEN: "token",
-        CLOUDFLARE_SANDBOX_WORKER_URL: "https://verify.sandbox-sdk.workers.dev",
-      })
-    ).toMatchObject({
-      details:
-        "workflow ready, CLOUDFLARE_SANDBOX_PREVIEW_HOST must be a custom hostname without protocol",
-      status: "partial",
-    });
-  });
-
-  test("reports Cloudflare ready when workflow and port host are ready", () => {
-    expect(
-      row("cloudflare", {
-        CLOUDFLARE_SANDBOX_PREVIEW_HOST: "preview.sandbox-sdk.sh",
-        CLOUDFLARE_SANDBOX_TOKEN: "token",
-        CLOUDFLARE_SANDBOX_WORKER_URL: "https://verify.sandbox-sdk.workers.dev",
-      })
-    ).toMatchObject({
-      details: "ready",
-      status: "ready",
     });
   });
 

@@ -33,10 +33,9 @@ unauthenticated.
 ## routes
 
 - `/sandbox-sdk/live` verifies normalized files, process execution, environment, and streaming behavior
-- `/sandbox-sdk/ports` verifies `ports.expose()` against a custom preview host
-- `/sandbox-sdk/tunnels` verifies Cloudflare quick tunnels through `sandbox.raw`
+- `/sandbox-sdk/ports` verifies a reachable quick tunnel through `ports.expose()`
 - `/sandbox-sdk/raw` verifies raw sessions, code contexts, interpreter execution, retained change checks, and safe method presence for configured raw features
-- `/sandbox-sdk/cleanup` stops sandboxes created by preview and tunnel checks
+- `/sandbox-sdk/cleanup` stops sandboxes created by tunnel checks
 
 ## binding
 
@@ -69,27 +68,7 @@ export { Sandbox } from "@cloudflare/sandbox";
 
 ## ports
 
-The live workflow endpoint runs on `.workers.dev`, but the optional port
-verification test requires a custom domain with wildcard routing. `.workers.dev`
-does not support the wildcard subdomains required by `exposePort()`.
-
-Set the custom preview host locally before running the port verification:
-
-```bash
-export CLOUDFLARE_SANDBOX_PREVIEW_HOST="example.com"
-bun run verify:cloudflare
-```
-
-The Worker also accepts `SANDBOX_SDK_PREVIEW_HOST` as an environment value. The
-test sends `CLOUDFLARE_SANDBOX_PREVIEW_HOST` in the authenticated request so the
-same deployed Worker can validate multiple preview host setups.
-
-If you test ports locally with `wrangler dev`, add `EXPOSE` directives for
-every port you plan to expose in `Dockerfile`. Cloudflare accepts ports
-1024-65535 and reserves port `3000` for the Sandbox runtime.
-
-For easiest TLS setup, use the zone apex as the preview host so generated
-preview URLs are one label under the zone, such as
-`8080-sandbox-token.example.com`. A subdomain preview host such as
-`preview.example.com` generates deeper hostnames and needs matching wildcard TLS
-coverage for that subdomain.
+The adapter uses Cloudflare's RPC transport and quick tunnels, so the live port
+verification only needs the Worker URL and bearer token. No wildcard route or
+custom preview hostname is required. Cloudflare accepts ports 1024-65535 and
+reserves port `3000` for the Sandbox runtime.
