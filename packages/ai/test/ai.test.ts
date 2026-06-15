@@ -3,7 +3,6 @@ import { expect, test } from "bun:test";
 import { RunContext } from "@openai/agents";
 import { create, isSandboxError } from "@sandbox-sdk/core";
 import { local } from "@sandbox-sdk/local";
-import type { Experimental_Sandbox as ExperimentalSandbox } from "ai";
 
 import { claude } from "../src/claude";
 import type { SandboxSession } from "../src/index";
@@ -146,7 +145,6 @@ test("tools expose an ai sdk sandbox shape", async () => {
     timeout: 10_000,
   });
   const agent: SandboxSession = kit.sandbox;
-  const legacy: ExperimentalSandbox = kit.sandbox;
   const ai = aisdk(kit);
 
   const output = await agent.run({
@@ -154,7 +152,7 @@ test("tools expose an ai sdk sandbox shape", async () => {
     env: { SANDBOX_VALUE: "ai" },
     workingDirectory: "/workspace",
   });
-  const command = await legacy.runCommand({
+  const command = await kit.sandbox.runCommand({
     command: "printf run",
     workingDirectory: "/workspace",
   });
@@ -245,7 +243,7 @@ test("ai sdk sandbox process kill is idempotent", async () => {
 
 test("ai sdk sandbox shape reads and writes files", async () => {
   const sandbox = await create({ adapter: local(), cwd: "/workspace" });
-  const agent: ExperimentalSandbox = tools(sandbox, {
+  const agent: SandboxSession = tools(sandbox, {
     allow: ["read", "write", "list", "exec"],
   }).sandbox;
   const stream = new ReadableStream<Uint8Array>({

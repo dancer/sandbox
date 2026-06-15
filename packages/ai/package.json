@@ -46,7 +46,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "prepack": "bun run build",
-    "test": "bun test test"
+    "test": "bun test test",
+    "typecheck": "tsc -p test/tsconfig.json"
   },
   "dependencies": {
     "@sandbox-sdk/core": "workspace:*"
@@ -55,7 +56,8 @@
     "@anthropic-ai/claude-agent-sdk": "^0.3.145",
     "@openai/agents": "^0.11.4",
     "@sandbox-sdk/local": "workspace:*",
-    "ai": "^6.0.190",
+    "ai": "^6.0.205",
+    "ai-v7": "npm:ai@7.0.0-canary.174",
     "typescript": "^6.0.3",
     "zod": "^4.3.6"
   },
