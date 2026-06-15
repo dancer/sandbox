@@ -96,8 +96,9 @@ live("blaxel exposes advertised raw capabilities", async () => {
     );
 
     try {
+      await delay(1000);
       await sandbox.files.write(`${cwd}/watched.txt`, "watch");
-      await waitFor(() => watched, "blaxel file watch");
+      await waitFor(() => watched, "blaxel file watch", 20_000);
     } finally {
       handle.close();
     }

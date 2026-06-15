@@ -203,6 +203,9 @@ const rawRoute = "/sandbox-sdk/raw";
 const cleanupRoute = "/sandbox-sdk/cleanup";
 const attempts = 2;
 const timeout = 90_000;
+const previewTimeout = 10_000;
+const previews = 30;
+const tunnels = 3;
 
 const env = (name: string): string | undefined => {
   const value = process.env[name]?.trim();
@@ -264,7 +267,7 @@ const previewRequest = async (
     path: `${url.pathname}${url.search}`,
     port: 443,
   });
-  client.setTimeout(timeout, () => {
+  client.setTimeout(previewTimeout, () => {
     client.destroy(new Error("cloudflare preview request timed out"));
   });
   client.end();
@@ -288,7 +291,7 @@ const preview = async (value: string): Promise<PortPayload["response"]> => {
   resolver.setServers(["1.1.1.1", "1.0.0.1"]);
   let failure: unknown;
 
-  for (let attempt = 0; attempt < 60; attempt += 1) {
+  for (let attempt = 0; attempt < previews; attempt += 1) {
     try {
       const addresses = await resolver.resolve4(url.hostname);
       for (const address of addresses) {
@@ -333,42 +336,52 @@ export const execute = async (): Promise<Result> => {
 };
 
 export const executePorts = async (): Promise<PortResult> => {
-  const response = await request(portsRoute, {
-    headers: headers(),
-    method: "POST",
-  });
+  let failure: unknown;
 
-  try {
-    const body = (await response.json()) as PortPayload;
-    if (!response.ok) {
-      return { body, response };
-    }
+  for (let attempt = 0; attempt < tunnels; attempt += 1) {
+    const response = await request(portsRoute, {
+      headers: headers(),
+      method: "POST",
+    });
 
     try {
-      return {
-        body: {
-          ...body,
-          response: await preview(body.port.url),
-        },
-        response,
-      };
-    } finally {
-      await request(cleanupRoute, {
-        body: JSON.stringify({ id: body.id }),
-        headers: headers(),
-        method: "POST",
-      });
-    }
-  } catch (error) {
-    if (error instanceof Error && error.message.includes("json")) {
-      throw new Error(
-        `cloudflare port verification returned non-json response with status ${response.status}`,
-        { cause: error }
-      );
-    }
+      const body = (await response.json()) as PortPayload;
+      if (!response.ok) {
+        return { body, response };
+      }
 
-    throw error;
+      try {
+        return {
+          body: {
+            ...body,
+            response: await preview(body.port.url),
+          },
+          response,
+        };
+      } catch (error) {
+        failure = error;
+      } finally {
+        await request(cleanupRoute, {
+          body: JSON.stringify({ id: body.id }),
+          headers: headers(),
+          method: "POST",
+        });
+      }
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("json")) {
+        throw new Error(
+          `cloudflare port verification returned non-json response with status ${response.status}`,
+          { cause: error }
+        );
+      }
+
+      throw error;
+    }
   }
+
+  throw new Error("cloudflare tunnel verification exhausted fresh tunnels", {
+    cause: failure,
+  });
 };
 
 export const executeRaw = async (): Promise<RawResult> => {
