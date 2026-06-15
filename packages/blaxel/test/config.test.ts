@@ -3,7 +3,7 @@ import { expect, test } from "bun:test";
 import { SandboxInstance } from "@blaxel/core";
 import { create } from "@sandbox-sdk/core";
 
-import { blaxel } from "../src/index";
+import { blaxel, updateNetwork } from "../src/index";
 
 const response = (exitCode = 0, stdout = "ok", stderr = "") => ({
   command: "command",
@@ -132,6 +132,70 @@ test("blaxel rejects invalid create timeouts before provider calls", async () =>
   }
 });
 
+test("blaxel rejects long sandbox names before provider calls", async () => {
+  const original = SandboxInstance.create;
+  let called = false;
+  SandboxInstance.create = (() => {
+    called = true;
+    return Promise.reject(new Error("provider called"));
+  }) as typeof SandboxInstance.create;
+
+  try {
+    await expect(
+      create({
+        adapter: blaxel({
+          apiKey: "key",
+          name: "x".repeat(50),
+          workspace: "workspace",
+        }),
+      })
+    ).rejects.toMatchObject({
+      code: "configuration",
+      provider: "blaxel",
+    });
+    expect(called).toBe(false);
+  } finally {
+    SandboxInstance.create = original;
+  }
+});
+
+test("blaxel replaces network configuration for a native sandbox", async () => {
+  const original = SandboxInstance.updateNetwork;
+  let seen: unknown;
+  const raw = {
+    metadata: { name: "sandbox" },
+  } as SandboxInstance;
+
+  SandboxInstance.updateNetwork = ((name: string, network: unknown) => {
+    seen = { name, network };
+    return Promise.resolve(raw);
+  }) as typeof SandboxInstance.updateNetwork;
+
+  try {
+    await expect(
+      updateNetwork(raw, {
+        proxy: {
+          allowedDomains: ["api.example.com"],
+          routing: [],
+        },
+      })
+    ).resolves.toBe(raw);
+    expect(seen).toEqual({
+      name: "sandbox",
+      network: {
+        network: {
+          proxy: {
+            allowedDomains: ["api.example.com"],
+            routing: [],
+          },
+        },
+      },
+    });
+  } finally {
+    SandboxInstance.updateNetwork = original;
+  }
+});
+
 test("blaxel maps create options and normalized operations", async () => {
   const original = SandboxInstance.create;
   let createSeen: unknown;
@@ -241,6 +305,13 @@ test("blaxel maps create options and normalized operations", async () => {
         labels: { owner: "sdk" },
         memory: 4096,
         name: "named",
+        network: {
+          firewall: { rulesets: ["proxy"] },
+          proxy: {
+            allowedDomains: ["api.example.com"],
+            routing: [],
+          },
+        },
         ports: [3000],
         safe: true,
         volumes: [{ mountPath: "/cache", name: "cache", readOnly: true }],
@@ -265,6 +336,13 @@ test("blaxel maps create options and normalized operations", async () => {
       labels: { owner: "sdk", task: "test" },
       memory: 4096,
       name: "named",
+      network: {
+        firewall: { rulesets: ["proxy"] },
+        proxy: {
+          allowedDomains: ["api.example.com"],
+          routing: [],
+        },
+      },
       ports: [{ protocol: "HTTP", target: 8080 }],
       ttl: "5s",
       volumes: [{ mountPath: "/cache", name: "cache", readOnly: true }],

@@ -9,7 +9,7 @@ import { create } from "@sandbox-sdk/core";
 
 import { record, workflowFixture } from "../../../test/fixture";
 import { workflow } from "../../../test/workflow";
-import { blaxel } from "../src/index";
+import { blaxel, updateNetwork } from "../src/index";
 
 const config = (): boolean =>
   existsSync(join(homedir(), ".blaxel", "config.yaml"));
@@ -139,6 +139,41 @@ live("blaxel exposes advertised raw capabilities", async () => {
     expect(Array.isArray(mounts)).toBe(true);
     expect(typeof sandbox.raw.system.upgrade).toBe("function");
     expect(typeof sandbox.raw.codegen.reranking).toBe("function");
+  } finally {
+    await sandbox.stop();
+  }
+});
+
+live("blaxel updates a live sandbox network", async () => {
+  const cwd = "/app";
+  const sandbox = await create({
+    adapter: blaxel({
+      apiKey: process.env.BL_API_KEY,
+      clientCredentials: process.env.BL_CLIENT_CREDENTIALS,
+      image: "blaxel/base-image:latest",
+      name: `sdk-net-${randomUUID().slice(0, 8)}`,
+      network: {
+        proxy: {
+          routing: [],
+        },
+      },
+      region: process.env.BL_REGION,
+      ttl: "10m",
+      workspace: process.env.BL_WORKSPACE,
+    }),
+    cwd,
+  });
+
+  try {
+    const updated = await updateNetwork(sandbox.raw, {
+      proxy: {
+        allowedDomains: ["example.com"],
+        routing: [],
+      },
+    });
+    expect(updated.spec.network?.proxy?.allowedDomains).toEqual([
+      "example.com",
+    ]);
   } finally {
     await sandbox.stop();
   }

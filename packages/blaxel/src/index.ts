@@ -8,6 +8,7 @@ import type {
   Config as BlaxelConfig,
   ProcessResponse,
   SandboxCreateConfiguration,
+  SandboxUpdateNetwork,
 } from "@blaxel/core";
 import {
   abort,
@@ -37,6 +38,7 @@ import { rejectUnsupported } from "./errors.js";
 import type { Blaxel } from "./types.js";
 
 export type { Blaxel, BlaxelRaw } from "./types.js";
+export type { SandboxUpdateNetwork } from "@blaxel/core";
 
 type Raw = SandboxInstance;
 
@@ -53,7 +55,7 @@ const capabilities: Capabilities = {
     codegen: true,
     drives: true,
     lifecycle: true,
-    network: "create-time",
+    network: "dynamic",
     previews: true,
     resources: "create-time",
     sessions: true,
@@ -66,6 +68,18 @@ const capabilities: Capabilities = {
   snapshotSource: false,
   snapshots: false,
   streaming: "separate",
+};
+
+/** replace the network configuration for a running Blaxel sandbox and return a refreshed native instance */
+export const updateNetwork = (
+  sandbox: Raw | string,
+  network: SandboxUpdateNetwork["network"]
+): Promise<Raw> => {
+  const update: SandboxUpdateNetwork = network === undefined ? {} : { network };
+  return SandboxInstance.updateNetwork(
+    typeof sandbox === "string" ? sandbox : sandbox.metadata.name,
+    update
+  );
 };
 
 const noop = (): void => void 0;
@@ -503,12 +517,23 @@ const shell = (
   options: Exec
 ): Promise<Result> => execute(raw, cwd, script, options);
 
+const sandboxName = (value: string | undefined): string | undefined => {
+  if (value !== undefined && value.length > 49) {
+    throw sandboxError(
+      provider,
+      "Blaxel sandbox names must be 49 characters or fewer",
+      "configuration"
+    );
+  }
+  return value;
+};
+
 const createOptions = (
   options: Blaxel,
   input: Options,
   ports: readonly number[]
 ): SandboxCreateConfiguration => {
-  const name = input.id ?? options.name;
+  const name = sandboxName(input.id ?? options.name);
   const image = input.template ?? options.image;
   const envs = { ...options.env, ...input.env };
   const labels = { ...options.labels, ...input.metadata };

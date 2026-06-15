@@ -25,7 +25,7 @@ const workflow: Workflow = {
       codegen: true,
       drives: true,
       lifecycle: true,
-      network: "create-time",
+      network: "dynamic",
       previews: true,
       resources: "create-time",
       sessions: true,

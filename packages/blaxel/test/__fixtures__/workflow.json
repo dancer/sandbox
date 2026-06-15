@@ -42,7 +42,7 @@
         "codegen": true,
         "drives": true,
         "lifecycle": true,
-        "network": "create-time",
+        "network": "dynamic",
         "previews": true,
         "sessions": true,
         "system": true,

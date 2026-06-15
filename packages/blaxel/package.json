@@ -41,7 +41,7 @@
     "test": "bun test test"
   },
   "dependencies": {
-    "@blaxel/core": "^0.2.84",
+    "@blaxel/core": "^0.2.91",
     "@sandbox-sdk/core": "workspace:*"
   },
   "devDependencies": {
