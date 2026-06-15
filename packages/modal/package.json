@@ -42,7 +42,7 @@
   },
   "dependencies": {
     "@sandbox-sdk/core": "workspace:*",
-    "modal": "^0.7.6"
+    "modal": "^0.8.0"
   },
   "devDependencies": {
     "@types/node": "^20.19.41",

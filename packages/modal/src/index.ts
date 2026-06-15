@@ -1,7 +1,6 @@
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { join as joinPath } from "node:path";
-import { dirname } from "node:path/posix";
 
 import {
   abort,
@@ -74,6 +73,8 @@ export type Modal = Readonly<
     memoryLimitMiB?: CreateParams["memoryLimitMiB"];
     /** optional Modal sandbox name */
     name?: CreateParams["name"];
+    /** published Modal image name, optionally including a tag; cannot be combined with image */
+    namedImage?: string;
     /** modal sandbox create options forwarded to the native sdk */
     options?: Omit<
       ModalSdk.SandboxCreateParams,
@@ -81,6 +82,8 @@ export type Modal = Readonly<
     >;
     /** outbound CIDR allowlist for sandbox network access */
     outboundCidrAllowlist?: CreateParams["outboundCidrAllowlist"];
+    /** outbound domain allowlist with optional wildcard prefixes such as *.example.com */
+    outboundDomainAllowlist?: CreateParams["outboundDomainAllowlist"];
     /** encrypted ports declared at create time and later exposed with ports.expose */
     ports?: readonly number[];
     /** enable a pty for the Modal sandbox entrypoint */
@@ -93,6 +96,10 @@ export type Modal = Readonly<
     regions?: CreateParams["regions"];
     /** Modal secrets injected as sandbox environment variables */
     secrets?: CreateParams["secrets"];
+    /** filesystem snapshot timeout in milliseconds, rounded up to a whole second */
+    snapshotTimeout?: number;
+    /** filesystem snapshot retention as whole seconds in milliseconds, or null for no expiry */
+    snapshotTtl?: number | null;
     /** stop behavior used by `sandbox.stop` */
     stop?: "detach" | "terminate";
     /** default tags attached to new sandboxes */
@@ -140,6 +147,8 @@ const capabilities: Capabilities = {
 const present = (value: string | undefined): value is string =>
   value !== undefined && value.length > 0;
 
+const ignore = (): void => void 0;
+
 const secrets = ["MODAL_TOKEN_ID", "MODAL_TOKEN_SECRET"] as const;
 
 const first = (
@@ -167,6 +176,13 @@ const readable = (value: Uint8Array): ReadableStream<Uint8Array> =>
   });
 
 const validate = (options: Modal): void => {
+  if (options.image !== undefined && options.namedImage !== undefined) {
+    throw sandboxError(
+      provider,
+      "Modal image and namedImage cannot be used together",
+      "configuration"
+    );
+  }
   if (options.client) {
     return;
   }
@@ -232,6 +248,14 @@ const image = async (
   if (options.image instanceof ModalSdk.Image) {
     return options.image;
   }
+  if (options.namedImage !== undefined) {
+    return modalClient.images.fromName(
+      options.namedImage,
+      options.environment === undefined
+        ? {}
+        : { environment: options.environment }
+    );
+  }
   return modalClient.images.fromRegistry(options.image ?? "alpine:3.21");
 };
 
@@ -254,6 +278,31 @@ const duration = (value: number | undefined): number | undefined => {
     );
   }
   return Math.ceil(value / 1000) * 1000;
+};
+
+const ttl = (value: number | null | undefined): number | null | undefined => {
+  if (value === undefined || value === null) {
+    return value;
+  }
+  if (!Number.isFinite(value) || value < 1000 || value % 1000 !== 0) {
+    throw sandboxError(
+      provider,
+      "Modal snapshotTtl must be null or a positive multiple of 1000 milliseconds",
+      "configuration"
+    );
+  }
+  return value;
+};
+
+const snapshotOptions = (
+  options: Modal
+): ModalSdk.SandboxSnapshotFilesystemParams => {
+  const timeout = duration(options.snapshotTimeout);
+  const retention = ttl(options.snapshotTtl);
+  return {
+    ...(timeout === undefined ? {} : { timeoutMs: timeout }),
+    ...(retention === undefined ? {} : { ttlMs: retention }),
+  };
 };
 
 const set = <Key extends keyof ModalSdk.SandboxCreateParams>(
@@ -311,6 +360,7 @@ const createOptions = (
   set(output, "memoryMiB", options.memoryMiB);
   set(output, "name", options.name);
   set(output, "outboundCidrAllowlist", options.outboundCidrAllowlist);
+  set(output, "outboundDomainAllowlist", options.outboundDomainAllowlist);
   set(output, "proxy", options.proxy);
   set(output, "pty", options.pty);
   set(output, "readinessProbe", options.readinessProbe);
@@ -369,7 +419,7 @@ const shell = (
 ): Promise<Result> => execute(raw, cwd, ["sh", "-lc", script], options);
 
 const writeChunks = async (
-  file: ModalSdk.SandboxFile,
+  writer: WritableStreamDefaultWriter<Uint8Array>,
   input: Blob | ReadableStream<Uint8Array>
 ): Promise<void> => {
   const source = input instanceof Blob ? input.stream() : input;
@@ -380,7 +430,7 @@ const writeChunks = async (
       if (next.done) {
         return;
       }
-      await file.write(next.value);
+      await writer.write(next.value);
     }
   } finally {
     reader.releaseLock();
@@ -396,13 +446,39 @@ const write = async (raw: Raw, path: string, input: Input) => {
     await raw.filesystem.writeBytes(input, path);
     return;
   }
-  await raw.filesystem.makeDirectory(dirname(path), { createParents: true });
-  const file = await raw.open(path, "w");
+  const process = await raw.exec(
+    [
+      "sh",
+      "-c",
+      'mkdir -p "$(dirname -- "$1")" && cat > "$1"',
+      "sandbox-sdk",
+      path,
+    ],
+    {
+      mode: "binary",
+      stderr: "pipe",
+      stdout: "pipe",
+    }
+  );
+  const writer = process.stdin.getWriter();
   try {
-    await writeChunks(file, input);
-    await file.flush();
+    await writeChunks(writer, input);
+    await writer.close();
+  } catch (error) {
+    await writer.abort(error).catch(ignore);
+    throw error;
   } finally {
-    await file.close();
+    writer.releaseLock();
+  }
+  const [code, stderr] = await Promise.all([
+    process.wait(),
+    process.stderr.readBytes(),
+    process.stdout.readBytes(),
+  ]);
+  if (code !== 0) {
+    throw new Error(
+      `Modal streaming write failed: ${new TextDecoder().decode(stderr)}`
+    );
   }
 };
 
@@ -443,7 +519,8 @@ const createSandbox = (
   raw: Raw,
   cwd: string,
   ports: readonly number[],
-  stop: Modal["stop"]
+  stop: Modal["stop"],
+  snapshot: ModalSdk.SandboxSnapshotFilesystemParams
 ): Sandbox<Raw> => ({
   capabilities,
   cwd,
@@ -520,8 +597,11 @@ const createSandbox = (
   raw,
   snapshots: {
     create: async (name) => {
-      const snapshot = await wrap(() => raw.snapshotFilesystem(), "snapshot");
-      return { id: snapshot.imageId, ...(name === undefined ? {} : { name }) };
+      const created = await wrap(
+        () => raw.snapshotFilesystem(snapshot),
+        "snapshot"
+      );
+      return { id: created.imageId, ...(name === undefined ? {} : { name }) };
     },
     restore: () => rejectUnsupported("in-place snapshot restore"),
   },
@@ -544,6 +624,7 @@ export const modal = (options: Modal = {}): Adapter<Raw> => ({
     const ports = (input.ports ?? options.ports ?? []).map((value) =>
       port(value, provider)
     );
+    const snapshot = snapshotOptions(options);
     const raw =
       input.id === undefined
         ? await modalClient.sandboxes.create(
@@ -564,7 +645,13 @@ export const modal = (options: Modal = {}): Adapter<Raw> => ({
       }
     }
 
-    return createSandbox(raw, cwd, ports, options.stop ?? "terminate");
+    return createSandbox(
+      raw,
+      cwd,
+      ports,
+      options.stop ?? "terminate",
+      snapshot
+    );
   },
   provider,
 });

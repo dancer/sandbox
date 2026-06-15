@@ -26,6 +26,8 @@ const adapter = () =>
     app: "sandbox-sdk-live",
     image: "alpine:3.21",
     ports: [3000],
+    snapshotTimeout: 120_000,
+    snapshotTtl: 3_600_000,
     timeout: 300_000,
     tokenId: process.env.MODAL_TOKEN_ID,
     tokenSecret: process.env.MODAL_TOKEN_SECRET,

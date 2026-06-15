@@ -138,6 +138,94 @@ test("modal rejects provider credentials in sandbox env before provider calls", 
   expect(called).toBe(false);
 });
 
+test("modal rejects ambiguous image configuration before provider calls", async () => {
+  let called = false;
+  const client = {
+    apps: {
+      fromName: () => {
+        called = true;
+        return Promise.resolve({});
+      },
+    },
+  } as unknown as ModalSdk.ModalClient;
+
+  await expect(
+    create({
+      adapter: modal({
+        client,
+        image: "alpine:3.21",
+        namedImage: "sandbox-base:v1",
+      }),
+    })
+  ).rejects.toMatchObject({
+    code: "configuration",
+    provider: "modal",
+  });
+  expect(called).toBe(false);
+});
+
+test("modal rejects invalid snapshot retention before provider calls", async () => {
+  let called = false;
+  const client = {
+    apps: {
+      fromName: () => {
+        called = true;
+        return Promise.resolve({});
+      },
+    },
+  } as unknown as ModalSdk.ModalClient;
+
+  await expect(
+    create({
+      adapter: modal({
+        client,
+        snapshotTtl: 1500,
+      }),
+    })
+  ).rejects.toMatchObject({
+    code: "configuration",
+    provider: "modal",
+  });
+  expect(called).toBe(false);
+});
+
+test("modal resolves named images explicitly", async () => {
+  let namedSeen: unknown;
+  const raw = {
+    filesystem: {
+      makeDirectory: () => Promise.resolve(),
+    },
+    sandboxId: "sandbox",
+  } as unknown as ModalSdk.Sandbox;
+  const client = {
+    apps: {
+      fromName: () => Promise.resolve({}),
+    },
+    images: {
+      fromName: (name: string, options: unknown) => {
+        namedSeen = { name, options };
+        return Promise.resolve({});
+      },
+    },
+    sandboxes: {
+      create: () => Promise.resolve(raw),
+    },
+  } as unknown as ModalSdk.ModalClient;
+
+  await create({
+    adapter: modal({
+      client,
+      environment: "main",
+      namedImage: "sandbox-base:v1",
+    }),
+  });
+
+  expect(namedSeen).toEqual({
+    name: "sandbox-base:v1",
+    options: { environment: "main" },
+  });
+});
+
 test("modal maps create options, tags, commands, and ports", async () => {
   const execSeen: unknown[] = [];
   let appSeen: unknown;
@@ -146,6 +234,7 @@ test("modal maps create options, tags, commands, and ports", async () => {
   const directories: unknown[] = [];
   let detached = false;
   let snapshotted = false;
+  let snapshotSeen: unknown;
   let tagsSeen: unknown;
   let terminated = false;
   const bucket = {} as ModalSdk.CloudBucketMount;
@@ -172,7 +261,8 @@ test("modal maps create options, tags, commands, and ports", async () => {
       tagsSeen = tags;
       return Promise.resolve();
     },
-    snapshotFilesystem: () => {
+    snapshotFilesystem: (options: unknown) => {
+      snapshotSeen = options;
       snapshotted = true;
       return Promise.resolve({ imageId: "im-snapshot-created" });
     },
@@ -236,12 +326,15 @@ test("modal maps create options, tags, commands, and ports", async () => {
       name: "sdk-sandbox",
       options: { cpu: 0.5 },
       outboundCidrAllowlist: ["0.0.0.0/0"],
+      outboundDomainAllowlist: ["api.example.com"],
       ports: [3000],
       proxy,
       pty: true,
       readinessProbe: probe,
       regions: ["us-east"],
       secrets: [secret],
+      snapshotTimeout: 1200,
+      snapshotTtl: 3_600_000,
       stop: "detach",
       tags: { owner: "sdk" },
       timeout: 123,
@@ -285,6 +378,7 @@ test("modal maps create options, tags, commands, and ports", async () => {
       memoryMiB: 512,
       name: "sdk-sandbox",
       outboundCidrAllowlist: ["0.0.0.0/0"],
+      outboundDomainAllowlist: ["api.example.com"],
       proxy,
       pty: true,
       readinessProbe: probe,
@@ -359,6 +453,10 @@ test("modal maps create options, tags, commands, and ports", async () => {
     name: "ready",
   });
   expect(snapshotted).toBe(true);
+  expect(snapshotSeen).toEqual({
+    timeoutMs: 2000,
+    ttlMs: 3_600_000,
+  });
   await expect(
     sandbox.snapshots.restore("im-snapshot-created")
   ).rejects.toMatchObject({
@@ -376,31 +474,33 @@ test("modal writes readable streams in chunks", async () => {
   const directories: unknown[] = [];
   const writes: string[] = [];
   let closed = false;
-  let flushed = false;
-  let openSeen: unknown;
+  let execSeen: unknown;
   const raw = {
+    exec: (command: string[], options: unknown) => {
+      execSeen = { command, options };
+      return Promise.resolve({
+        stderr: {
+          readBytes: () => Promise.resolve(new Uint8Array()),
+        },
+        stdin: new WritableStream<Uint8Array>({
+          close() {
+            closed = true;
+          },
+          write(data) {
+            writes.push(decoder.decode(data));
+          },
+        }),
+        stdout: {
+          readBytes: () => Promise.resolve(new Uint8Array()),
+        },
+        wait: () => Promise.resolve(0),
+      });
+    },
     filesystem: {
       makeDirectory: (path: string, options: unknown) => {
         directories.push({ options, path });
         return Promise.resolve();
       },
-    },
-    open: (path: string, mode: string) => {
-      openSeen = { mode, path };
-      return Promise.resolve({
-        close: () => {
-          closed = true;
-          return Promise.resolve();
-        },
-        flush: () => {
-          flushed = true;
-          return Promise.resolve();
-        },
-        write: (data: Uint8Array) => {
-          writes.push(decoder.decode(data));
-          return Promise.resolve();
-        },
-      });
     },
     sandboxId: "sandbox",
     terminate: () => Promise.resolve(),
@@ -433,12 +533,23 @@ test("modal writes readable streams in chunks", async () => {
 
   await sandbox.files.write("stream.txt", input);
 
-  expect(openSeen).toEqual({ mode: "w", path: "/work/stream.txt" });
+  expect(execSeen).toEqual({
+    command: [
+      "sh",
+      "-c",
+      'mkdir -p "$(dirname -- "$1")" && cat > "$1"',
+      "sandbox-sdk",
+      "/work/stream.txt",
+    ],
+    options: {
+      mode: "binary",
+      stderr: "pipe",
+      stdout: "pipe",
+    },
+  });
   expect(directories).toEqual([
-    { options: { createParents: true }, path: "/work" },
     { options: { createParents: true }, path: "/work" },
   ]);
   expect(writes).toEqual(["chunk-1", "chunk-2"]);
-  expect(flushed).toBe(true);
   expect(closed).toBe(true);
 });
