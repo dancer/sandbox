@@ -1507,12 +1507,31 @@ export type Blaxel = Readonly<
 
 ### functions
 
+#### `updateNetwork`
+
+replace the network configuration for a running Blaxel sandbox and return a refreshed native instance
+
+```ts
+export declare const updateNetwork: (
+  sandbox: Raw | string,
+  network: SandboxUpdateNetwork["network"]
+) => Promise<Raw>;
+```
+
 #### `blaxel`
 
 create a blaxel adapter with normalized sandbox operations
 
 ```ts
 export declare const blaxel: (options?: Blaxel) => Adapter<Raw>;
+```
+
+### re-exports
+
+#### `re-export`
+
+```ts
+export type { SandboxUpdateNetwork } from "@blaxel/core";
 ```
 
 ## @sandbox-sdk/cloudflare
@@ -1757,10 +1776,14 @@ CodeSandbox adapter for Sandbox SDK
 
 #### `CodeSandboxRaw`
 
-native CodeSandbox raw object exposed as `sandbox.raw`
+native CodeSandbox sdk, sandbox, and connected session exposed as `sandbox.raw`
 
 ```ts
-export type CodeSandboxRaw = Raw;
+export type CodeSandboxRaw = Readonly<{
+  client: NativeClient;
+  sandbox: NativeSandbox;
+  sdk: NativeSdk;
+}>;
 ```
 
 #### `CodeSandbox`
@@ -1813,7 +1836,9 @@ export type CodeSandbox = Readonly<{
 create a codesandbox adapter with normalized sandbox operations
 
 ```ts
-export declare const codesandbox: (options?: CodeSandbox) => Adapter<Raw>;
+export declare const codesandbox: (
+  options?: CodeSandbox
+) => Adapter<CodeSandboxRaw>;
 ```
 
 ## @sandbox-sdk/daytona
@@ -1857,6 +1882,8 @@ export type Daytona = DaytonaConfig &
     labels?: Readonly<Record<string, string>>;
     /** Daytona code language label for created sandboxes */
     language?: CodeLanguage | string;
+    /** existing ephemeral sandbox id or name used for runner co-location */
+    linkedSandbox?: string;
     /** stable Daytona sandbox name used when create input omits id */
     name?: string;
     /** outbound network allow list passed to Daytona at sandbox creation */
@@ -2032,6 +2059,8 @@ export type Modal = Readonly<
     memoryLimitMiB?: CreateParams["memoryLimitMiB"];
     /** optional Modal sandbox name */
     name?: CreateParams["name"];
+    /** published Modal image name, optionally including a tag; cannot be combined with image */
+    namedImage?: string;
     /** modal sandbox create options forwarded to the native sdk */
     options?: Omit<
       ModalSdk.SandboxCreateParams,
@@ -2039,6 +2068,8 @@ export type Modal = Readonly<
     >;
     /** outbound CIDR allowlist for sandbox network access */
     outboundCidrAllowlist?: CreateParams["outboundCidrAllowlist"];
+    /** outbound domain allowlist with optional wildcard prefixes such as *.example.com */
+    outboundDomainAllowlist?: CreateParams["outboundDomainAllowlist"];
     /** encrypted ports declared at create time and later exposed with ports.expose */
     ports?: readonly number[];
     /** enable a pty for the Modal sandbox entrypoint */
@@ -2051,6 +2082,10 @@ export type Modal = Readonly<
     regions?: CreateParams["regions"];
     /** Modal secrets injected as sandbox environment variables */
     secrets?: CreateParams["secrets"];
+    /** filesystem snapshot timeout in milliseconds, rounded up to a whole second */
+    snapshotTimeout?: number;
+    /** filesystem snapshot retention as whole seconds in milliseconds, or null for no expiry */
+    snapshotTtl?: number | null;
     /** stop behavior used by `sandbox.stop` */
     stop?: "detach" | "terminate";
     /** default tags attached to new sandboxes */
