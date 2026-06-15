@@ -78,14 +78,14 @@ test("tools returns prompt context and selected tools", async () => {
   if (!schema) {
     throw new Error("missing exec tool");
   }
-  expect(Object.getOwnPropertySymbols(schema)).toContain(
-    Symbol.for("vercel.ai.schema")
-  );
   expect(schema).toMatchObject({
     jsonSchema: {
       additionalProperties: false,
     },
-    validate: undefined,
+    "~standard": {
+      vendor: "sandbox-sdk",
+      version: 1,
+    },
   });
   expect(kit.tools.exec?.strict).toBe(true);
 
@@ -208,6 +208,37 @@ test("ai sdk sandbox shape spawns streaming processes", async () => {
   expect(stdout).toBe("stream");
   expect(stderr).toBe("err");
   expect(result).toEqual({ exitCode: 0 });
+
+  await sandbox.stop();
+});
+
+test("ai sdk sandbox shape preserves abort reasons", async () => {
+  const sandbox = await create({ adapter: local(), cwd: "/workspace" });
+  const agent: SandboxSession = tools(sandbox, {
+    allow: ["exec"],
+  }).sandbox;
+  const controller = new AbortController();
+  const process = await agent.spawn({
+    abortSignal: controller.signal,
+    command: "sleep 10",
+  });
+  const reason = new Error("cancelled");
+
+  controller.abort(reason);
+
+  await expect(process.wait()).rejects.toBe(reason);
+
+  await sandbox.stop();
+});
+
+test("ai sdk sandbox process kill is idempotent", async () => {
+  const sandbox = await create({ adapter: local(), cwd: "/workspace" });
+  const agent: SandboxSession = tools(sandbox, {
+    allow: ["exec"],
+  }).sandbox;
+  const process = await agent.spawn({ command: "sleep 10" });
+
+  await Promise.all([process.kill(), process.kill()]);
 
   await sandbox.stop();
 });

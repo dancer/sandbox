@@ -796,10 +796,29 @@ export type JsonSchema = Readonly<Record<string, unknown>>;
 
 #### `Schema`
 
-AI SDK schema created from json schema
+version-neutral standard schema accepted by AI SDK v6 and v7
 
 ```ts
-export type Schema<Input = unknown> = AisdkSchema<Input>;
+export type Schema<Input = unknown> = Readonly<{
+  /** json schema payload used by providers and other agent SDKs */
+  jsonSchema: JsonSchema;
+  /** standard schema contract used by supported AI SDK versions */
+  "~standard": Readonly<{
+    jsonSchema: Readonly<{
+      input(): JsonSchema;
+      output(): JsonSchema;
+    }>;
+    types?: Readonly<{
+      input: Input;
+      output: Input;
+    }>;
+    validate(value: unknown): Readonly<{
+      value: Input;
+    }>;
+    vendor: "sandbox-sdk";
+    version: 1;
+  }>;
+}>;
 ```
 
 #### `SchemaResult`
@@ -812,20 +831,19 @@ export type SchemaResult<Input = unknown> = Schema<Input>;
 
 #### `Tool`
 
-provider-agnostic tool shape compatible with the AI SDK
+provider-agnostic tool shape compatible with supported AI SDK versions
 
 ```ts
-export type Tool<Input, Output> = AisdkTool<Input, Output> &
-  Readonly<{
-    /** prompt-facing tool description */
-    description: string;
-    /** AI SDK-compatible input schema */
-    inputSchema: Schema<Input>;
-    /** true when model output should match the schema exactly */
-    strict: true;
-    /** tool implementation */
-    execute(input: Input, options?: unknown): Promise<Output>;
-  }>;
+export type Tool<Input, Output> = Readonly<{
+  /** prompt-facing tool description */
+  description: string;
+  /** AI SDK-compatible input schema */
+  inputSchema: Schema<Input>;
+  /** true when model output should match the schema exactly */
+  strict: true;
+  /** tool implementation */
+  execute(input: Input, options?: unknown): Promise<Output>;
+}>;
 ```
 
 #### `Name`

@@ -10,36 +10,44 @@ import type {
   Running,
   Sandbox,
 } from "@sandbox-sdk/core";
-import type {
-  JSONSchema7,
-  Schema as AisdkSchema,
-  Tool as AisdkTool,
-  ToolSet as AisdkToolSet,
-} from "ai";
-
-const schemaKey = Symbol.for("vercel.ai.schema");
 
 /** json schema payload exposed to the AI SDK */
 export type JsonSchema = Readonly<Record<string, unknown>>;
 
-/** AI SDK schema created from json schema */
-export type Schema<Input = unknown> = AisdkSchema<Input>;
+/** version-neutral standard schema accepted by AI SDK v6 and v7 */
+export type Schema<Input = unknown> = Readonly<{
+  /** json schema payload used by providers and other agent SDKs */
+  jsonSchema: JsonSchema;
+  /** standard schema contract used by supported AI SDK versions */
+  "~standard": Readonly<{
+    jsonSchema: Readonly<{
+      input(): JsonSchema;
+      output(): JsonSchema;
+    }>;
+    types?: Readonly<{
+      input: Input;
+      output: Input;
+    }>;
+    validate(value: unknown): Readonly<{ value: Input }>;
+    vendor: "sandbox-sdk";
+    version: 1;
+  }>;
+}>;
 
 /** result returned when the AI SDK resolves a schema */
 export type SchemaResult<Input = unknown> = Schema<Input>;
 
-/** provider-agnostic tool shape compatible with the AI SDK */
-export type Tool<Input, Output> = AisdkTool<Input, Output> &
-  Readonly<{
-    /** prompt-facing tool description */
-    description: string;
-    /** AI SDK-compatible input schema */
-    inputSchema: Schema<Input>;
-    /** true when model output should match the schema exactly */
-    strict: true;
-    /** tool implementation */
-    execute(input: Input, options?: unknown): Promise<Output>;
-  }>;
+/** provider-agnostic tool shape compatible with supported AI SDK versions */
+export type Tool<Input, Output> = Readonly<{
+  /** prompt-facing tool description */
+  description: string;
+  /** AI SDK-compatible input schema */
+  inputSchema: Schema<Input>;
+  /** true when model output should match the schema exactly */
+  strict: true;
+  /** tool implementation */
+  execute(input: Input, options?: unknown): Promise<Output>;
+}>;
 
 /** built-in sandbox tool name */
 export type Name = "exec" | "list" | "preview" | "read" | "write";
@@ -170,14 +178,13 @@ export type SandboxProcess = Readonly<{
   wait(): PromiseLike<{ exitCode: number }>;
 }>;
 
-type Draft = AisdkToolSet &
-  Partial<{
-    exec: Tool<Exec, ExecResult>;
-    list: Tool<Partial<Path>, ListResult>;
-    preview: Tool<Preview, PreviewResult>;
-    read: Tool<Path, TextResult>;
-    write: Tool<Write, WriteResult>;
-  }>;
+type Draft = Partial<{
+  exec: Tool<Exec, ExecResult>;
+  list: Tool<Partial<Path>, ListResult>;
+  preview: Tool<Preview, PreviewResult>;
+  read: Tool<Path, TextResult>;
+  write: Tool<Write, WriteResult>;
+}>;
 
 export type Tools = Readonly<Draft>;
 
@@ -388,9 +395,7 @@ const result = (output: Result, limit: number): ExecResult => {
 };
 
 const assertActive = (signal: AbortSignal | undefined): void => {
-  if (signal?.aborted) {
-    throw sandboxError("ai", "Operation aborted", "aborted", signal.reason);
-  }
+  signal?.throwIfAborted();
 };
 
 const missing = <Value>(error: unknown): Value | null => {
@@ -470,15 +475,30 @@ const commandOptions = (
   timeout,
 });
 
-const process = (running: Running): SandboxProcess => ({
-  kill: () => running.kill(),
-  stderr: running.stderr ?? emptyStream(),
-  stdout: running.stdout ?? running.output,
-  wait: async () => {
-    const output = await running.result;
-    return { exitCode: output.code };
-  },
-});
+const process = (
+  running: Running,
+  signal: AbortSignal | undefined
+): SandboxProcess => {
+  let killed: Promise<void> | undefined;
+  return {
+    kill: () => {
+      killed ??= running.kill();
+      return killed;
+    },
+    stderr: running.stderr ?? emptyStream(),
+    stdout: running.stdout ?? running.output,
+    wait: async () => {
+      try {
+        const output = await running.result;
+        signal?.throwIfAborted();
+        return { exitCode: output.code };
+      } catch (error) {
+        signal?.throwIfAborted();
+        throw error;
+      }
+    },
+  };
+};
 
 const run = async (
   sandbox: Sandbox,
@@ -487,6 +507,7 @@ const run = async (
   timeout: number,
   beforeExec?: Policy<Exec, "exec">
 ): Promise<CommandResult> => {
+  assertActive(input.abortSignal);
   await beforeExec?.(
     {
       command: input.command,
@@ -495,15 +516,21 @@ const run = async (
     },
     context(sandbox, cwd, "exec")
   );
-  const output = await sandbox.process.shell(
-    input.command,
-    commandOptions(input, cwd, timeout)
-  );
-  return {
-    exitCode: output.code,
-    stderr: output.stderr,
-    stdout: output.stdout,
-  };
+  try {
+    const output = await sandbox.process.shell(
+      input.command,
+      commandOptions(input, cwd, timeout)
+    );
+    input.abortSignal?.throwIfAborted();
+    return {
+      exitCode: output.code,
+      stderr: output.stderr,
+      stdout: output.stdout,
+    };
+  } catch (error) {
+    input.abortSignal?.throwIfAborted();
+    throw error;
+  }
 };
 
 const spawn = async (
@@ -513,6 +540,7 @@ const spawn = async (
   timeout: number,
   beforeExec?: Policy<Exec, "exec">
 ): Promise<SandboxProcess> => {
+  assertActive(input.abortSignal);
   await beforeExec?.(
     {
       command: input.command,
@@ -525,7 +553,8 @@ const spawn = async (
     await sandbox.process.spawnShell(
       input.command,
       commandOptions(input, cwd, timeout)
-    )
+    ),
+    input.abortSignal
   );
 };
 
@@ -533,18 +562,24 @@ const schema = <Input>(
   properties: Readonly<Record<string, unknown>>,
   required: readonly string[]
 ): Schema<Input> => {
-  const value = {
+  const value: JsonSchema = {
     additionalProperties: false,
-    properties: properties as Record<string, JSONSchema7>,
+    properties,
     required: [...required],
     type: "object",
-  } satisfies JSONSchema7;
+  };
   return {
-    _type: undefined as Input,
-    [schemaKey]: true,
     jsonSchema: value,
-    validate: undefined,
-  } as unknown as Schema<Input>;
+    "~standard": {
+      jsonSchema: {
+        input: () => value,
+        output: () => value,
+      },
+      validate: (input) => ({ value: input as Input }),
+      vendor: "sandbox-sdk",
+      version: 1,
+    },
+  };
 };
 
 const description = (
