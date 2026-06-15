@@ -31,6 +31,7 @@
         "network": "dynamic",
         "previews": "dynamic",
         "metrics": true,
+        "pty": true,
         "resources": "dynamic",
         "sessions": "dynamic"
       },

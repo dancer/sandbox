@@ -120,6 +120,28 @@ live("vercel exposes ports after creation", async () => {
   }
 });
 
+live("vercel enforces command timeouts", async () => {
+  const sandbox = await create({
+    adapter: adapter({ ports: [] }),
+    cwd,
+  });
+
+  try {
+    await expect(
+      sandbox.process.exec("sleep", ["60"], { timeout: 1000 })
+    ).rejects.toMatchObject({
+      code: "timeout",
+      provider: "vercel",
+    });
+    await expect(sandbox.process.shell("printf ready")).resolves.toMatchObject({
+      code: 0,
+      stdout: "ready",
+    });
+  } finally {
+    await cleanup(sandbox);
+  }
+});
+
 live("vercel exposes advertised raw capabilities", async () => {
   const sandbox = await create({
     adapter: adapter({ resources: { vcpus: 1 } }),
@@ -135,6 +157,7 @@ live("vercel exposes advertised raw capabilities", async () => {
     expect(sandbox.raw.status).toBe("stopped");
     expect("activeCpuUsageMs" in sandbox.raw).toBe(true);
     expect("networkTransfer" in sandbox.raw).toBe(true);
+    expect(sandbox.capabilities.raw?.pty).toBe(true);
   } finally {
     await cleanup(sandbox);
   }

@@ -2273,6 +2273,7 @@ export {
 
 ```ts
 export type {
+  CommandOutput as VercelCommandOutput,
   InvalidRequestProxyHandler as VercelInvalidRequestProxyHandler,
   NetworkPolicy as VercelNetworkPolicy,
   NetworkPolicyKeyValueMatcher as VercelNetworkPolicyKeyValueMatcher,

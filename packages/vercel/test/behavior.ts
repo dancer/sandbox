@@ -38,6 +38,7 @@ type Paths = Readonly<{
 
 type Raw = Readonly<{
   extended: boolean;
+  interactive: boolean;
   networkPolicy: NetworkPolicy | undefined;
   restoredNetworkPolicy: NetworkPolicy | undefined;
   status: string;
@@ -119,6 +120,7 @@ export const workflowCoverage: Coverage = {
     "process.failure",
     "ports.expose",
     "sandbox.raw.extendTimeout",
+    "sandbox.raw.openInteractive",
     "sandbox.raw.update.networkPolicy",
     "sandbox.raw.status",
     "sandbox.raw.delete",
@@ -227,6 +229,13 @@ const filesOk = (value: Files, content: string): boolean =>
   value.inputs.stream === "stream" &&
   value.removed;
 
+const rawOk = (value: Raw): boolean =>
+  value.extended &&
+  value.interactive &&
+  value.networkPolicy === "deny-all" &&
+  value.restoredNetworkPolicy === "allow-all" &&
+  value.status === "running";
+
 const commandsOk = (
   input: Pick<
     Workflow,
@@ -250,10 +259,7 @@ const commandsOk = (
   input.spawn.stderrStream === "" &&
   input.port.port === 3000 &&
   input.port.url.startsWith("https://") &&
-  input.raw.extended &&
-  input.raw.networkPolicy === "deny-all" &&
-  input.raw.restoredNetworkPolicy === "allow-all" &&
-  input.raw.status === "running";
+  rawOk(input.raw);
 
 export const workflow = async (
   sandbox: LiveSandbox,
@@ -300,6 +306,7 @@ export const workflow = async (
   let extended = false;
   await sandbox.raw.extendTimeout(1000);
   extended = true;
+  const interactive = await sandbox.raw.openInteractive();
   await sandbox.raw.update({ networkPolicy: "deny-all" });
   const { networkPolicy } = sandbox.raw;
   await sandbox.raw.update({ networkPolicy: "allow-all" });
@@ -312,6 +319,7 @@ export const workflow = async (
   const spawn = { ...spawned, output, stderrStream, stdoutStream };
   const raw = {
     extended,
+    interactive: interactive.url.length > 0 && interactive.token.length > 0,
     networkPolicy,
     restoredNetworkPolicy,
     status: sandbox.raw.status,
@@ -412,6 +420,7 @@ export const expectWorkflow = (payload: Workflow): void => {
   expect(payload.port.url).toMatch(/^https:\/\//u);
   expect(payload.raw).toEqual({
     extended: true,
+    interactive: true,
     networkPolicy: "deny-all",
     restoredNetworkPolicy: "allow-all",
     status: "running",

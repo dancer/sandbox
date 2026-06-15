@@ -37,6 +37,7 @@ export {
   defineSandboxProxy as defineVercelSandboxProxy,
 } from "@vercel/sandbox";
 export type {
+  CommandOutput as VercelCommandOutput,
   InvalidRequestProxyHandler as VercelInvalidRequestProxyHandler,
   NetworkPolicy as VercelNetworkPolicy,
   NetworkPolicyKeyValueMatcher as VercelNetworkPolicyKeyValueMatcher,
@@ -188,6 +189,7 @@ const capabilities: Capabilities = {
     metrics: true,
     network: "dynamic",
     previews: "dynamic",
+    pty: true,
     resources: "dynamic",
     sessions: "dynamic",
   },
@@ -597,6 +599,7 @@ const execute = async (
       ...(options.env === undefined ? {} : { env: { ...options.env } }),
       ...signals,
       ...(sudo === undefined ? {} : { sudo }),
+      ...(options.timeout === undefined ? {} : { timeoutMs: options.timeout }),
     });
     const stdout = await output.stdout(signals);
     const stderr = await output.stderr(signals);
@@ -671,6 +674,7 @@ const spawn = async (
       ...(options.env === undefined ? {} : { env: { ...options.env } }),
       ...signals,
       ...(sudo === undefined ? {} : { sudo }),
+      ...(options.timeout === undefined ? {} : { timeoutMs: options.timeout }),
     });
     const cancel = (): void => {
       void running.kill("SIGTERM");

@@ -353,8 +353,8 @@ test("vercel forwards process kill signals", async () => {
     runCommand: () =>
       Promise.resolve({
         cmdId: "command",
-        kill: (input?: unknown) => {
-          signal = input;
+        kill: (next?: unknown) => {
+          signal = next;
           return Promise.resolve();
         },
         logs,
@@ -413,8 +413,8 @@ test("vercel kills spawned processes on abort", async () => {
     runCommand: () =>
       Promise.resolve({
         cmdId: "command",
-        kill: (input?: unknown) => {
-          signal = input;
+        kill: (next?: unknown) => {
+          signal = next;
           return Promise.resolve();
         },
         logs,
@@ -453,6 +453,7 @@ test("vercel kills spawned processes on abort", async () => {
 
 test("vercel kills spawned processes on timeout", async () => {
   const original = VercelSandbox.create;
+  let command: unknown;
   let signal: unknown;
   const wait = async () => {
     for (;;) {
@@ -471,16 +472,18 @@ test("vercel kills spawned processes on timeout", async () => {
       mkdir: () => Promise.resolve(),
     },
     name: "sandbox",
-    runCommand: () =>
-      Promise.resolve({
+    runCommand: (input: unknown) => {
+      command = input;
+      return Promise.resolve({
         cmdId: "command",
-        kill: (input?: unknown) => {
-          signal = input;
+        kill: (next?: unknown) => {
+          signal = next;
           return Promise.resolve();
         },
         logs,
         wait,
-      }),
+      });
+    },
     stop: () => Promise.resolve(),
   } as unknown as VercelSandbox;
 
@@ -503,7 +506,51 @@ test("vercel kills spawned processes on timeout", async () => {
       code: "timeout",
       provider: "vercel",
     });
+    expect(command).toMatchObject({ timeoutMs: 1 });
     expect(signal).toBe("SIGTERM");
+  } finally {
+    VercelSandbox.create = original;
+  }
+});
+
+test("vercel forwards execution timeouts to the provider", async () => {
+  const original = VercelSandbox.create;
+  let command: unknown;
+  const raw = {
+    fs: {
+      mkdir: () => Promise.resolve(),
+    },
+    name: "sandbox",
+    runCommand: (input: unknown) => {
+      command = input;
+      return Promise.resolve({
+        exitCode: 0,
+        stderr: () => Promise.resolve(""),
+        stdout: () => Promise.resolve("done"),
+      });
+    },
+    stop: () => Promise.resolve(),
+  } as unknown as VercelSandbox;
+
+  VercelSandbox.create = (() =>
+    Promise.resolve(raw)) as typeof VercelSandbox.create;
+
+  try {
+    const sandbox = await create({
+      adapter: vercel({
+        projectId: "project",
+        teamId: "team",
+        token: "token",
+      }),
+    });
+
+    await expect(
+      sandbox.process.exec("sleep", ["1"], { timeout: 2500 })
+    ).resolves.toMatchObject({
+      code: 0,
+      stdout: "done",
+    });
+    expect(command).toMatchObject({ timeoutMs: 2500 });
   } finally {
     VercelSandbox.create = original;
   }

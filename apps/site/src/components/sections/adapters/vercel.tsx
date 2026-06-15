@@ -22,14 +22,19 @@ export const Vercel = () => (
     <p>
       Vercel via <code>@vercel/sandbox</code>. Backed by Vercel's Fluid Compute:
       named, persistent microVMs with snapshots, dynamic ports, network policy,
-      sessions, and provider-native lifecycle controls. The adapter normalizes
-      files, commands, ports, and snapshots while keeping the full Vercel SDK on{" "}
-      <code>raw</code>.
+      sessions, interactive PTY connections, and provider-native lifecycle
+      controls. The adapter normalizes files, commands, ports, and snapshots
+      while keeping the full Vercel SDK on <code>raw</code>.
     </p>
     <p>
       Use <code>snapshot</code> to start from a snapshot id, or{" "}
       <code>snapshots.restore()</code> to point the current named sandbox at a
       snapshot and resume from it on the next operation.
+    </p>
+    <p>
+      Command timeouts are enforced inside the sandbox and backed by local
+      cancellation. Use <code>raw.openInteractive()</code> when an application
+      needs Vercel's native controller-backed PTY connection.
     </p>
     <CodeBlock code={VERCEL_EXAMPLE} lang="ts" />
     <div className="flex flex-col gap-2">

@@ -133,7 +133,8 @@ clean cross-provider meaning:
 Cloudflare sessions, code contexts, quick tunnels, and configured backups,
 and bucket mounts; Vercel network policy and timeout extension;
 Vercel named sandbox list, get, getOrCreate, fork, dynamic updates, sessions,
-snapshot lists, snapshot trees, proxy helpers, and native filesystem helpers;
+interactive PTY connections, snapshot lists, snapshot trees, proxy helpers,
+and native filesystem helpers;
 E2B Git, MCP, PTY, create-time network settings, and mounted volumes; Daytona
 SSH, PTY, LSP, create-time network settings, tier-gated network updates, and
 resize; Modal create-time volumes, cloud bucket mounts, secrets, tags, connect

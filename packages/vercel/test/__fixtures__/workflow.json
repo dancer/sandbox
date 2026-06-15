@@ -25,6 +25,7 @@
       "process.failure",
       "ports.expose",
       "sandbox.raw.extendTimeout",
+      "sandbox.raw.openInteractive",
       "sandbox.raw.update.networkPolicy",
       "sandbox.raw.status",
       "sandbox.raw.delete"
@@ -46,6 +47,7 @@
         "network": "dynamic",
         "previews": "dynamic",
         "metrics": true,
+        "pty": true,
         "resources": "dynamic",
         "sessions": "dynamic"
       },
@@ -93,6 +95,7 @@
     "provider": "vercel",
     "raw": {
       "extended": true,
+      "interactive": true,
       "networkPolicy": "deny-all",
       "restoredNetworkPolicy": "allow-all",
       "status": "running"
