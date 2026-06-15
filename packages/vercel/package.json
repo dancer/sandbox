@@ -42,7 +42,7 @@
   },
   "dependencies": {
     "@sandbox-sdk/core": "workspace:*",
-    "@vercel/sandbox": "^2.0.0"
+    "@vercel/sandbox": "^2.2.1"
   },
   "devDependencies": {
     "@types/async-retry": "^1.4.9",

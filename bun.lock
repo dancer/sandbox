@@ -7,7 +7,7 @@
       "devDependencies": {
         "@changesets/cli": "^2.31.0",
         "@cloudflare/sandbox": "^0.12.1",
-        "@cloudflare/workers-types": "^4.20260613.1",
+        "@cloudflare/workers-types": "^4.20260615.1",
         "@sandbox-sdk/ai": "workspace:*",
         "@sandbox-sdk/blaxel": "workspace:*",
         "@sandbox-sdk/cloudflare": "workspace:*",
@@ -36,7 +36,7 @@
         "@sandbox-sdk/core": "workspace:*",
       },
       "devDependencies": {
-        "@cloudflare/workers-types": "^4.20260613.1",
+        "@cloudflare/workers-types": "^4.20260615.1",
         "typescript": "^6.0.3",
       },
     },
@@ -118,7 +118,7 @@
         "@sandbox-sdk/core": "workspace:*",
       },
       "devDependencies": {
-        "@cloudflare/workers-types": "^4.20260613.1",
+        "@cloudflare/workers-types": "^4.20260615.1",
         "typescript": "^6.0.3",
       },
     },
@@ -193,7 +193,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@sandbox-sdk/core": "workspace:*",
-        "@vercel/sandbox": "^2.0.0",
+        "@vercel/sandbox": "^2.2.1",
       },
       "devDependencies": {
         "@types/async-retry": "^1.4.9",
@@ -1163,7 +1163,7 @@
 
     "@vercel/oidc": ["@vercel/oidc@3.2.0", "", {}, "sha512-UycprH3T6n3jH0k44NHMa7pnFHGu/N05MjojYr+Mc6I7obkoLIJujSWwin1pCvdy/eOxrI/l3uDLQsmcrOb4ug=="],
 
-    "@vercel/sandbox": ["@vercel/sandbox@2.0.0", "", { "dependencies": { "@vercel/oidc": "3.2.0", "@workflow/serde": "4.1.0-beta.2", "async-retry": "1.3.3", "jose": "6.2.3", "jsonlines": "0.1.1", "ms": "2.1.3", "picocolors": "^1.1.1", "tar-stream": "3.1.7", "undici": "^7.16.0", "xdg-app-paths": "5.1.0", "zod": "3.24.4" } }, "sha512-fmg6lNfDJdhQ43Njc0jUIXTQP2wKPY6tJszeVq5C25v1XsDK3wwnlFBQfSKzZfkMkh1N269pPgOopjTEqJJamA=="],
+    "@vercel/sandbox": ["@vercel/sandbox@2.2.1", "", { "dependencies": { "@vercel/oidc": "3.2.0", "@workflow/serde": "4.1.0-beta.2", "async-retry": "1.3.3", "jose": "6.2.3", "jsonlines": "0.1.1", "ms": "2.1.3", "picocolors": "^1.1.1", "tar-stream": "3.1.7", "undici": "^7.27.1", "xdg-app-paths": "5.1.0", "zod": "^4.1.1" } }, "sha512-IqFYVEsPilXb28VbpTtrP5UkMgVAyQlp77zcLJUgCUo1yEbjJiClGS6sEqGjkAukhbLGS+T2vG3ZOgzSzUTyZg=="],
 
     "@workflow/serde": ["@workflow/serde@4.1.0-beta.2", "", {}, "sha512-8kkeoQKLDaKXefjV5dbhBj2aErfKp1Mc4pb6tj8144cF+Em5SPbyMbyLCHp+BVrFfFVCBluCtMx+jjvaFVZGww=="],
 
@@ -2515,7 +2515,7 @@
 
     "@tailwindcss/oxide-wasm32-wasi/tslib": ["tslib@2.8.1", "", { "bundled": true }, "sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w=="],
 
-    "@vercel/sandbox/zod": ["zod@3.24.4", "", {}, "sha512-OdqJE9UDRPwWsrHjLN2F8bPxvwJBK22EHLWtanu0LSYr5YqzsaaW3RMgmjwr8Rypg5k+meEJdSPXJZXE/yqOMg=="],
+    "@vercel/sandbox/undici": ["undici@7.27.2", "", {}, "sha512-uZsKNuzQxDMUY6M3pIMvy5tvlGmtq8XJ2oLAkfRKGNu+1VQAIvLy2xIVG5ATZl5wDXl/tddByAWCizRbOme+TA=="],
 
     "accepts/mime-types": ["mime-types@3.0.2", "", { "dependencies": { "mime-db": "^1.54.0" } }, "sha512-Lbgzdk0h4juoQ9fCKXW4by0UJqj+nOOrI9MJ1sSj4nI8aI2eo1qmvQEie4VD1glsS250n15LsWsYtCugiStS5A=="],
 
