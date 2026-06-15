@@ -28,6 +28,7 @@ import type {
 
 import type {
   ClientOptions,
+  CodeSandboxRaw,
   CreateOptions,
   LocalCreate,
   Raw,
@@ -148,7 +149,7 @@ const sdk = (options: CodeSandbox): Sdk =>
 
 const createOptions = (
   options: CodeSandbox,
-  input: NonNullable<Parameters<Adapter<Raw>["create"]>[0]>
+  input: NonNullable<Parameters<Adapter<CodeSandboxRaw>["create"]>[0]>
 ): LocalCreate => {
   const template = input.snapshot ?? input.template ?? options.template;
   const lifetime = duration(input.timeout ?? options.timeout, provider);
@@ -178,7 +179,7 @@ const createOptions = (
 
 const session = (
   options: CodeSandbox,
-  input: NonNullable<Parameters<Adapter<Raw>["create"]>[0]>
+  input: NonNullable<Parameters<Adapter<CodeSandboxRaw>["create"]>[0]>
 ): SessionOptions => {
   const values = { ...options.env, ...input.env };
   return {
@@ -460,7 +461,7 @@ const createSandbox = (
   raw: Raw,
   cwd: string,
   stop: CodeSandbox["stop"]
-): Sandbox<Raw> => ({
+): Sandbox<CodeSandboxRaw> => ({
   capabilities,
   cwd,
   files: {
@@ -519,7 +520,7 @@ const createSandbox = (
       spawn(raw.client, cwd, script, options),
   },
   provider,
-  raw,
+  raw: raw as unknown as CodeSandboxRaw,
   snapshots: {
     create: async (name) => {
       await raw.sdk.sandboxes.hibernate(raw.sandbox.id);
@@ -545,7 +546,9 @@ const createSandbox = (
 });
 
 /** create a codesandbox adapter with normalized sandbox operations */
-export const codesandbox = (options: CodeSandbox = {}): Adapter<Raw> => ({
+export const codesandbox = (
+  options: CodeSandbox = {}
+): Adapter<CodeSandboxRaw> => ({
   capabilities,
   async create(input = {}) {
     validate(options);

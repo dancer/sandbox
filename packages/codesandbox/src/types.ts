@@ -1,7 +1,11 @@
-import type { CodeSandbox as CodeSandboxClient } from "@codesandbox/sdk";
+import type { CodeSandbox as NativeSdk, VMTier } from "@codesandbox/sdk";
+
+type NativeSandbox = Awaited<ReturnType<NativeSdk["sandboxes"]["create"]>>;
+
+type NativeClient = Awaited<ReturnType<NativeSandbox["connect"]>>;
 
 export type ClientOptions = NonNullable<
-  ConstructorParameters<typeof CodeSandboxClient>[1]
+  ConstructorParameters<typeof NativeSdk>[1]
 >;
 
 export type LocalCreate = Readonly<{
@@ -14,7 +18,7 @@ export type LocalCreate = Readonly<{
   privacy?: "private" | "public" | "public-hosts" | "unlisted";
   tags?: string[];
   title?: string;
-  vmTier?: unknown;
+  vmTier?: VMTier;
 }>;
 
 export type CreateOptions = LocalCreate;
@@ -226,12 +230,16 @@ export type Sdk = Readonly<{
   }>;
 }>;
 
-/** native CodeSandbox sdk, sandbox, and connected session exposed as `sandbox.raw` */
+/** internal CodeSandbox contract used by custom clients and tests */
 export type Raw = Readonly<{
   client: SandboxClient;
   sandbox: ProviderSandbox;
   sdk: Sdk;
 }>;
 
-/** native CodeSandbox raw object exposed as `sandbox.raw` */
-export type CodeSandboxRaw = Raw;
+/** native CodeSandbox sdk, sandbox, and connected session exposed as `sandbox.raw` */
+export type CodeSandboxRaw = Readonly<{
+  client: NativeClient;
+  sandbox: NativeSandbox;
+  sdk: NativeSdk;
+}>;
