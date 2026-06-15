@@ -64,6 +64,8 @@ export type Daytona = DaytonaConfig &
     labels?: Readonly<Record<string, string>>;
     /** Daytona code language label for created sandboxes */
     language?: CodeLanguage | string;
+    /** existing ephemeral sandbox id or name used for runner co-location */
+    linkedSandbox?: string;
     /** stable Daytona sandbox name used when create input omits id */
     name?: string;
     /** outbound network allow list passed to Daytona at sandbox creation */
@@ -294,6 +296,9 @@ const baseParams = (
   ...(options.ephemeral === undefined ? {} : { ephemeral: options.ephemeral }),
   labels: { ...options.labels, ...input.metadata },
   ...(options.language === undefined ? {} : { language: options.language }),
+  ...(options.linkedSandbox === undefined
+    ? {}
+    : { linkedSandbox: options.linkedSandbox }),
   ...((input.id ?? options.name) ? { name: input.id ?? options.name } : {}),
   ...(options.networkAllowList === undefined
     ? {}

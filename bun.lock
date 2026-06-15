@@ -145,7 +145,7 @@
       "name": "@sandbox-sdk/daytona",
       "version": "0.0.0",
       "dependencies": {
-        "@daytona/sdk": "^0.179.0",
+        "@daytona/sdk": "^0.187.0",
         "@sandbox-sdk/core": "workspace:*",
       },
       "devDependencies": {
@@ -445,11 +445,11 @@
 
     "@connectrpc/connect-web": ["@connectrpc/connect-web@2.0.0-rc.3", "", { "peerDependencies": { "@bufbuild/protobuf": "^2.2.0", "@connectrpc/connect": "2.0.0-rc.3" } }, "sha512-w88P8Lsn5CCsA7MFRl2e6oLY4J/5toiNtJns/YJrlyQaWOy3RO8pDgkz+iIkG98RPMhj2thuBvsd3Cn4DKKCkw=="],
 
-    "@daytona/api-client": ["@daytona/api-client@0.179.0", "", { "dependencies": { "axios": "^1.6.1" } }, "sha512-5szyt5NyTQv/yPgreuQqIEu79sE7VKAzrYCnpJMByJSnIoViZ6kvgrOJTPC+kJs6RJUO/G3wyM8iMDsvYkL2KA=="],
+    "@daytona/api-client": ["@daytona/api-client@0.187.0", "", { "dependencies": { "axios": "^1.6.1" } }, "sha512-riKOJ6eSuy67DL6iJlAa3Bfjnm4iQmkOdJk0B5hqrYMZeZmVDsgdiZtYvFpyoa+2KCZFNb0Gs5dQwO1d6NhGCw=="],
 
-    "@daytona/sdk": ["@daytona/sdk@0.179.0", "", { "dependencies": { "@aws-sdk/client-s3": "^3.787.0", "@aws-sdk/lib-storage": "^3.798.0", "@daytona/api-client": "0.179.0", "@daytona/toolbox-api-client": "0.179.0", "@iarna/toml": "^2.2.5", "@opentelemetry/api": "^1.9.0", "@opentelemetry/exporter-trace-otlp-http": "^0.217.0", "@opentelemetry/instrumentation-http": "^0.217.0", "@opentelemetry/otlp-exporter-base": "0.217.0", "@opentelemetry/resources": "2.7.1", "@opentelemetry/sdk-node": "^0.217.0", "@opentelemetry/sdk-trace-base": "^2.7.1", "@opentelemetry/semantic-conventions": "^1.40.0", "axios": "^1.15.2", "busboy": "^1.0.0", "dotenv": "^17.0.1", "expand-tilde": "^2.0.2", "fast-glob": "^3.3.0", "form-data": "^4.0.4", "isomorphic-ws": "^5.0.0", "pathe": "^2.0.3", "shell-quote": "^1.8.2", "tar": "^7.5.11" } }, "sha512-6cxr5Do/DggTyNmliKL5ZJCmqlornqKipGFQf8giXLZr7L3vVE1Lbt+qps8zwfVpJ3PdGg4nPUTdoJEtHoT2dQ=="],
+    "@daytona/sdk": ["@daytona/sdk@0.187.0", "", { "dependencies": { "@aws-sdk/client-s3": "^3.787.0", "@aws-sdk/lib-storage": "^3.798.0", "@daytona/api-client": "0.187.0", "@daytona/toolbox-api-client": "0.187.0", "@iarna/toml": "^2.2.5", "@opentelemetry/api": "^1.9.0", "@opentelemetry/exporter-trace-otlp-http": "^0.217.0", "@opentelemetry/instrumentation-http": "^0.217.0", "@opentelemetry/otlp-exporter-base": "0.217.0", "@opentelemetry/resources": "2.7.1", "@opentelemetry/sdk-node": "^0.217.0", "@opentelemetry/sdk-trace-base": "^2.7.1", "@opentelemetry/semantic-conventions": "^1.40.0", "axios": "^1.15.2", "busboy": "^1.0.0", "dotenv": "^17.0.1", "expand-tilde": "^2.0.2", "fast-glob": "^3.3.0", "form-data": "^4.0.4", "isomorphic-ws": "^5.0.0", "pathe": "^2.0.3", "shell-quote": "^1.8.2", "tar": "^7.5.11" } }, "sha512-d1OsvxwEptAZoQT0hwLggWOU/B000BferyHMEUr0I9QRPwv32bnfOOmjZHKIWx8jHWvK2YWv9PvsORSvD4o6Jg=="],
 
-    "@daytona/toolbox-api-client": ["@daytona/toolbox-api-client@0.179.0", "", { "dependencies": { "axios": "^1.6.1" } }, "sha512-CgfoVrksH+WRjf4ZPcNZfE6vhEOmqkGN5JRJ6rqbcfWVNLwpl46/s8qw/Zz8H/37i0c1enNl+QokLyW5fCxS3w=="],
+    "@daytona/toolbox-api-client": ["@daytona/toolbox-api-client@0.187.0", "", { "dependencies": { "axios": "^1.6.1" } }, "sha512-T5F+++cakH5Nl67fR53SLkEeTgayEmw5JFXhdMKRgk/mUf6IL30nHC/2kIbc4yK8Iol6YVo9vlG4cLk+4x8y1A=="],
 
     "@dotenvx/dotenvx": ["@dotenvx/dotenvx@1.65.0", "", { "dependencies": { "commander": "^11.1.0", "dotenv": "^17.2.1", "eciesjs": "^0.4.10", "execa": "^5.1.1", "fdir": "^6.2.0", "ignore": "^5.3.0", "object-treeify": "1.1.33", "picomatch": "^4.0.4", "which": "^4.0.0", "yocto-spinner": "^1.1.0" }, "bin": { "dotenvx": "src/cli/dotenvx.js" } }, "sha512-v4FA/Lw3pTEloLxBqTOaYDX6MNo0Jo7lGBsPZhwnJBqRJp0AzQg1ZZNxrFsh6HVC6QWeWrfIKLn0y2eyIXaVDg=="],
 

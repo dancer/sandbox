@@ -204,3 +204,30 @@ live("daytona exposes advertised raw capabilities", async () => {
     await sandbox.stop();
   }
 });
+
+live("daytona creates a linked sandbox", async () => {
+  const source = await create({
+    adapter: daytona({
+      deleteOnStop: true,
+      ephemeral: true,
+      timeout: 300_000,
+    }),
+  });
+  let linked: typeof source | undefined;
+
+  try {
+    linked = await create({
+      adapter: daytona({
+        deleteOnStop: true,
+        ephemeral: true,
+        linkedSandbox: source.id,
+        timeout: 300_000,
+      }),
+    });
+    await linked.raw.refreshData();
+    expect(linked.raw.linkedSandboxId).toBe(source.id);
+  } finally {
+    await linked?.stop();
+    await source.stop();
+  }
+});
