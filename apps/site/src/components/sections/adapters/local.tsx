@@ -26,8 +26,8 @@ export const Local = () => (
       <code>node:child_process</code>. It is not an isolation boundary for
       untrusted code. Every sandbox path is mapped below the root, and existing
       symlinks are rejected when they resolve outside it. Ports return localhost
-      URLs, and filesystem snapshots support create and restore in the same
-      process.
+      URLs, and filesystem snapshots support create, delete, and restore in the
+      same process.
     </p>
     <CodeBlock code={LOCAL_EXAMPLE} lang="ts" />
     <div className="flex flex-col gap-2">

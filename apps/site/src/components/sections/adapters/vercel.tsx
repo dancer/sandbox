@@ -29,7 +29,11 @@ export const Vercel = () => (
     <p>
       Use <code>snapshot</code> to start from a snapshot id, or{" "}
       <code>snapshots.restore()</code> to point the current named sandbox at a
-      snapshot and resume from it on the next operation.
+      snapshot and resume from it on the next operation. Call{" "}
+      <code>snapshots.delete()</code> to permanently remove a durable snapshot
+      after its dependents have been created. Deleting the current snapshot of a
+      stopped named sandbox makes the next <code>getOrCreate()</code> rebuild
+      it.
     </p>
     <p>
       Command timeouts are enforced inside the sandbox and backed by local

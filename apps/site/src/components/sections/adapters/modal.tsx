@@ -27,8 +27,8 @@ export const Modal = () => (
       Reconnecting by sandbox id discovers existing tunnels automatically.
     </p>
     <p>
-      Modal supports filesystem snapshot creation. In-place restore and
-      background process handles stay unsupported in the normalized adapter
+      Modal supports filesystem snapshot creation and deletion. In-place restore
+      and background process handles stay unsupported in the normalized adapter
       until the provider exposes a matching stable primitive.
     </p>
     <CodeBlock code={MODAL_EXAMPLE} lang="ts" />

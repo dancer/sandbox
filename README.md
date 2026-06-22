@@ -125,6 +125,11 @@ true. Use `sandbox.snapshots.restore(id)` only when
 `supports(sandbox, "snapshotRestore")` is true; restore means in-place restore
 of the current sandbox.
 
+Use `sandbox.snapshots.delete(id)` only when
+`supports(sandbox, "snapshotDelete")` is true. For persistent provider
+snapshots, deletion is permanent, so delete only after every sandbox that needs
+the snapshot has been created.
+
 To create a fresh sandbox from a snapshot, pass the snapshot id to `create()`:
 
 ```ts
@@ -134,6 +139,10 @@ const next = await create({
   adapter,
   snapshot: checkpoint.id,
 });
+
+if (supports(sandbox, "snapshotDelete")) {
+  await sandbox.snapshots.delete(checkpoint.id);
+}
 ```
 
 The `snapshot` create option is supported by adapters that advertise
@@ -408,7 +417,7 @@ CodeSandbox config and replay tests.
 - Blaxel: `BL_WORKSPACE` with `BL_API_KEY` or `BL_CLIENT_CREDENTIALS`, or Blaxel CLI config; set `BL_REGION` when you need a specific region
 - Cloudflare: deploy `apps/cloudflare` and set `CLOUDFLARE_SANDBOX_WORKER_URL` and `CLOUDFLARE_SANDBOX_TOKEN`
 - CodeSandbox: `CSB_API_KEY`
-- Daytona: `DAYTONA_API_KEY`
+- Daytona: `DAYTONA_API_KEY`; include `delete:snapshots` when using `snapshots.delete()`
 - E2B: `E2B_API_KEY` or `E2B_ACCESS_TOKEN`
 - Modal: `MODAL_TOKEN_ID` and `MODAL_TOKEN_SECRET`, or Modal CLI config
 - Vercel: `VERCEL_OIDC_TOKEN`, or `VERCEL_TOKEN`, `VERCEL_TEAM_ID`, and `VERCEL_PROJECT_ID`

@@ -24,8 +24,12 @@ export const Daytona = () => (
     </p>
     <p>
       Use the shared <code>snapshot</code> create option, or the adapter{" "}
-      <code>snapshot</code> default, to start from a Daytona snapshot id.
+      <code>snapshot</code> default, to start from a Daytona snapshot reference.
       Network limits are configured at creation time in the normalized adapter.
+      Durable Daytona snapshots can be removed through{" "}
+      <code>snapshots.delete()</code> when the API key has Daytona's{" "}
+      <code>delete:snapshots</code> permission; snapshot creation stays on the
+      native client until the source lifecycle has a matching stable contract.
       Daytona's native <code>raw.updateNetworkSettings()</code> is still
       available when the account tier supports runtime network changes.
     </p>

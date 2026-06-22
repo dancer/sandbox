@@ -146,6 +146,35 @@ const ROWS: { capability: string; cells: Record<ColumnKey, Cell> }[] = [
     },
   },
   {
+    capability: "snapshot delete",
+    cells: {
+      blaxel: no(
+        "Blaxel snapshot deletion stays behind raw until its snapshot lifecycle has a matching normalized contract."
+      ),
+      cloudflare: no(
+        "Cloudflare Sandbox backups and hibernation stay behind raw until their lifecycle maps cleanly to durable snapshots."
+      ),
+      codesandbox: no(
+        "CodeSandbox normalized snapshots are hibernated sandbox ids, so deleting one would delete the source sandbox."
+      ),
+      daytona: warn(
+        "Daytona deletes durable snapshots when the API key has delete:snapshots. Existing sandboxes continue running, but no new sandbox can use the deleted snapshot."
+      ),
+      e2b: warn(
+        "E2B deletes durable snapshots by id. A missing snapshot returns a typed not_found error."
+      ),
+      local: warn(
+        "Local deletes the in-process filesystem checkpoint. Local snapshots are removed automatically when the sandbox stops."
+      ),
+      modal: warn(
+        "Modal deletes the filesystem snapshot image. Deletion is irreversible and later sandboxes cannot start from it."
+      ),
+      vercel: warn(
+        "Vercel permanently removes the durable snapshot. Delete it only after every dependent sandbox has been created. A stopped named sandbox rebuilds on its next getOrCreate when its current snapshot is gone."
+      ),
+    },
+  },
+  {
     capability: "snapshot restore",
     cells: {
       blaxel: no(

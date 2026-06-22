@@ -28,7 +28,8 @@ export const E2B = () => (
       state, briefly pausing the source sandbox and dropping active command,
       PTY, and WebSocket connections. Use <code>template</code> for provider
       template ids and names. Named snapshots return E2B's persisted canonical
-      name, which can include a namespace and tag.
+      name, which can include a namespace and tag. Call{" "}
+      <code>snapshots.delete()</code> after the snapshot is no longer needed.
     </p>
     <p>
       When E2B restricts preview traffic, call <code>preview.request()</code>{" "}

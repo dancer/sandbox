@@ -27,7 +27,9 @@ export const CodeSandbox = () => (
       Use <code>template</code> to fork from a template sandbox, or{" "}
       <code>snapshot</code> to fork from a snapshot created with{" "}
       <code>snapshots.create()</code>. Use <code>id</code> on{" "}
-      <code>create()</code> to resume an existing sandbox.
+      <code>create()</code> to resume an existing sandbox. The hibernated id
+      names the source sandbox, so normalized snapshot deletion stays
+      unsupported.
     </p>
     <CodeBlock code={CODESANDBOX_EXAMPLE} lang="ts" />
     <div className="flex flex-col gap-2">

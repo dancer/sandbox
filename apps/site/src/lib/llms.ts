@@ -19,7 +19,7 @@ Every sandbox provider exposes a slightly different API for the same handful of 
 
 - One small API across providers. Swap E2B for Daytona without rewriting your agent loop.
 - Web-standards I/O. Accepts \`string\`, \`Uint8Array\`, \`Blob\`, \`ArrayBuffer\`, or a \`ReadableStream\`. Runs on Node, Bun, and Workers, anywhere the fetch primitives run.
-- Capabilities, not surprises. Each adapter declares what it supports. Branch on \`supports(sandbox, "snapshotCreate")\` and \`supports(sandbox, "snapshotRestore")\` instead of discovering it the hard way in production.
+- Capabilities, not surprises. Each adapter declares what it supports. Branch on \`supports(sandbox, "snapshotCreate")\`, \`supports(sandbox, "snapshotDelete")\`, and \`supports(sandbox, "snapshotRestore")\` instead of discovering it the hard way in production.
 - Escape hatch via \`sandbox.raw\`. The native client is always one property away, typed per adapter, for anything outside the unified surface.
 - Predictable errors. A single \`SandboxError\` with a normalized \`code\` across providers, and the original error attached as \`cause\`.`;
 
@@ -110,7 +110,7 @@ CodeSandbox microVMs via \`@codesandbox/sdk\`. Creates or resumes sandboxes, con
 Daytona dev environments via \`@daytona/sdk\`. Spins up a workspace from the given image, mounts a workdir, and threads files and processes through Daytona's API. Standard private previews work through \`preview.request()\`, which retains Daytona's preview token. Standard tokens reset after a sandbox restart, so expose the port again after restarting. Set \`signedPreview\` when an external client needs a self-contained URL. Network limits are configured at creation time; native \`raw.updateNetworkSettings()\` is available when the account tier supports runtime changes.
 
 - \`image\`, \`apiKey\`, \`target\`, \`networkBlockAll\`, \`networkAllowList\`.
-- Credentials: \`DAYTONA_API_KEY\`.
+- Credentials: \`DAYTONA_API_KEY\`. Include the Daytona \`delete:snapshots\` permission when using \`snapshots.delete()\`.
 
 ## E2B (@sandbox-sdk/e2b)
 
@@ -148,10 +148,14 @@ if (supports(sandbox, "ports")) {
 if (supports(sandbox, "snapshotCreate")) {
   const snapshot = await sandbox.snapshots.create();
   console.log(snapshot.id);
+
+  if (supports(sandbox, "snapshotDelete")) {
+    await sandbox.snapshots.delete(snapshot.id);
+  }
 }
 \`\`\`
 
-Normalized capability flags include \`files\`, \`fileStreaming\`, \`process\`, \`processExec\`, \`processSpawn\`, \`ports\`, \`snapshots\`, \`snapshotCreate\`, \`snapshotRestore\`, \`snapshotSource\`, \`environment\`, and \`streaming\`. Provider-specific powers are listed under \`capabilities.raw\` and reached through \`sandbox.raw\`.
+Normalized capability flags include \`files\`, \`fileStreaming\`, \`process\`, \`processExec\`, \`processSpawn\`, \`ports\`, \`snapshots\`, \`snapshotCreate\`, \`snapshotDelete\`, \`snapshotRestore\`, \`snapshotSource\`, \`environment\`, and \`streaming\`. Provider-specific powers are listed under \`capabilities.raw\` and reached through \`sandbox.raw\`.
 
 \`capabilityMode(sandbox, capability)\` returns how a feature works when it exists but has a provider-specific shape, for example \`"disk"\` versus \`"memory"\` snapshots, \`"separate"\` versus \`"combined"\` output streams, or \`"native"\` versus \`"buffered"\` file delivery. The TypeScript map only accepts modes that belong to the named normalized capability, so output shape stays under \`streaming\` rather than \`processSpawn\`. \`sandbox.capabilities\` is the runtime source of truth for a given provider.`;
 
@@ -242,10 +246,15 @@ if (supports(sandbox, "snapshotCreate")) {
       console.log(await fresh.files.list());
     }
   );
+
+  if (supports(sandbox, "snapshotDelete")) {
+    await sandbox.snapshots.delete(snapshot.id);
+  }
 }
 \`\`\`
 
 - \`snapshots.create(name?)\` captures provider state when \`snapshotCreate\` is supported. Snapshot names are accepted only when the provider persists them. Other adapters reject a name rather than silently discarding it. When present, \`Snapshot.name\` is the provider-persisted value and can differ from the requested label.
+- \`snapshots.delete(id)\` removes a snapshot when \`snapshotDelete\` is supported. For persistent provider snapshots, deletion is permanent. Delete only after every sandbox that needs it has been created.
 - \`snapshots.restore(id)\` means in-place restore of the current sandbox, gated separately by \`snapshotRestore\`.
 - To create a fresh sandbox from a snapshot, pass the snapshot id as the \`snapshot\` create option on adapters that advertise \`snapshotSource\`. Provider template ids still use \`template\`.`;
 
@@ -436,7 +445,7 @@ Use \`SandboxRuntime<Raw>\` with \`fromSandboxRuntime()\` for adapters that can 
 
 ## Advertise capability truthfully
 
-\`capabilities\` is a contract, not a feature wishlist. Every advertised flag needs an implementation and a deterministic test. Keep snapshot creation, in-place restore, and create-from-snapshot separate because providers rarely implement all three with the same lifecycle semantics. Keep \`processSpawn\` false when a provider cannot offer a reliable process handle, even if it can run one-shot commands.
+\`capabilities\` is a contract, not a feature wishlist. Every advertised flag needs an implementation and a deterministic test. Keep snapshot creation, deletion, in-place restore, and create-from-snapshot separate because providers rarely implement the same lifecycle semantics. Keep \`processSpawn\` false when a provider cannot offer a reliable process handle, even if it can run one-shot commands.
 
 Use \`SandboxError\` with a stable code for configuration, unsupported, path, timeout, abort, and normalized provider failures. Do not silently discard unsupported options or make a capability appear supported just because a related native method exists.
 

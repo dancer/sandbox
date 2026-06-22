@@ -89,6 +89,10 @@ if (supports(sandbox, "snapshotCreate")) {
   if (supports(sandbox, "snapshotRestore")) {
     await sandbox.snapshots.restore(snap.id);
   }
+
+  if (supports(sandbox, "snapshotDelete")) {
+    await sandbox.snapshots.delete(snap.id);
+  }
 }`;
 
 export const ApiReference = () => (
@@ -343,16 +347,19 @@ export const ApiReference = () => (
 
     <section>
       <Heading as="h3" id="snapshots">
-        snapshots.create(name?) / snapshots.restore(id)
+        snapshots.create(name?) / snapshots.delete(id) / snapshots.restore(id)
       </Heading>
       <p>
         Captures provider state when <code>snapshotCreate</code> is supported.
-        Restore means in-place restore of the current sandbox and is tracked
-        separately with <code>snapshotRestore</code>. To create a fresh sandbox
-        from a snapshot, pass <code>snapshot</code> to <code>create()</code> on
-        adapters that advertise <code>snapshotSource</code>. Snapshot names are
-        accepted only when the provider persists them. Other adapters reject a
-        name rather than silently discarding it.
+        Snapshots can be removed with <code>delete()</code> when{" "}
+        <code>snapshotDelete</code> is supported. For persistent provider
+        snapshots, deletion is permanent. Restore means in-place restore of the
+        current sandbox and is tracked separately with{" "}
+        <code>snapshotRestore</code>. To create a fresh sandbox from a snapshot,
+        pass <code>snapshot</code> to <code>create()</code> on adapters that
+        advertise <code>snapshotSource</code>. Snapshot names are accepted only
+        when the provider persists them. Other adapters reject a name rather
+        than silently discarding it.
       </p>
       <CodeBlock code={SNAPSHOTS_EXAMPLE} lang="ts" />
     </section>

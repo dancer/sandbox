@@ -26,6 +26,7 @@ export const Why = () => (
         <span className="text-foreground">Capabilities, not surprises.</span>{" "}
         Each adapter declares what it supports. Branch on{" "}
         <code>supports(sandbox, "snapshotCreate")</code> and{" "}
+        <code>supports(sandbox, "snapshotDelete")</code> and{" "}
         <code>supports(sandbox, "snapshotRestore")</code> instead of discovering
         it the hard way in production.
       </li>
