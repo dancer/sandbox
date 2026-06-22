@@ -77,7 +77,7 @@ export type VercelFetch = (
 /** source used to seed a new Vercel sandbox */
 export type Source =
   | Readonly<{
-      /** shallow clone depth for git sources */
+      /** positive integer shallow clone depth for git sources */
       depth?: number;
       /** git branch, tag, or commit to check out */
       revision?: string;
@@ -87,7 +87,7 @@ export type Source =
       url: string;
     }>
   | Readonly<{
-      /** shallow clone depth for private git sources */
+      /** positive integer shallow clone depth for private git sources */
       depth?: number;
       /** password or token for the private git source */
       password: string;
@@ -469,6 +469,20 @@ const requestedResources = (
   return value;
 };
 
+const sourceOptions = (value: Source | undefined): Source | undefined => {
+  if (value?.type !== "git" || value.depth === undefined) {
+    return value;
+  }
+  if (!Number.isInteger(value.depth) || value.depth < 1) {
+    throw sandboxError(
+      provider,
+      "source.depth must be a positive integer",
+      "configuration"
+    );
+  }
+  return value;
+};
+
 const sandboxTags = (
   defaults: Readonly<Record<string, string>> | undefined,
   metadata: Readonly<Record<string, string>> | undefined
@@ -519,7 +533,7 @@ const createInput = (
     snapshotExpiration,
     source:
       snapshot === undefined
-        ? options.source
+        ? sourceOptions(options.source)
         : { snapshotId: snapshot, type: "snapshot" },
     tags,
     ...(lifetime === undefined ? {} : { timeout: lifetime }),

@@ -2778,7 +2778,7 @@ source used to seed a new Vercel sandbox
 ```ts
 export type Source =
   | Readonly<{
-      /** shallow clone depth for git sources */
+      /** positive integer shallow clone depth for git sources */
       depth?: number;
       /** git branch, tag, or commit to check out */
       revision?: string;
@@ -2788,7 +2788,7 @@ export type Source =
       url: string;
     }>
   | Readonly<{
-      /** shallow clone depth for private git sources */
+      /** positive integer shallow clone depth for private git sources */
       depth?: number;
       /** password or token for the private git source */
       password: string;

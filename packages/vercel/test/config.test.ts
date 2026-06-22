@@ -864,6 +864,87 @@ test("vercel rejects invalid resource counts before provider calls", async () =>
   }
 });
 
+test("vercel rejects invalid git source depth before provider calls", async () => {
+  const original = VercelSandbox.create;
+  let called = false;
+
+  VercelSandbox.create = (() => {
+    called = true;
+    return Promise.reject(new Error("provider called"));
+  }) as typeof VercelSandbox.create;
+
+  try {
+    for (const depth of [0, 1.5]) {
+      await expect(
+        create({
+          adapter: vercel({
+            projectId: "project",
+            source: {
+              depth,
+              type: "git",
+              url: "https://github.com/acme/example.git",
+            },
+            teamId: "team",
+            token: "token",
+          }),
+        })
+      ).rejects.toMatchObject({
+        code: "configuration",
+        message: "source.depth must be a positive integer",
+        provider: "vercel",
+      });
+    }
+    expect(called).toBe(false);
+  } finally {
+    VercelSandbox.create = original;
+  }
+});
+
+test("vercel forwards valid git source depth", async () => {
+  const original = VercelSandbox.create;
+  const raw = {
+    fs: {
+      mkdir: () => Promise.resolve(),
+    },
+    name: "sandbox",
+    stop: () => Promise.resolve(),
+  } as unknown as VercelSandbox;
+  let seen: unknown;
+
+  VercelSandbox.create = ((input?: unknown) => {
+    seen = input;
+    return Promise.resolve(raw);
+  }) as typeof VercelSandbox.create;
+
+  try {
+    const sandbox = await create({
+      adapter: vercel({
+        projectId: "project",
+        source: {
+          depth: 2,
+          revision: "main",
+          type: "git",
+          url: "https://github.com/acme/example.git",
+        },
+        teamId: "team",
+        token: "token",
+      }),
+    });
+
+    await sandbox.stop();
+    expect(seen).toMatchObject({
+      source: {
+        depth: 2,
+        revision: "main",
+        type: "git",
+        url: "https://github.com/acme/example.git",
+      },
+    });
+  } finally {
+    VercelSandbox.create = original;
+  }
+});
+
 test("vercel rejects invalid create timeouts before provider calls", async () => {
   const original = VercelSandbox.create;
   let called = false;
