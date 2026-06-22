@@ -167,7 +167,9 @@ export type CloudflareBridge = Readonly<{
    */
   token?: string;
   /**
-   * default sandbox working directory
+   * default sandbox working directory below `/workspace`
+   *
+   * relative values resolve below `/workspace`, custom directories are created, and paths outside it are rejected before bridge work
    *
    * @default "/workspace"
    */
@@ -262,7 +264,8 @@ export const bridgeCapabilities: Capabilities = {
 
 export const absolute = (cwd: string, path = cwd): string => {
   const value = path.startsWith("/") ? path : `${cwd}/${path}`;
-  const output = new URL(value, "file:///").pathname;
+  const output =
+    new URL(value, "file:///").pathname.replace(/\/+$/u, "") || "/";
   if (output !== "/workspace" && !output.startsWith("/workspace/")) {
     throw sandboxError(
       provider,

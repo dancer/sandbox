@@ -33,7 +33,7 @@ export const execPayload = (
           executable,
           ...args,
         ],
-  ...(options.cwd === undefined ? {} : { cwd: absolute(cwd, options.cwd) }),
+  cwd: options.cwd === undefined ? cwd : absolute(cwd, options.cwd),
   ...(options.timeout === undefined
     ? {}
     : { timeout_ms: duration(options.timeout, provider) }),

@@ -198,9 +198,148 @@ test("cloudflareBridge keeps paths under workspace", async () => {
       code: "path_escape",
       provider: "cloudflare",
     });
+    await expect(sandbox.files.remove(".")).rejects.toMatchObject({
+      code: "path_escape",
+      provider: "cloudflare",
+    });
   } finally {
     await sandbox.stop();
   }
+});
+
+test("cloudflareBridge normalizes its default cwd without a session", async () => {
+  const seen: Seen[] = [];
+  const executions: Record<string, unknown>[] = [];
+  const sandbox = await create({
+    adapter: cloudflareBridge({
+      cwd: "app",
+      fetch: bridgeFetch((request) => {
+        if (request.path === "/v1/sandbox" && request.method === "POST") {
+          return json({ id: "box-1" });
+        }
+        if (request.path === "/v1/sandbox/box-1/exec") {
+          const body = JSON.parse(request.body ?? "{}") as Record<
+            string,
+            unknown
+          >;
+          executions.push(body);
+          return Array.isArray(body.argv) && body.argv[0] === "sh"
+            ? sse(["stdout", "/workspace/app\n"], ["exit", "0"])
+            : sse(["exit", "0"]);
+        }
+        if (request.method === "DELETE") {
+          return new Response(null, { status: 204 });
+        }
+        return missing();
+      }, seen),
+      url: "https://bridge.example.com",
+    }),
+  });
+
+  try {
+    expect(sandbox.cwd).toBe("/workspace/app");
+    await expect(sandbox.files.mkdir("nested")).resolves.toBeUndefined();
+    await expect(sandbox.process.shell("pwd")).resolves.toMatchObject({
+      code: 0,
+      stdout: "/workspace/app\n",
+    });
+  } finally {
+    await sandbox.stop();
+  }
+
+  expect(seen.map((request) => `${request.method} ${request.path}`)).toEqual([
+    "POST /v1/sandbox",
+    "POST /v1/sandbox/box-1/exec",
+    "POST /v1/sandbox/box-1/exec",
+    "POST /v1/sandbox/box-1/exec",
+    "DELETE /v1/sandbox/box-1",
+  ]);
+  expect(executions).toEqual([
+    {
+      argv: ["mkdir", "-p", "/workspace/app"],
+      cwd: "/workspace",
+    },
+    {
+      argv: ["mkdir", "-p", "/workspace/app/nested"],
+      cwd: "/workspace/app",
+    },
+    {
+      argv: ["sh", "-lc", "pwd"],
+      cwd: "/workspace/app",
+    },
+  ]);
+});
+
+test("cloudflareBridge rejects working directories outside workspace", async () => {
+  let calls = 0;
+  const fetch = bridgeFetch(() => {
+    calls += 1;
+    return json({ id: "box-1" });
+  }, []);
+
+  await expect(
+    create({
+      adapter: cloudflareBridge({
+        cwd: "/tmp",
+        fetch,
+        url: "https://bridge.example.com",
+      }),
+    })
+  ).rejects.toMatchObject({
+    code: "path_escape",
+    provider: "cloudflare",
+  });
+  await expect(
+    create({
+      adapter: cloudflareBridge({
+        fetch,
+        url: "https://bridge.example.com",
+      }),
+      cwd: "../tmp",
+    })
+  ).rejects.toMatchObject({
+    code: "path_escape",
+    provider: "cloudflare",
+  });
+
+  expect(calls).toBe(0);
+});
+
+test("cloudflareBridge deletes an owned sandbox when workspace setup fails", async () => {
+  const seen: Seen[] = [];
+
+  await expect(
+    create({
+      adapter: cloudflareBridge({
+        cwd: "app",
+        fetch: bridgeFetch((request) => {
+          if (request.path === "/v1/sandbox" && request.method === "POST") {
+            return json({ id: "box-1" });
+          }
+          if (request.path === "/v1/sandbox/box-1/exec") {
+            return sse(["exit", "1"]);
+          }
+          if (
+            request.path === "/v1/sandbox/box-1" &&
+            request.method === "DELETE"
+          ) {
+            return new Response(null, { status: 204 });
+          }
+          return missing();
+        }, seen),
+        url: "https://bridge.example.com",
+      }),
+    })
+  ).rejects.toMatchObject({
+    code: "provider",
+    provider: "cloudflare",
+  });
+
+  expect(seen.map((request) => `${request.method} ${request.path}`)).toEqual([
+    "POST /v1/sandbox",
+    "POST /v1/sandbox/box-1/exec",
+    "DELETE /v1/sandbox/box-1",
+  ]);
 });
 
 test("cloudflareBridge maps create session and cleanup", async () => {
@@ -211,6 +350,13 @@ test("cloudflareBridge maps create session and cleanup", async () => {
       fetch: bridgeFetch((request) => {
         if (request.path === "/v1/sandbox" && request.method === "POST") {
           return json({ id: "box-1" });
+        }
+        if (request.path === "/v1/sandbox/box-1/exec") {
+          expect(JSON.parse(request.body ?? "{}")).toEqual({
+            argv: ["mkdir", "-p", "/workspace/app"],
+            cwd: "/workspace",
+          });
+          return sse(["exit", "0"]);
         }
         if (request.path === "/v1/sandbox/box-1/session") {
           expect(JSON.parse(request.body ?? "{}")).toEqual({
@@ -243,6 +389,7 @@ test("cloudflareBridge maps create session and cleanup", async () => {
 
   expect(seen.map((request) => `${request.method} ${request.path}`)).toEqual([
     "POST /v1/sandbox",
+    "POST /v1/sandbox/box-1/exec",
     "POST /v1/sandbox/box-1/session",
     "DELETE /v1/sandbox/box-1/session/session-1",
     "DELETE /v1/sandbox/box-1",

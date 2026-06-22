@@ -70,14 +70,17 @@ export const Cloudflare = () => (
       command execution, and HTTPS tunnel previews available over HTTP.
       <code>ports.expose()</code> creates a zero-config quick tunnel by default;
       set <code>tunnel</code> to request a named tunnel when the bridge Worker
-      has the required Cloudflare account and zone credentials. Bridge
-      lifecycle, sessions, persist, hydrate, bucket mounts, warm-pool controls,
-      health, OpenAPI schema access, and raw tunnel controls stay typed on{" "}
-      <code>sandbox.raw</code>. PTY support returns a typed WebSocket connection
-      descriptor so your app can own the terminal client and start a
-      long-running service before calling <code>ports.expose()</code>. The
-      bridge HTTP API does not expose a lifecycle-safe background process
-      endpoint, so <code>process.spawn()</code> stays unavailable.{" "}
+      has the required Cloudflare account and zone credentials. Bridge working
+      directories stay below <code>/workspace</code>, so relative values resolve
+      there, custom directories are created, and external paths fail before a
+      bridge request. Bridge lifecycle, sessions, persist, hydrate, bucket
+      mounts, warm-pool controls, health, OpenAPI schema access, and raw tunnel
+      controls stay typed on <code>sandbox.raw</code>. PTY support returns a
+      typed WebSocket connection descriptor so your app can own the terminal
+      client and start a long-running service before calling{" "}
+      <code>ports.expose()</code>. The bridge HTTP API does not expose a
+      lifecycle-safe background process endpoint, so{" "}
+      <code>process.spawn()</code> stays unavailable.{" "}
       <code>SANDBOX_API_KEY</code> authenticates the bridge and is rejected from
       sandbox environment configuration.
     </p>
@@ -93,6 +96,14 @@ export const Cloudflare = () => (
             <code>wrangler.jsonc</code>. Pass the binding from{" "}
             <code>env.Sandbox</code>; the adapter materializes the sandbox with
             <code>@cloudflare/sandbox</code> when <code>create()</code> runs.
+          </p>
+        </PropAccordionItem>
+        <PropAccordionItem name="cwd" status="optional" value="/workspace">
+          <p>
+            Default working directory for files and commands. The native adapter
+            passes it to Cloudflare. The HTTP bridge resolves relative values
+            below <code>/workspace</code>, creates custom directories, and
+            rejects external paths before a bridge request.
           </p>
         </PropAccordionItem>
         <PropAccordionItem name="tunnel" status="optional" value="string">

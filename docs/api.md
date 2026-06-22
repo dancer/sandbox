@@ -2121,7 +2121,9 @@ export type CloudflareBridge = Readonly<{
    */
   token?: string;
   /**
-   * default sandbox working directory
+   * default sandbox working directory below `/workspace`
+   *
+   * relative values resolve below `/workspace`, custom directories are created, and paths outside it are rejected before bridge work
    *
    * @default "/workspace"
    */

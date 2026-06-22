@@ -53,6 +53,8 @@ const execJson = async (
   mustOk(result, executable);
 };
 
+const workspace = (cwd: string): string => absolute("/workspace", cwd);
+
 /**
  * create a Cloudflare Sandbox adapter that talks to the official HTTP bridge
  *
@@ -66,20 +68,32 @@ export const cloudflareBridge = (
     const environment = { ...options.env, ...input.env };
     assertSandboxEnv(environment);
     const raw = bridge(options);
-    const cwd = input.cwd ?? options.cwd ?? "/workspace";
+    const cwd = workspace(input.cwd ?? options.cwd ?? "/workspace");
     let id = input.id ?? options.id;
+    const owned = id === undefined;
     if (id === undefined) {
       const { id: created } = await raw.create();
       id = created;
     }
-    const createdSession =
-      Object.keys(environment).length === 0
-        ? undefined
-        : await raw.session.create(id, {
-            cwd,
-            env: environment,
-          });
-    const session = createdSession?.id;
+    let session: string | undefined;
+    try {
+      if (cwd !== "/workspace") {
+        await execJson(raw, id, undefined, "/workspace", "mkdir", ["-p", cwd]);
+      }
+      const createdSession =
+        Object.keys(environment).length === 0
+          ? undefined
+          : await raw.session.create(id, {
+              cwd,
+              env: environment,
+            });
+      session = createdSession?.id;
+    } catch (error) {
+      if (owned) {
+        await raw.delete(id).catch(() => null);
+      }
+      throw error;
+    }
     const headers = session === undefined ? {} : { "session-id": session };
 
     return fromSandboxRuntime({

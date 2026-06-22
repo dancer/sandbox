@@ -324,7 +324,12 @@ tunnel by default. Set the adapter `tunnel` option to request a stable named
 tunnel when the bridge Worker has the required Cloudflare account and zone
 credentials. Bridge lifecycle, sessions, persist, hydrate, bucket mounts,
 warm-pool controls, health, OpenAPI schema access, raw tunnel controls, and PTY
-connection descriptors are available through `sandbox.raw`. Normalized
+connection descriptors are available through `sandbox.raw`. Normalized working
+directories stay below `/workspace`: relative values resolve there and custom
+directories are created. Paths outside that workspace fail with `SandboxError`
+and `code: "path_escape"`
+before a bridge request. Use `sandbox.raw.request()` for provider-specific
+execution outside the normalized workspace boundary. Normalized
 snapshots and terminal I/O stay unsupported because the bridge does not expose
 the same snapshot or WebSocket ownership contract as the Worker binding adapter.
 The bridge HTTP API also has no lifecycle-safe background process route, so
