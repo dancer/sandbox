@@ -46,7 +46,7 @@
     "@sandbox-sdk/core": "workspace:*"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260615.1",
+    "@cloudflare/workers-types": "^4.20260617.1",
     "typescript": "^6.0.3"
   }
 }
