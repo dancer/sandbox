@@ -83,8 +83,9 @@ export type Policy<Input, ToolName extends Name = Name> = (
 /**
  * options for creating model-facing sandbox tools and AI SDK prompt context
  *
- * the allowlist and file policies apply to generated tools, custom AI SDK tools
- * that use `kit.sandbox` own their own authorization boundary
+ * the allowlist and file policies apply only to generated tools. `beforeExec`
+ * also applies to session commands. custom AI SDK tools that call
+ * `kit.sandbox` own their authorization boundary
  */
 export type Options = Readonly<{
   /**
@@ -122,8 +123,8 @@ export type Options = Readonly<{
 /**
  * agent-ready sandbox tools, prompt context, and an AI SDK session
  *
- * pass this to `aisdk()` for AI SDK v6 and v7 generation calls, `tools` is the
- * model-facing allowlist, while `sandbox` is passed to trusted tool callbacks
+ * pass this to `aisdk()` for AI SDK v6 and v7 generation calls. `tools` are
+ * model-facing, while `sandbox` is for trusted custom tool callbacks
  */
 export type Kit = Readonly<{
   /** agent-facing context describing the workspace, capabilities, and limits */
@@ -137,8 +138,8 @@ export type Kit = Readonly<{
 /**
  * options ready to spread into AI SDK v6 or v7 generation calls
  *
- * AI SDK v6 can use `tools` and the system prompt context, AI SDK v7 also
- * forwards `experimental_sandbox` to tool execution
+ * AI SDK v6 uses `tools` and `system`. AI SDK v7 also passes
+ * `experimental_sandbox` to custom tool execution
  */
 export type AisdkOptions = Readonly<{
   /** sandbox session forwarded to AI SDK tool execution */
@@ -154,9 +155,9 @@ export type AisdkOptions = Readonly<{
 /**
  * agent-facing sandbox session compatible with the AI SDK sandbox contract
  *
- * it intentionally omits host-only lifecycle, networking, and raw provider
- * controls from `Sandbox`, it does not apply the generated tool allowlist to
- * its file or process methods, so custom tool code must enforce its own policy
+ * this restricted session omits host-only lifecycle, networking, and raw
+ * provider controls from `Sandbox`. the generated tool allowlist does not
+ * constrain direct session methods, so custom tools must enforce their own policy
  */
 export type SandboxSession = Readonly<{
   /** normalized capabilities advertised by the underlying sandbox */
