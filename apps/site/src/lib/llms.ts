@@ -390,11 +390,13 @@ const kit = tools(sandbox, {
 
 const verification = `# Verification
 
-Every adapter is verified against the live provider, not just mocked. Sanitized fixtures give fast contract replay in \`bun test\`; the \`verify:*\` scripts run the same suite against real sandboxes and are the source of truth for provider behavior. They print readiness without leaking secret values.
+Every adapter is verified against the live provider, not just mocked. Sanitized fixtures give fast contract replay in \`bun test\`, which never loads \`.env.local\`. The \`verify:*\` scripts explicitly load \`.env.local\`, run the same suite against real sandboxes, and are the source of truth for provider behavior. They print readiness without leaking secret values.
 
 \`\`\`bash
 # check which provider credentials are present
 bun run verify:env
+
+bun run test
 
 # run the full live suite across every provider
 bun run verify:providers

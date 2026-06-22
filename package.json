@@ -16,7 +16,7 @@
     "docs:api": "bun run build:packages && bun scripts/api.ts && bun x oxfmt docs/api.md",
     "docs:api:check": "bun run docs:api && git diff --exit-code docs/api.md",
     "fix": "ultracite fix",
-    "pack:packages": "for p in packages/core packages/local packages/ai packages/vercel packages/e2b packages/daytona packages/cloudflare packages/modal packages/blaxel packages/codesandbox; do (cd $p && bun pm pack --dry-run); done",
+    "pack:packages": "bun run build:packages && for p in packages/core packages/local packages/ai packages/vercel packages/e2b packages/daytona packages/cloudflare packages/modal packages/blaxel packages/codesandbox; do (cd $p && bun pm pack --dry-run --ignore-scripts); done",
     "release": "bun run build:packages && bun run pack:packages && changeset publish",
     "test": "bun run build:packages && bun test packages scripts test",
     "verify:env": "bun --env-file=.env.local scripts/credentials.ts",

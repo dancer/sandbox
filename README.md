@@ -345,17 +345,17 @@ bun run verify:providers
 bun run verify:e2b
 ```
 
-The default test suite runs without provider credentials and covers core
-behavior, the local adapter, AI tool execution, package exports, config tests,
-and sanitized replay fixtures. Replay fixtures lock down the normalized SDK
-contract without hitting providers.
+The default test suite never loads `.env.local`, even when it exists. It covers
+core behavior, the local adapter, AI tool execution, package exports, config
+tests, and sanitized replay fixtures. Replay fixtures lock down the normalized
+SDK contract without hitting providers.
 
-Live provider scripts load `.env.local` automatically and skip unless
-credentials are present. `bun run verify:env` prints provider readiness without
-printing secret values. The live scripts are the source of truth for real
-provider behavior and may create billable sandboxes. Use the provider-specific
-live commands while adding credentials so one failing provider does not block
-the rest of the validation pass.
+Live provider scripts load `.env.local` explicitly and skip unless credentials
+are present. `bun run verify:env` prints provider readiness without printing
+secret values. The live scripts are the source of truth for real provider
+behavior and may create billable sandboxes. Use the provider-specific live
+commands while adding credentials so one failing provider does not block the
+rest of the validation pass.
 
 The CodeSandbox live verifier runs with Node because the upstream
 `@codesandbox/sdk` websocket session works there. Bun still runs the

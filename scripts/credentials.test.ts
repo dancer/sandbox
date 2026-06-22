@@ -1,6 +1,14 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 
 import { credentialRows, formatRows } from "./credentials";
+
+const root = resolve(import.meta.dir, "..");
+
+const manifest = JSON.parse(
+  readFileSync(resolve(root, "package.json"), "utf-8")
+) as Readonly<{ scripts: Readonly<Record<string, string>> }>;
 
 const encode = (input: unknown): string =>
   btoa(JSON.stringify(input))
@@ -160,4 +168,19 @@ describe("credentialRows", () => {
       status: "partial",
     });
   });
+});
+
+test("verification commands load credentials explicitly", () => {
+  expect(readFileSync(resolve(root, "bunfig.toml"), "utf-8")).toContain(
+    "[env]\nfile = false"
+  );
+
+  const verification = Object.entries(manifest.scripts).filter(([name]) =>
+    name.startsWith("verify:")
+  );
+
+  expect(verification.length).toBeGreaterThan(0);
+  for (const [, command] of verification) {
+    expect(command).toContain("--env-file=.env.local");
+  }
 });
