@@ -5,7 +5,7 @@ import * as ts from "typescript";
 
 type Entry = Readonly<{
   docs: Documentation;
-  kind: "classes" | "exports" | "functions" | "types";
+  kind: "classes" | "functions" | "types";
   name: string;
   signature: string;
 }>;
@@ -202,15 +202,6 @@ const localNames = (
   );
 };
 
-const reexport = (source: ts.SourceFile, statement: ts.ExportDeclaration) => [
-  {
-    docs: none,
-    kind: "exports",
-    name: "re-export",
-    signature: code(source, statement),
-  } satisfies Entry,
-];
-
 const parseFile = async (
   file: string,
   parseStatement: (
@@ -243,17 +234,16 @@ const entry = async (
     const file = localFile(source, statement);
     const names = localNames(statement);
     if (file !== undefined && names !== undefined) {
-      try {
-        const entries = await parseFile(file, entry);
-        const selected = entries.filter((item) => names.has(item.name));
-        if (selected.length === names.size) {
-          return selected;
-        }
-      } catch {
-        return reexport(source, statement);
+      const entries = await parseFile(file, entry);
+      const selected = entries.filter((item) => names.has(item.name));
+      if (selected.length === names.size) {
+        return selected;
       }
+      throw new Error(
+        `unable to resolve local API export from ${source.fileName}`
+      );
     }
-    return reexport(source, statement);
+    return [];
   }
   if (!exported(statement)) {
     return [];
@@ -298,14 +288,22 @@ const title = (value: Entry["kind"]): string => {
   if (value === "functions") {
     return "functions";
   }
-  if (value === "classes") {
-    return "classes";
+  return "classes";
+};
+
+const validate = (packageName: string, entries: readonly Entry[]): void => {
+  const missing = entries
+    .filter((item) => item.docs.description === "")
+    .map((item) => item.name);
+  if (missing.length > 0) {
+    throw new Error(
+      `public API JSDoc missing from ${packageName}: ${missing.join(", ")}`
+    );
   }
-  return "re-exports";
 };
 
 const render = (entries: readonly Entry[]): string =>
-  (["types", "classes", "functions", "exports"] as const)
+  (["types", "classes", "functions"] as const)
     .map((kind) => {
       const items = entries.filter((item) => item.kind === kind);
       if (items.length === 0) {
@@ -336,6 +334,7 @@ const main = async (): Promise<void> => {
     packages.flatMap((item) =>
       item.files.map(async (file) => {
         const entries = await parse(file);
+        validate(file.name, entries);
         return [`## ${file.name}`, item.description, render(entries)].join(
           "\n\n"
         );

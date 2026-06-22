@@ -1756,14 +1756,6 @@ create a blaxel adapter with normalized sandbox operations
 export declare const blaxel: (options?: Blaxel) => Adapter<Raw>;
 ```
 
-### re-exports
-
-#### `re-export`
-
-```ts
-export type { SandboxLifecycle, SandboxUpdateNetwork } from "@blaxel/core";
-```
-
 ## @sandbox-sdk/cloudflare
 
 Cloudflare Sandbox adapter for Sandbox SDK
@@ -2022,14 +2014,6 @@ create a Cloudflare Sandbox adapter from a Worker binding
 export declare const cloudflare: <ProviderRaw = unknown>(
   options: Cloudflare
 ) => Adapter<ProviderRaw>;
-```
-
-### re-exports
-
-#### `re-export`
-
-```ts
-export type { Sandbox as CloudflareSandbox } from "@cloudflare/sandbox";
 ```
 
 ## @sandbox-sdk/codesandbox
@@ -2593,44 +2577,4 @@ alias for users who prefer the explicit provider name
 
 ```ts
 export declare const vercelSandbox: (options?: Vercel) => Adapter<Raw>;
-```
-
-### re-exports
-
-#### `re-export`
-
-```ts
-export {
-  APIError as VercelAPIError,
-  Command as VercelCommand,
-  CommandFinished as VercelCommandFinished,
-  FileSystem as VercelFileSystem,
-  Sandbox as VercelSandbox,
-  Session as VercelSession,
-  Snapshot as VercelSnapshot,
-  StreamError as VercelStreamError,
-  defineSandboxProxy as defineVercelSandboxProxy,
-} from "@vercel/sandbox";
-```
-
-#### `re-export`
-
-```ts
-export type {
-  CommandOutput as VercelCommandOutput,
-  InvalidRequestProxyHandler as VercelInvalidRequestProxyHandler,
-  NetworkPolicy as VercelNetworkPolicy,
-  NetworkPolicyKeyValueMatcher as VercelNetworkPolicyKeyValueMatcher,
-  NetworkPolicyMatch as VercelNetworkPolicyMatch,
-  NetworkPolicyMatcher as VercelNetworkPolicyMatcher,
-  NetworkPolicyRule as VercelNetworkPolicyRule,
-  NetworkTransformer as VercelNetworkTransformer,
-  SerializedCommand as SerializedVercelCommand,
-  SerializedCommandFinished as SerializedVercelCommandFinished,
-  ProxyHandler as VercelProxyHandler,
-  ProxyMeta as VercelProxyMeta,
-  SerializedSandbox as SerializedVercelSandbox,
-  SerializedSnapshot as SerializedVercelSnapshot,
-  SnapshotTreeNodeData as VercelSnapshotTreeNodeData,
-} from "@vercel/sandbox";
 ```
