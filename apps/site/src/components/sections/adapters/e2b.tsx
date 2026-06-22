@@ -24,7 +24,9 @@ export const E2B = () => (
     </p>
     <p>
       Use the shared <code>snapshot</code> create option to start a fresh E2B
-      sandbox from a snapshot id. Use <code>template</code> for provider
+      sandbox from a snapshot id. E2B snapshots capture filesystem and memory
+      state, briefly pausing the source sandbox and dropping active command,
+      PTY, and WebSocket connections. Use <code>template</code> for provider
       template ids and names.
     </p>
     <CodeBlock code={E2B_EXAMPLE} lang="ts" />

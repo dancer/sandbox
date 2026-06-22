@@ -2167,7 +2167,11 @@ export type E2B = Readonly<{
   sandboxUrl?: string;
   /** secure sandbox controller traffic when supported by e2b */
   secure?: boolean;
-  /** e2b template id, template name, or snapshot id used when create input omits template and snapshot */
+  /**
+   * e2b template id or template name used when the create input omits `template`
+   *
+   * pass snapshot ids through `create({ snapshot })` so snapshot state stays distinct from provider templates
+   */
   template?: string;
   /** sandbox lifetime timeout in milliseconds */
   timeout?: number;
@@ -2183,6 +2187,8 @@ export type E2B = Readonly<{
 #### `e2b`
 
 create an E2B adapter with normalized sandbox operations
+
+E2B snapshots capture filesystem and memory state. creation briefly pauses the source sandbox and drops active command, pty, and WebSocket connections. create a fresh sandbox with `create({ snapshot })`; in-place restore is not normalized
 
 ```ts
 export declare const e2b: (options?: E2B) => Adapter<Raw>;

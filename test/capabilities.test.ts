@@ -35,7 +35,7 @@ test("adapters expose capability-honest feature modes", () => {
       volumes: "create-time",
       watching: true,
     },
-    snapshotCreate: "disk",
+    snapshotCreate: "memory",
     snapshotRestore: false,
     snapshotSource: "create-time",
   });

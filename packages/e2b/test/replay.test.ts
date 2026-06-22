@@ -39,7 +39,7 @@ const workflow: Workflow = {
       volumes: "create-time",
       watching: true,
     },
-    snapshotCreate: "disk",
+    snapshotCreate: "memory",
     snapshotRestore: false,
     snapshotSource: "create-time",
     snapshots: false,

@@ -112,7 +112,7 @@ Daytona dev environments via \`@daytona/sdk\`. Spins up a workspace from the giv
 
 ## E2B (@sandbox-sdk/e2b)
 
-E2B microVM sandboxes via \`e2b\`. Can pin a template at construction and threads writes, commands, ports, and snapshots through the E2B SDK. Use the shared \`snapshot\` create option to start a fresh sandbox from a snapshot id.
+E2B microVM sandboxes via \`e2b\`. Can pin a template at construction and threads writes, commands, ports, and snapshots through the E2B SDK. E2B snapshots capture filesystem and memory state, briefly pausing the source sandbox and dropping active command, PTY, and WebSocket connections. Use the shared \`snapshot\` create option to start a fresh sandbox from a snapshot id.
 
 - \`template\`, \`apiKey\`, \`timeout\`.
 - Credentials: \`E2B_API_KEY\` or \`E2B_ACCESS_TOKEN\`.

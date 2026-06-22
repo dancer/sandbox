@@ -157,7 +157,7 @@ live("e2b exposes advertised raw capabilities", async () => {
   }
 });
 
-live("e2b creates and starts from a live snapshot", async () => {
+live("e2b preserves process state in a live snapshot", async () => {
   const cwd = `/tmp/sandbox-sdk-${randomUUID()}`;
   const file = `${cwd}/snapshot.txt`;
   const sandbox = await create({
@@ -168,6 +168,9 @@ live("e2b creates and starts from a live snapshot", async () => {
 
   try {
     await sandbox.files.write(file, "ready");
+    const process = await sandbox.raw.commands.run("sleep 60", {
+      background: true,
+    });
 
     const snapshot = await sandbox.snapshots.create("sandbox-sdk-live");
     expect(snapshot.id).toBeTruthy();
@@ -180,6 +183,8 @@ live("e2b creates and starts from a live snapshot", async () => {
 
     expect(await derived.files.exists(file)).toBe(true);
     expect(await derived.files.text(file)).toBe("ready");
+    const processes = await derived.raw.commands.list();
+    expect(processes.some((value) => value.pid === process.pid)).toBe(true);
     const payload: Source = {
       capabilities: derived.capabilities,
       file: {
