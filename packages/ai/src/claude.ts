@@ -10,14 +10,17 @@ import type { Kit, Name } from "./index.js";
 import { approval, entries, instructions, json, message } from "./shared.js";
 import type { Approval } from "./shared.js";
 
+/** annotations accepted by Claude Agent SDK MCP tool definitions */
 export type ToolAnnotations = NonNullable<SdkMcpToolDefinition["annotations"]>;
 
+/** MCP tool result returned by generated Claude sandbox handlers */
 export type ClaudeResult = Readonly<{
   content: readonly Readonly<{ text: string; type: "text" }>[];
   isError?: true;
   structuredContent?: Record<string, unknown>;
 }>;
 
+/** generated Claude MCP tool exposed for advanced composition and inspection */
 export type ClaudeTool = Readonly<{
   annotations?: ToolAnnotations;
   description: string;
@@ -26,6 +29,12 @@ export type ClaudeTool = Readonly<{
   name: string;
 }>;
 
+/**
+ * generated Claude Agent SDK integration for one sandbox tool kit
+ *
+ * pass `mcpServers`, `allowedTools`, `canUseTool`, and `instructions` directly
+ * to a Claude Agent SDK query configuration
+ */
 export type ClaudeTools = Readonly<{
   /** all MCP tool names exposed by the sandbox server */
   availableTools: readonly string[];
@@ -47,6 +56,7 @@ export type ClaudeTools = Readonly<{
   tools: readonly ClaudeTool[];
 }>;
 
+/** options for adapting a sandbox tool kit to the Claude Agent SDK */
 export type ClaudeOptions = Readonly<{
   /**
    * per-tool annotations merged onto the generated MCP tools

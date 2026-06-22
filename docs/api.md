@@ -62,7 +62,9 @@ export type RawCapability =
 
 #### `Mode`
 
-capability mode details when a feature exists but has provider-specific shape
+capability mode details when a feature exists but has a provider-specific shape
+
+check the specific capability before assuming related operations are supported
 
 ```ts
 export type Mode =
@@ -83,6 +85,9 @@ export type Mode =
 
 provider capability map used by `supports`, `capabilityMode`, and docs
 
+snapshot create, restore, and source capabilities are intentionally separate
+because providers do not expose the same snapshot lifecycle
+
 ```ts
 export type Capabilities = Readonly<
   Partial<Record<Capability, Mode>> & {
@@ -95,6 +100,8 @@ export type Capabilities = Readonly<
 #### `Input`
 
 file write input accepted by every adapter
+
+readable streams are consumed once by the receiving operation
 
 ```ts
 export type Input =
@@ -227,6 +234,9 @@ export type Ports = Readonly<{
 
 normalized snapshot namespace for capability-gated state capture
 
+check `snapshotCreate` and `snapshotRestore` independently because creating a
+snapshot does not imply an adapter can restore one in place
+
 ```ts
 export type Snapshots = Readonly<{
   /** create a snapshot when `snapshotCreate` is supported */
@@ -265,6 +275,8 @@ export type Snapshot = Readonly<{
 #### `Exec`
 
 command execution options shared by exec, shell, spawn, and spawnShell
+
+command environments apply only to that process and are not adapter credentials
 
 ```ts
 export type Exec = Readonly<{
@@ -306,6 +318,9 @@ export type Port = Readonly<{
 
 normalized sandbox instance returned by every adapter
 
+use `capabilities` before optional operations and `raw` only when the
+provider-specific capability is explicitly needed
+
 ```ts
 export type Sandbox<Raw = unknown> = Readonly<{
   /** advertised runtime feature support */
@@ -322,7 +337,7 @@ export type Sandbox<Raw = unknown> = Readonly<{
   provider: string;
   /** preview URL operations */
   ports: Ports;
-  /** raw provider object for advanced provider-specific usage */
+  /** raw provider object for advanced provider-specific usage outside the normalized contract */
   raw: Raw;
   /** snapshot operations gated by capabilities */
   snapshots: Snapshots;
@@ -373,6 +388,9 @@ export type SandboxRuntimeProcess = Readonly<{
 
 low-level vendor contract that keeps large I/O stream-first
 
+adapter authors should implement this contract and use `fromSandboxRuntime`
+instead of buffering provider I/O in an adapter
+
 ```ts
 export type SandboxRuntime<Raw = unknown> = Readonly<{
   /** advertised runtime feature support */
@@ -402,6 +420,9 @@ export type SandboxRuntime<Raw = unknown> = Readonly<{
 
 provider adapter contract implemented by each package
 
+adapter configuration belongs in the factory and per-sandbox configuration
+belongs in `create`
+
 ```ts
 export type Adapter<Raw = unknown> = Readonly<{
   /** provider name */
@@ -416,6 +437,9 @@ export type Adapter<Raw = unknown> = Readonly<{
 #### `Options`
 
 sandbox creation options shared across providers
+
+individual adapters document which options they support and how they map to
+their provider
 
 ```ts
 export type Options = Readonly<{
@@ -478,12 +502,18 @@ export type Code =
 
 #### `SandboxError`
 
-error type thrown by normalized SDK failures
+normalized error emitted by public sandbox sdk operations
+
+use `code` for portable error handling and `provider` to identify the adapter
+that raised the error
 
 ```ts
 export declare class SandboxError extends Error {
+  /** stable sandbox sdk error code for portable error handling */
   readonly code: Code;
+  /** adapter provider name when the failing operation is provider-specific */
   readonly provider?: string;
+  /** create a normalized error from an adapter or public helper */
   constructor(
     message: string,
     options: Cause & {
@@ -498,13 +528,21 @@ export declare class SandboxError extends Error {
 
 #### `isSandboxError`
 
+return whether a value is a normalized sandbox sdk error
+
+use this instead of matching provider-specific error messages when handling
+errors from multiple adapters
+
 ```ts
 export declare const isSandboxError: (error: unknown) => error is SandboxError;
 ```
 
 #### `create`
 
-create a sandbox through an adapter without leaking the adapter option
+create a sandbox through an adapter
+
+adapter configuration stays on the adapter and per-sandbox options stay in
+`input`, keeping provider setup separate from a single sandbox request
 
 ```ts
 export declare const create: <Raw = unknown>(
@@ -517,6 +555,20 @@ export declare const create: <Raw = unknown>(
 #### `withSandbox`
 
 create a sandbox, run work, and always attempt cleanup
+
+use this for short-lived work where retaining the sandbox after the callback
+completes would be unexpected
+
+**example**
+
+```ts
+import { withSandbox } from "@sandbox-sdk/core";
+import { local } from "@sandbox-sdk/local";
+
+const result = await withSandbox({ adapter: local() }, (sandbox) =>
+  sandbox.process.shell("printf hello")
+);
+```
 
 ```ts
 export declare const withSandbox: <Raw = unknown, Output = unknown>(
@@ -650,19 +702,27 @@ export declare const sandboxError: (
 
 #### `abort`
 
+throw a normalized aborted error for an adapter operation
+
 ```ts
 export declare const abort: (provider: string, cause?: unknown) => never;
 ```
 
 #### `bytes`
 
-normalize supported file inputs into bytes or text
+normalize supported file input into text or bytes
+
+passing a readable stream consumes it exactly once
 
 ```ts
 export declare const bytes: (input: Input) => Promise<Uint8Array | string>;
 ```
 
 #### `text`
+
+decode supported file input as utf-8 text
+
+passing a readable stream consumes it exactly once
 
 ```ts
 export declare const text: (input: Input) => Promise<string>;
@@ -678,7 +738,10 @@ export declare const sandboxPath: (cwd: string, value?: string) => string;
 
 #### `fromSandboxRuntime`
 
-lift a stream-first low-level sandbox into the public sandbox api
+lift a stream-first provider runtime into the public sandbox api
+
+adapter authors implement this lower-level contract to preserve streaming
+for large files and processes while callers receive the normalized api
 
 ```ts
 export declare const fromSandboxRuntime: <Raw = unknown>(
@@ -741,6 +804,11 @@ Local sandbox adapter for Sandbox SDK
 ### types
 
 #### `Local`
+
+configuration for the local adapter
+
+local runs commands on the host in an owned directory and is not an isolation
+boundary for untrusted code
 
 ```ts
 export type Local = Readonly<{
@@ -1042,6 +1110,8 @@ export type SandboxProcess = Readonly<{
 
 #### `Tools`
 
+AI SDK-compatible sandbox tools keyed by the enabled tool name
+
 ```ts
 export type Tools = Readonly<Draft>;
 ```
@@ -1286,11 +1356,15 @@ Agent tool helpers for Sandbox SDK
 
 #### `ToolAnnotations`
 
+annotations accepted by Claude Agent SDK MCP tool definitions
+
 ```ts
 export type ToolAnnotations = NonNullable<SdkMcpToolDefinition["annotations"]>;
 ```
 
 #### `ClaudeResult`
+
+MCP tool result returned by generated Claude sandbox handlers
 
 ```ts
 export type ClaudeResult = Readonly<{
@@ -1305,6 +1379,8 @@ export type ClaudeResult = Readonly<{
 
 #### `ClaudeTool`
 
+generated Claude MCP tool exposed for advanced composition and inspection
+
 ```ts
 export type ClaudeTool = Readonly<{
   annotations?: ToolAnnotations;
@@ -1316,6 +1392,11 @@ export type ClaudeTool = Readonly<{
 ```
 
 #### `ClaudeTools`
+
+generated Claude Agent SDK integration for one sandbox tool kit
+
+pass `mcpServers`, `allowedTools`, `canUseTool`, and `instructions` directly
+to a Claude Agent SDK query configuration
 
 ```ts
 export type ClaudeTools = Readonly<{
@@ -1341,6 +1422,8 @@ export type ClaudeTools = Readonly<{
 ```
 
 #### `ClaudeOptions`
+
+options for adapting a sandbox tool kit to the Claude Agent SDK
 
 ```ts
 export type ClaudeOptions = Readonly<{
@@ -1392,11 +1475,15 @@ Agent tool helpers for Sandbox SDK
 
 #### `OpenAITools`
 
+generated OpenAI Agents SDK function tools keyed by sandbox tool name
+
 ```ts
 export type OpenAITools = Readonly<Partial<Record<Name, FunctionTool>>>;
 ```
 
 #### `OpenAI`
+
+OpenAI Agents SDK integration for one sandbox tool kit
 
 ```ts
 export type OpenAI = Readonly<{
@@ -1408,6 +1495,8 @@ export type OpenAI = Readonly<{
 ```
 
 #### `OpenAIOptions`
+
+options for adapting a sandbox tool kit to the OpenAI Agents SDK
 
 ```ts
 export type OpenAIOptions = Readonly<{
@@ -1527,8 +1616,13 @@ export type Blaxel = Readonly<
 
 replace the network configuration for a running Blaxel sandbox and return its refreshed native instance
 
-@example
-await updateNetwork(sandbox.raw, { proxy: { allowedDomains: ["api.example.com"], routing: [] } })
+**example**
+
+```ts
+await updateNetwork(sandbox.raw, {
+  proxy: { allowedDomains: ["api.example.com"], routing: [] },
+});
+```
 
 ```ts
 export declare const updateNetwork: (
@@ -1542,8 +1636,11 @@ export declare const updateNetwork: (
 replace or request clearing the ttl for a running Blaxel sandbox and return its refreshed native instance
 workspace quota tiers can still enforce a ttl after a clear request
 
-@example
-await updateTtl(sandbox.raw, "1h")
+**example**
+
+```ts
+await updateTtl(sandbox.raw, "1h");
+```
 
 ```ts
 export declare const updateTtl: (
@@ -1556,10 +1653,13 @@ export declare const updateTtl: (
 
 replace or clear the lifecycle configuration for a running Blaxel sandbox and return its refreshed native instance
 
-@example
+**example**
+
+```ts
 await updateLifecycle(sandbox.raw, {
-expirationPolicies: [{ action: "delete", type: "ttl-idle", value: "1h" }],
-})
+  expirationPolicies: [{ action: "delete", type: "ttl-idle", value: "1h" }],
+});
+```
 
 ```ts
 export declare const updateLifecycle: (
@@ -1600,29 +1700,50 @@ export type CloudflareBridgeJson = Readonly<Record<string, unknown>>;
 
 #### `CloudflareBridgeRaw`
 
+advanced bridge operations exposed as `sandbox.raw`
+
+this is a bridge-specific contract, not the normalized snapshot or process api
+
 ```ts
 export type CloudflareBridgeRaw = Readonly<{
+  /** create a bridge-managed sandbox and return its id */
   create(): Promise<
     Readonly<{
       id: string;
     }>
   >;
+  /** permanently delete a bridge-managed sandbox */
   delete(id: string): Promise<void>;
+  /** fetch implementation used for bridge requests */
   fetch: typeof fetch;
+  /** query the bridge health endpoint */
   health(): Promise<CloudflareBridgeJson>;
+  /** restore a bridge workspace archive into a sandbox */
   hydrate(id: string, archive: Input): Promise<void>;
+  /** mount object storage into a bridge sandbox */
   mount(id: string, input: CloudflareBridgeMount): Promise<void>;
+  /** read the bridge OpenAPI document */
   openapi(): Promise<CloudflareBridgeJson>;
+  /** bridge prewarm pool controls */
   pool: Readonly<{
+    /** prewarm bridge sandbox capacity */
     prime(): Promise<void>;
+    /** shut down bridge prewarmed sandboxes */
     shutdownPrewarmed(): Promise<void>;
+    /** return bridge prewarm pool statistics */
     stats(): Promise<CloudflareBridgeJson>;
   }>;
+  /** export the bridge workspace as a tar archive */
   persist(id: string, options?: CloudflareBridgePersist): Promise<Uint8Array>;
+  /** return WebSocket connection details for an interactive terminal */
   pty(id: string, options?: CloudflareBridgePty): CloudflareBridgePtyConnection;
+  /** make an authenticated request to an arbitrary bridge route */
   request(path: string, init?: RequestInit): Promise<Response>;
+  /** return whether a bridge sandbox is still running */
   running(id: string): Promise<boolean>;
+  /** bridge execution session controls */
   session: Readonly<{
+    /** create an execution session scoped to one sandbox */
     create(
       id: string,
       options?: CloudflareBridgeSession
@@ -1631,9 +1752,12 @@ export type CloudflareBridgeRaw = Readonly<{
         id: string;
       }>
     >;
+    /** delete one execution session */
     delete(id: string, session: string): Promise<void>;
   }>;
+  /** detach a mounted object-storage bucket from a sandbox */
   unmount(id: string, mountPath: string): Promise<void>;
+  /** configured bridge base URL */
   url: string;
 }>;
 ```

@@ -4,10 +4,15 @@ import { dirname, join } from "node:path";
 import * as ts from "typescript";
 
 type Entry = Readonly<{
-  docs: string;
+  docs: Documentation;
   kind: "classes" | "exports" | "functions" | "types";
   name: string;
   signature: string;
+}>;
+
+type Documentation = Readonly<{
+  description: string;
+  examples: readonly string[];
 }>;
 
 type Package = Readonly<{
@@ -39,6 +44,8 @@ const folders = [
   "modal",
   "vercel",
 ] as const;
+
+const none: Documentation = { description: "", examples: [] };
 
 const read = async (folder: string): Promise<Package> => {
   const directory = join(root, "packages", folder);
@@ -76,22 +83,50 @@ const clean = (value: string): string =>
     .join("\n")
     .trim();
 
-const docs = (source: ts.SourceFile, node: ts.Node): string => {
-  const comments = ts
-    .getJSDocCommentsAndTags(node)
-    .filter(ts.isJSDoc)
-    .map((item) =>
-      typeof item.comment === "string" ? item.comment.trim() : ""
-    )
-    .filter(Boolean)
-    .join("\n\n");
-
-  if (comments.length > 0) {
-    return comments;
+const docs = (source: ts.SourceFile, node: ts.Node): Documentation => {
+  const match = /^\s*\/\*\*([\s\S]*?)\*\//u.exec(node.getFullText(source));
+  if (match?.[1] === undefined) {
+    return none;
   }
 
-  const match = /^\s*\/\*\*([\s\S]*?)\*\//u.exec(node.getFullText(source));
-  return match?.[1] === undefined ? "" : clean(match[1]);
+  const description: string[] = [];
+  const examples: string[] = [];
+  let example: string[] | undefined;
+  const flush = (): void => {
+    if (example === undefined) {
+      return;
+    }
+    const value = example.join("\n").trim();
+    if (value.length > 0) {
+      examples.push(value);
+    }
+    example = undefined;
+  };
+
+  for (const line of clean(match[1]).split("\n")) {
+    if (line.startsWith("@example")) {
+      flush();
+      example = [];
+      const value = line.slice("@example".length).trim();
+      if (value.length > 0) {
+        example.push(value);
+      }
+      continue;
+    }
+    if (example !== undefined && line.startsWith("@")) {
+      flush();
+      description.push(line);
+      continue;
+    }
+    if (example === undefined) {
+      description.push(line);
+    } else {
+      example.push(line);
+    }
+  }
+  flush();
+
+  return { description: description.join("\n").trim(), examples };
 };
 
 const code = (source: ts.SourceFile, node: ts.Node): string =>
@@ -169,7 +204,7 @@ const localNames = (
 
 const reexport = (source: ts.SourceFile, statement: ts.ExportDeclaration) => [
   {
-    docs: "",
+    docs: none,
     kind: "exports",
     name: "re-export",
     signature: code(source, statement),
@@ -281,7 +316,10 @@ const render = (entries: readonly Entry[]): string =>
         ...items.map((item) =>
           [
             `#### \`${item.name}\``,
-            item.docs,
+            item.docs.description,
+            ...item.docs.examples.map((example) =>
+              ["**example**", "```ts", example, "```"].join("\n")
+            ),
             ["```ts", item.signature, "```"].join("\n"),
           ]
             .filter(Boolean)

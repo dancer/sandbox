@@ -44,12 +44,20 @@ export type {
   Url,
 } from "./types.js";
 
-/** error type thrown by normalized SDK failures */
+/**
+ * normalized error emitted by public sandbox sdk operations
+ *
+ * use `code` for portable error handling and `provider` to identify the adapter
+ * that raised the error
+ */
 export class SandboxError extends Error {
+  /** stable sandbox sdk error code for portable error handling */
   readonly code: Code;
 
+  /** adapter provider name when the failing operation is provider-specific */
   readonly provider?: string;
 
+  /** create a normalized error from an adapter or public helper */
   constructor(
     message: string,
     options: Cause & { code: Code; provider?: string }
@@ -63,10 +71,21 @@ export class SandboxError extends Error {
   }
 }
 
+/**
+ * return whether a value is a normalized sandbox sdk error
+ *
+ * use this instead of matching provider-specific error messages when handling
+ * errors from multiple adapters
+ */
 export const isSandboxError = (error: unknown): error is SandboxError =>
   error instanceof SandboxError;
 
-/** create a sandbox through an adapter without leaking the adapter option */
+/**
+ * create a sandbox through an adapter
+ *
+ * adapter configuration stays on the adapter and per-sandbox options stay in
+ * `input`, keeping provider setup separate from a single sandbox request
+ */
 export const create = <Raw = unknown>(
   input: Options & { adapter: Adapter<Raw> }
 ): Promise<Sandbox<Raw>> => {
@@ -89,7 +108,20 @@ const stopAfterError = async (
   }
 };
 
-/** create a sandbox, run work, and always attempt cleanup */
+/**
+ * create a sandbox, run work, and always attempt cleanup
+ *
+ * use this for short-lived work where retaining the sandbox after the callback
+ * completes would be unexpected
+ *
+ * @example
+ * import { withSandbox } from "@sandbox-sdk/core"
+ * import { local } from "@sandbox-sdk/local"
+ *
+ * const result = await withSandbox({ adapter: local() }, (sandbox) =>
+ *   sandbox.process.shell("printf hello")
+ * )
+ */
 export const withSandbox = async <Raw = unknown, Output = unknown>(
   input: Options & { adapter: Adapter<Raw> },
   use: (sandbox: Sandbox<Raw>) => Output | Promise<Output>
@@ -211,11 +243,16 @@ export const sandboxError = (
     provider,
   });
 
+/** throw a normalized aborted error for an adapter operation */
 export const abort = (provider: string, cause?: unknown): never => {
   throw sandboxError(provider, "Operation aborted", "aborted", cause);
 };
 
-/** normalize supported file inputs into bytes or text */
+/**
+ * normalize supported file input into text or bytes
+ *
+ * passing a readable stream consumes it exactly once
+ */
 export const bytes = async (input: Input): Promise<Uint8Array | string> => {
   if (typeof input === "string" || input instanceof Uint8Array) {
     return input;
@@ -247,6 +284,11 @@ export const bytes = async (input: Input): Promise<Uint8Array | string> => {
   return output;
 };
 
+/**
+ * decode supported file input as utf-8 text
+ *
+ * passing a readable stream consumes it exactly once
+ */
 export const text = async (input: Input): Promise<string> => {
   const value = await bytes(input);
   return typeof value === "string" ? value : new TextDecoder().decode(value);
@@ -316,7 +358,12 @@ const guarded = <Value>(
   }
 };
 
-/** lift a stream-first low-level sandbox into the public sandbox api */
+/**
+ * lift a stream-first provider runtime into the public sandbox api
+ *
+ * adapter authors implement this lower-level contract to preserve streaming
+ * for large files and processes while callers receive the normalized api
+ */
 export const fromSandboxRuntime = <Raw = unknown>(
   input: SandboxRuntime<Raw>
 ): Sandbox<Raw> => ({

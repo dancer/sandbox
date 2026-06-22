@@ -5,8 +5,10 @@ import type { JsonSchema, Kit, Name } from "./index.js";
 import { approval, entries, instructions, message } from "./shared.js";
 import type { Approval } from "./shared.js";
 
+/** generated OpenAI Agents SDK function tools keyed by sandbox tool name */
 export type OpenAITools = Readonly<Partial<Record<Name, FunctionTool>>>;
 
+/** OpenAI Agents SDK integration for one sandbox tool kit */
 export type OpenAI = Readonly<{
   /** instructions ready for new Agent({ instructions }) */
   instructions: string;
@@ -14,6 +16,7 @@ export type OpenAI = Readonly<{
   tools: OpenAITools;
 }>;
 
+/** options for adapting a sandbox tool kit to the OpenAI Agents SDK */
 export type OpenAIOptions = Readonly<{
   /**
    * prefix for tool names sent to the model

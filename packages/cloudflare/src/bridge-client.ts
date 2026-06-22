@@ -29,31 +29,56 @@ type SessionResponse = Readonly<{
 /** generic JSON object returned by bridge utility routes */
 export type CloudflareBridgeJson = Readonly<Record<string, unknown>>;
 
+/**
+ * advanced bridge operations exposed as `sandbox.raw`
+ *
+ * this is a bridge-specific contract, not the normalized snapshot or process api
+ */
 export type CloudflareBridgeRaw = Readonly<{
+  /** create a bridge-managed sandbox and return its id */
   create(): Promise<Readonly<{ id: string }>>;
+  /** permanently delete a bridge-managed sandbox */
   delete(id: string): Promise<void>;
+  /** fetch implementation used for bridge requests */
   fetch: typeof fetch;
+  /** query the bridge health endpoint */
   health(): Promise<CloudflareBridgeJson>;
+  /** restore a bridge workspace archive into a sandbox */
   hydrate(id: string, archive: Input): Promise<void>;
+  /** mount object storage into a bridge sandbox */
   mount(id: string, input: CloudflareBridgeMount): Promise<void>;
+  /** read the bridge OpenAPI document */
   openapi(): Promise<CloudflareBridgeJson>;
+  /** bridge prewarm pool controls */
   pool: Readonly<{
+    /** prewarm bridge sandbox capacity */
     prime(): Promise<void>;
+    /** shut down bridge prewarmed sandboxes */
     shutdownPrewarmed(): Promise<void>;
+    /** return bridge prewarm pool statistics */
     stats(): Promise<CloudflareBridgeJson>;
   }>;
+  /** export the bridge workspace as a tar archive */
   persist(id: string, options?: CloudflareBridgePersist): Promise<Uint8Array>;
+  /** return WebSocket connection details for an interactive terminal */
   pty(id: string, options?: CloudflareBridgePty): CloudflareBridgePtyConnection;
+  /** make an authenticated request to an arbitrary bridge route */
   request(path: string, init?: RequestInit): Promise<Response>;
+  /** return whether a bridge sandbox is still running */
   running(id: string): Promise<boolean>;
+  /** bridge execution session controls */
   session: Readonly<{
+    /** create an execution session scoped to one sandbox */
     create(
       id: string,
       options?: CloudflareBridgeSession
     ): Promise<Readonly<{ id: string }>>;
+    /** delete one execution session */
     delete(id: string, session: string): Promise<void>;
   }>;
+  /** detach a mounted object-storage bucket from a sandbox */
   unmount(id: string, mountPath: string): Promise<void>;
+  /** configured bridge base URL */
   url: string;
 }>;
 

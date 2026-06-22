@@ -38,6 +38,12 @@ import type {
   Snapshot,
 } from "@sandbox-sdk/core";
 
+/**
+ * configuration for the local adapter
+ *
+ * local runs commands on the host in an owned directory and is not an isolation
+ * boundary for untrusted code
+ */
 export type Local = Readonly<{
   /**
    * host environment inheritance policy for local commands

@@ -38,7 +38,11 @@ export type RawCapability =
   | "volumes"
   | "watching";
 
-/** capability mode details when a feature exists but has provider-specific shape */
+/**
+ * capability mode details when a feature exists but has a provider-specific shape
+ *
+ * check the specific capability before assuming related operations are supported
+ */
 export type Mode =
   | boolean
   | "combined"
@@ -52,7 +56,12 @@ export type Mode =
   | "separate"
   | "volume";
 
-/** provider capability map used by `supports`, `capabilityMode`, and docs */
+/**
+ * provider capability map used by `supports`, `capabilityMode`, and docs
+ *
+ * snapshot create, restore, and source capabilities are intentionally separate
+ * because providers do not expose the same snapshot lifecycle
+ */
 export type Capabilities = Readonly<
   Partial<Record<Capability, Mode>> & {
     /** provider-specific powers available through `sandbox.raw` */
@@ -60,7 +69,11 @@ export type Capabilities = Readonly<
   }
 >;
 
-/** file write input accepted by every adapter */
+/**
+ * file write input accepted by every adapter
+ *
+ * readable streams are consumed once by the receiving operation
+ */
 export type Input =
   | string
   | Uint8Array
@@ -156,7 +169,12 @@ export type Ports = Readonly<{
   expose(port: number, options?: Port): Promise<Url>;
 }>;
 
-/** normalized snapshot namespace for capability-gated state capture */
+/**
+ * normalized snapshot namespace for capability-gated state capture
+ *
+ * check `snapshotCreate` and `snapshotRestore` independently because creating a
+ * snapshot does not imply an adapter can restore one in place
+ */
 export type Snapshots = Readonly<{
   /** create a snapshot when `snapshotCreate` is supported */
   create(name?: string): Promise<Snapshot>;
@@ -180,7 +198,11 @@ export type Snapshot = Readonly<{
   name?: string;
 }>;
 
-/** command execution options shared by exec, shell, spawn, and spawnShell */
+/**
+ * command execution options shared by exec, shell, spawn, and spawnShell
+ *
+ * command environments apply only to that process and are not adapter credentials
+ */
 export type Exec = Readonly<{
   /** command working directory inside the sandbox */
   cwd?: string;
@@ -205,7 +227,12 @@ export type Port = Readonly<{
   token?: string;
 }>;
 
-/** normalized sandbox instance returned by every adapter */
+/**
+ * normalized sandbox instance returned by every adapter
+ *
+ * use `capabilities` before optional operations and `raw` only when the
+ * provider-specific capability is explicitly needed
+ */
 export type Sandbox<Raw = unknown> = Readonly<{
   /** advertised runtime feature support */
   capabilities: Capabilities;
@@ -221,7 +248,7 @@ export type Sandbox<Raw = unknown> = Readonly<{
   provider: string;
   /** preview URL operations */
   ports: Ports;
-  /** raw provider object for advanced provider-specific usage */
+  /** raw provider object for advanced provider-specific usage outside the normalized contract */
   raw: Raw;
   /** snapshot operations gated by capabilities */
   snapshots: Snapshots;
@@ -257,7 +284,12 @@ export type SandboxRuntimeProcess = Readonly<{
   spawnShell(command: string, options?: Spawn): Promise<Running>;
 }>;
 
-/** low-level vendor contract that keeps large I/O stream-first */
+/**
+ * low-level vendor contract that keeps large I/O stream-first
+ *
+ * adapter authors should implement this contract and use `fromSandboxRuntime`
+ * instead of buffering provider I/O in an adapter
+ */
 export type SandboxRuntime<Raw = unknown> = Readonly<{
   /** advertised runtime feature support */
   capabilities: Capabilities;
@@ -281,7 +313,12 @@ export type SandboxRuntime<Raw = unknown> = Readonly<{
   stop(): Promise<void>;
 }>;
 
-/** provider adapter contract implemented by each package */
+/**
+ * provider adapter contract implemented by each package
+ *
+ * adapter configuration belongs in the factory and per-sandbox configuration
+ * belongs in `create`
+ */
 export type Adapter<Raw = unknown> = Readonly<{
   /** provider name */
   provider: string;
@@ -291,7 +328,12 @@ export type Adapter<Raw = unknown> = Readonly<{
   create(options?: Options): Promise<Sandbox<Raw>>;
 }>;
 
-/** sandbox creation options shared across providers */
+/**
+ * sandbox creation options shared across providers
+ *
+ * individual adapters document which options they support and how they map to
+ * their provider
+ */
 export type Options = Readonly<{
   /** default sandbox working directory */
   cwd?: string;

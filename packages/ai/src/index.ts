@@ -207,6 +207,7 @@ type Draft = Partial<{
   write: Tool<Write, WriteResult>;
 }>;
 
+/** AI SDK-compatible sandbox tools keyed by the enabled tool name */
 export type Tools = Readonly<Draft>;
 
 interface DraftTools {
