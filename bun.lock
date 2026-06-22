@@ -80,7 +80,7 @@
         "@anthropic-ai/claude-agent-sdk": "^0.3.145",
         "@openai/agents": "^0.11.4",
         "@sandbox-sdk/local": "workspace:*",
-        "ai": "^6.0.205",
+        "ai": "^6.0.208",
         "ai-v7": "npm:ai@7.0.0-canary.174",
         "typescript": "^6.0.3",
         "zod": "^4.3.6",
@@ -102,7 +102,7 @@
       "name": "@sandbox-sdk/blaxel",
       "version": "0.0.0",
       "dependencies": {
-        "@blaxel/core": "^0.2.91",
+        "@blaxel/core": "^0.2.94",
         "@sandbox-sdk/core": "workspace:*",
       },
       "devDependencies": {
@@ -118,7 +118,7 @@
         "@sandbox-sdk/core": "workspace:*",
       },
       "devDependencies": {
-        "@cloudflare/workers-types": "^4.20260615.1",
+        "@cloudflare/workers-types": "^4.20260617.1",
         "typescript": "^6.0.3",
       },
     },
