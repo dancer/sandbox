@@ -446,6 +446,7 @@ test("vercel rejects conflicting fork configuration before provider calls", asyn
           fork: "source",
           getOrCreate: true,
           projectId: "project",
+          runtime: "node26",
           source: { type: "git", url: "https://github.com/acme/example.git" },
           teamId: "team",
           token: "token",
@@ -457,7 +458,7 @@ test("vercel rejects conflicting fork configuration before provider calls", asyn
     ).rejects.toMatchObject({
       code: "configuration",
       message:
-        "Vercel fork cannot be combined with getOrCreate, source, id, snapshot, template",
+        "Vercel fork cannot be combined with getOrCreate, source, runtime, id, snapshot, template",
       provider: "vercel",
     });
     expect(called).toBe(false);

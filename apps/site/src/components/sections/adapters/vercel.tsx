@@ -46,7 +46,8 @@ export const Vercel = () => (
           <p>
             Vercel Sandbox runtime. Supported runtime ids include{" "}
             <code>node26</code>, <code>node24</code>, <code>node22</code>, and{" "}
-            <code>python3.13</code>.
+            <code>python3.13</code>. Forks inherit their source runtime and do
+            not accept this option.
           </p>
         </PropAccordionItem>
         <PropAccordionItem name="name" status="optional" value="name">
@@ -65,8 +66,9 @@ export const Vercel = () => (
           <p>
             Fork from an existing named Vercel sandbox. Stop or snapshot the
             source first to copy its filesystem. Fork cannot be combined with
-            <code>source</code>, <code>getOrCreate</code>, or create input{" "}
-            <code>id</code>, <code>snapshot</code>, or <code>template</code>.
+            <code>runtime</code>, <code>source</code>, <code>getOrCreate</code>,
+            or create input <code>id</code>, <code>snapshot</code>, or{" "}
+            <code>template</code>.
           </p>
         </PropAccordionItem>
         <PropAccordionItem name="teamId" status="optional" value="teamId">

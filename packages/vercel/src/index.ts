@@ -141,7 +141,8 @@ export type KeepLastSnapshots = Readonly<{
  *
  * Vercel uses the source sandbox's current snapshot when one exists. stop or
  * snapshot the source before forking to copy filesystem state. without a
- * snapshot, Vercel copies configuration into a fresh runtime
+ * snapshot, Vercel copies configuration into a fresh runtime. forks inherit
+ * the source runtime and cannot select a runtime override
  */
 export type Fork = Readonly<{
   /** named source sandbox whose current snapshot and configuration seed the fork */
@@ -164,8 +165,8 @@ export type Vercel = Readonly<{
   /**
    * fork every new sandbox from an existing named Vercel sandbox
    *
-   * cannot be combined with `source`, `getOrCreate`, or create input `id`,
-   * `snapshot`, or `template` because those select a different native creation path
+   * cannot be combined with `runtime`, `source`, `getOrCreate`, or create input
+   * `id`, `snapshot`, or `template` because those select a different native creation path
    */
   fork?: Fork | string;
   /** reuse a named sandbox when present and create it when absent */
@@ -483,7 +484,8 @@ const sandboxTags = (
 const createInput = (
   options: Vercel,
   input: NonNullable<Parameters<Adapter<Raw>["create"]>[0]>,
-  ports: readonly number[]
+  ports: readonly number[],
+  includeRuntime = true
 ): VercelCreate => {
   const snapshot = input.snapshot ?? input.template;
   const environment = { ...options.env, ...input.env };
@@ -506,7 +508,9 @@ const createInput = (
     persistent: options.persistent,
     ports: [...ports],
     resources,
-    runtime: options.runtime,
+    ...(includeRuntime && options.runtime !== undefined
+      ? { runtime: options.runtime }
+      : {}),
     signal: options.signal,
     snapshotExpiration,
     source:
@@ -537,6 +541,7 @@ const validateFork = (
   const conflicts = [
     options.getOrCreate ? "getOrCreate" : undefined,
     options.source === undefined ? undefined : "source",
+    options.runtime === undefined ? undefined : "runtime",
     input.id === undefined ? undefined : "id",
     input.snapshot === undefined ? undefined : "snapshot",
     input.template === undefined ? undefined : "template",
@@ -556,7 +561,7 @@ const forkInput = (
   input: NonNullable<Parameters<Adapter<Raw>["create"]>[0]>,
   ports: readonly number[]
 ): Parameters<typeof VercelSandbox.fork>[0] => {
-  const create = createInput(options, input, ports);
+  const create = createInput(options, input, ports, false);
   const source =
     typeof options.fork === "string"
       ? options.fork

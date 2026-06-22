@@ -2841,7 +2841,8 @@ Vercel Sandbox fork source
 
 Vercel uses the source sandbox's current snapshot when one exists. stop or
 snapshot the source before forking to copy filesystem state. without a
-snapshot, Vercel copies configuration into a fresh runtime
+snapshot, Vercel copies configuration into a fresh runtime. forks inherit
+the source runtime and cannot select a runtime override
 
 ```ts
 export type Fork = Readonly<{
@@ -2868,8 +2869,8 @@ export type Vercel = Readonly<{
   /**
    * fork every new sandbox from an existing named Vercel sandbox
    *
-   * cannot be combined with `source`, `getOrCreate`, or create input `id`,
-   * `snapshot`, or `template` because those select a different native creation path
+   * cannot be combined with `runtime`, `source`, `getOrCreate`, or create input
+   * `id`, `snapshot`, or `template` because those select a different native creation path
    */
   fork?: Fork | string;
   /** reuse a named sandbox when present and create it when absent */
