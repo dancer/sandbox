@@ -135,7 +135,13 @@ export type KeepLastSnapshots = Readonly<{
   deleteEvicted?: boolean;
 }>;
 
-/** Vercel Sandbox fork source */
+/**
+ * Vercel Sandbox fork source
+ *
+ * Vercel uses the source sandbox's current snapshot when one exists. stop or
+ * snapshot the source before forking to copy filesystem state. without a
+ * snapshot, Vercel copies configuration into a fresh runtime
+ */
 export type Fork = Readonly<{
   /** named source sandbox whose current snapshot and configuration seed the fork */
   sourceSandbox: string;
