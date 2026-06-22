@@ -91,7 +91,7 @@ Blaxel perpetual sandboxes via \`@blaxel/core\`. Maps Blaxel files, process exec
 
 ## Cloudflare (@sandbox-sdk/cloudflare)
 
-Cloudflare via \`@cloudflare/sandbox\`. Backed by a Durable Object running a Linux container, so the adapter takes a binding from \`env\` rather than an API key. The Worker must export \`Sandbox\` from \`@cloudflare/sandbox\` and bind that Durable Object in \`wrangler.jsonc\`. The adapter enforces RPC transport and \`ports.expose()\` returns a zero-config HTTPS quick tunnel by default. For non-Worker runtimes, deploy Cloudflare's HTTP bridge and use \`cloudflareBridge()\`; its \`ports.expose()\` also creates quick HTTPS tunnels, while \`tunnel\` opts into a named tunnel when the bridge Worker is configured for one. \`SANDBOX_API_KEY\` authenticates the bridge and is rejected from sandbox environment configuration.
+Cloudflare via \`@cloudflare/sandbox\`. Backed by a Durable Object running a Linux container, so the adapter takes a binding from \`env\` rather than an API key. The Worker must export \`Sandbox\` from \`@cloudflare/sandbox\` and bind that Durable Object in \`wrangler.jsonc\`. The adapter enforces RPC transport and \`ports.expose()\` returns a zero-config HTTPS quick tunnel by default. For non-Worker runtimes, deploy Cloudflare's HTTP bridge and use \`cloudflareBridge()\`; its \`ports.expose()\` also creates quick HTTPS tunnels, while \`tunnel\` opts into a named tunnel when the bridge Worker is configured for one. The bridge has no lifecycle-safe background process route, so \`process.spawn()\` stays unavailable. Start a long-running bridge service through \`sandbox.raw.pty()\` or a bridge image entrypoint before calling \`ports.expose()\`. \`SANDBOX_API_KEY\` authenticates the bridge and is rejected from sandbox environment configuration.
 
 - \`binding\` (required), \`id\`, \`tunnel\`.
 - Bridge credentials: \`SANDBOX_API_URL\` and \`SANDBOX_API_KEY\`.
@@ -404,10 +404,11 @@ bun run verify:providers
 # verify a single provider end to end
 bun run verify:vercel
 bun run verify:cloudflare
+bun run verify:cloudflare:bridge
 bun run verify:e2b
 \`\`\`
 
-Each provider has its own script: \`verify:blaxel\`, \`verify:cloudflare\`, \`verify:codesandbox\`, \`verify:daytona\`, \`verify:e2b\`, \`verify:modal\`, and \`verify:vercel\`. Credentials are read from \`.env.local\` and stay in host env, never sandbox env.`;
+Each provider has its own script: \`verify:blaxel\`, \`verify:cloudflare\`, \`verify:cloudflare:bridge\`, \`verify:codesandbox\`, \`verify:daytona\`, \`verify:e2b\`, \`verify:modal\`, and \`verify:vercel\`. The bridge verifier is optional and uses \`CLOUDFLARE_BRIDGE_URL\` with \`CLOUDFLARE_BRIDGE_TOKEN\`. Credentials are read from \`.env.local\` and stay in host env, never sandbox env.`;
 
 const adapterAuthoring = `# Adapter authoring
 

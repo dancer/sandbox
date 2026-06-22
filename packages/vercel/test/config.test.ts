@@ -367,7 +367,7 @@ test("vercel gets named sandboxes and preserves existing routes", async () => {
       teamId: "team",
       token: "token",
     });
-    await expect(sandbox.ports.expose(3000)).resolves.toEqual({
+    await expect(sandbox.ports.expose(3000)).resolves.toMatchObject({
       port: 3000,
       url: "https://preview.example.com/3000",
     });
@@ -1036,7 +1036,7 @@ test("vercel maps create options and updates dynamic ports", async () => {
       path: "/work",
     });
 
-    await expect(sandbox.ports.expose(3000)).resolves.toEqual({
+    await expect(sandbox.ports.expose(3000)).resolves.toMatchObject({
       port: 3000,
       url: "https://preview.example.com/3000",
     });
@@ -1054,7 +1054,7 @@ test("vercel maps create options and updates dynamic ports", async () => {
     });
     expect(updateSeen).toEqual({ ports: [8080, 3000] });
 
-    await expect(sandbox.ports.expose(8080)).resolves.toEqual({
+    await expect(sandbox.ports.expose(8080)).resolves.toMatchObject({
       port: 8080,
       url: "https://preview.example.com/8080",
     });

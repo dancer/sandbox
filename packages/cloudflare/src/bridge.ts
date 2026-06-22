@@ -182,10 +182,13 @@ export const cloudflareBridge = (
         restore: () => rejectUnsupported("bridge snapshots.restore"),
       },
       stop: async () => {
-        if (session !== undefined) {
-          await raw.session.delete(id, session);
+        try {
+          if (session !== undefined) {
+            await raw.session.delete(id, session);
+          }
+        } finally {
+          await raw.delete(id);
         }
-        await raw.delete(id);
       },
     });
   },

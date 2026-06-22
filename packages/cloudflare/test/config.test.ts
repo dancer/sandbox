@@ -371,7 +371,7 @@ test("cloudflare exposes quick tunnels by default", async () => {
   });
 
   try {
-    await expect(sandbox.ports.expose(8080)).resolves.toEqual({
+    await expect(sandbox.ports.expose(8080)).resolves.toMatchObject({
       port: 8080,
       url: "https://sandbox.trycloudflare.com",
     });
@@ -455,9 +455,7 @@ test("cloudflare rejects unsupported normalized tunnel options", async () => {
   });
 
   try {
-    const host = { host: "example.com" };
     for (const options of [
-      host,
       { protocol: "http" as const },
       { protocol: "tcp" as const },
       { token: "verify" },

@@ -314,6 +314,10 @@ warm-pool controls, health, OpenAPI schema access, raw tunnel controls, and PTY
 connection descriptors are available through `sandbox.raw`. Normalized
 snapshots and terminal I/O stay unsupported because the bridge does not expose
 the same snapshot or WebSocket ownership contract as the Worker binding adapter.
+The bridge HTTP API also has no lifecycle-safe background process route, so
+normalized `process.spawn()` stays unsupported. Start a long-running bridge
+service through its typed raw PTY connection or a bridge image entrypoint before
+calling `ports.expose()`.
 `SANDBOX_API_KEY` authenticates the bridge and is rejected from sandbox
 environment configuration so the control-plane credential is not forwarded into
 the remote sandbox.
@@ -324,6 +328,13 @@ the remote sandbox.
 It exports the Sandbox Durable Object class, binds it in `wrangler.jsonc`, and
 validates file operations, command execution, shell execution, background
 process spawning, and reachable quick tunnels through the shared adapter.
+
+`apps/cloudflare-bridge` is a separate deployable fixture for the official HTTP
+bridge. It has a zero-sized warm pool and allows one lite container at a time.
+Set its `SANDBOX_API_KEY` Worker secret, then set
+`CLOUDFLARE_BRIDGE_URL` and `CLOUDFLARE_BRIDGE_TOKEN` in `.env.local` to run
+`bun run verify:cloudflare:bridge`. This optional verifier does not change the
+native `bun run verify:cloudflare` workflow.
 
 `@sandbox-sdk/cloudflare` enforces Cloudflare's RPC transport so stream writes,
 stream reads, sessions, and tunnels work without app-specific transport

@@ -40,6 +40,17 @@
         "typescript": "^6.0.3",
       },
     },
+    "apps/cloudflare-bridge": {
+      "name": "@sandbox-sdk/cloudflare-bridge-verify",
+      "version": "0.0.0",
+      "dependencies": {
+        "@cloudflare/sandbox": "^0.12.1",
+      },
+      "devDependencies": {
+        "@cloudflare/workers-types": "^4.20260617.1",
+        "typescript": "^6.0.3",
+      },
+    },
     "apps/site": {
       "name": "@sandbox-sdk/site",
       "version": "0.1.0",
@@ -965,6 +976,8 @@
     "@sandbox-sdk/blaxel": ["@sandbox-sdk/blaxel@workspace:packages/blaxel"],
 
     "@sandbox-sdk/cloudflare": ["@sandbox-sdk/cloudflare@workspace:packages/cloudflare"],
+
+    "@sandbox-sdk/cloudflare-bridge-verify": ["@sandbox-sdk/cloudflare-bridge-verify@workspace:apps/cloudflare-bridge"],
 
     "@sandbox-sdk/cloudflare-live": ["@sandbox-sdk/cloudflare-live@workspace:apps/cloudflare"],
 

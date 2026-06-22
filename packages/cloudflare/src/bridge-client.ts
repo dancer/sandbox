@@ -279,11 +279,12 @@ export const fail = async (
   response: Response,
   feature: string
 ): Promise<never> => {
-  let error: BridgeError | undefined;
+  const body = await response.text();
+  let error: BridgeError;
   try {
-    error = (await response.json()) as BridgeError;
+    error = JSON.parse(body) as BridgeError;
   } catch {
-    error = { error: await response.text() };
+    error = { error: body };
   }
 
   throw sandboxError(

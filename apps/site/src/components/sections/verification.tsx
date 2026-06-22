@@ -12,6 +12,7 @@ bun run verify:providers
 # verify a single provider end to end
 bun run verify:vercel
 bun run verify:cloudflare
+bun run verify:cloudflare:bridge
 bun run verify:e2b`;
 
 export const Verification = () => (

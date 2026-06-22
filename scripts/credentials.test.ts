@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-import { credentialRows, formatRows } from "./credentials";
+import { credentialRows, formatRows, knownProviders } from "./credentials";
 
 const root = resolve(import.meta.dir, "..");
 
@@ -24,12 +24,15 @@ const row = (
   env: Readonly<Record<string, string | undefined>>,
   now = 1_900_000_000_000
 ) =>
-  credentialRows({
-    env,
-    exists: () => false,
-    home: "/tmp/sandbox-sdk",
-    now,
-  }).find((entry) => entry.provider === name);
+  credentialRows(
+    {
+      env,
+      exists: () => false,
+      home: "/tmp/sandbox-sdk",
+      now,
+    },
+    [name]
+  ).find((entry) => entry.provider === name);
 
 describe("credentialRows", () => {
   test("reports missing credentials without printing secrets", () => {
@@ -64,6 +67,19 @@ describe("credentialRows", () => {
     expect(rows.every((entry) => entry.status === "ready")).toBe(true);
   });
 
+  test("recognizes primary and optional verification providers", () => {
+    expect(knownProviders()).toEqual([
+      "blaxel",
+      "cloudflare",
+      "codesandbox",
+      "daytona",
+      "e2b",
+      "modal",
+      "vercel",
+      "cloudflare-bridge",
+    ]);
+  });
+
   test("reports Cloudflare ready with worker credentials", () => {
     expect(
       row("cloudflare", {
@@ -84,6 +100,31 @@ describe("credentialRows", () => {
     ).toMatchObject({
       details: "CLOUDFLARE_SANDBOX_WORKER_URL with CLOUDFLARE_SANDBOX_TOKEN",
       status: "partial",
+    });
+  });
+
+  test("keeps Cloudflare bridge verification opt-in", () => {
+    const rows = credentialRows({
+      env: {},
+      exists: () => false,
+      home: "/tmp/sandbox-sdk",
+      now: 1_900_000_000_000,
+    });
+
+    expect(rows.some((entry) => entry.provider === "cloudflare-bridge")).toBe(
+      false
+    );
+  });
+
+  test("reports Cloudflare bridge credentials without using adapter defaults", () => {
+    expect(
+      row("cloudflare-bridge", {
+        CLOUDFLARE_BRIDGE_TOKEN: "token",
+        CLOUDFLARE_BRIDGE_URL: "https://bridge.example.com",
+      })
+    ).toMatchObject({
+      details: "ready",
+      status: "ready",
     });
   });
 

@@ -74,7 +74,10 @@ export const Cloudflare = () => (
       lifecycle, sessions, persist, hydrate, bucket mounts, warm-pool controls,
       health, OpenAPI schema access, and raw tunnel controls stay typed on{" "}
       <code>sandbox.raw</code>. PTY support returns a typed WebSocket connection
-      descriptor so your app can own the terminal client.{" "}
+      descriptor so your app can own the terminal client and start a
+      long-running service before calling <code>ports.expose()</code>. The
+      bridge HTTP API does not expose a lifecycle-safe background process
+      endpoint, so <code>process.spawn()</code> stays unavailable.{" "}
       <code>SANDBOX_API_KEY</code> authenticates the bridge and is rejected from
       sandbox environment configuration.
     </p>

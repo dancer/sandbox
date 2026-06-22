@@ -287,7 +287,9 @@ const previewRequest = async (
   };
 };
 
-const preview = async (value: string): Promise<PortPayload["response"]> => {
+export const requestPreview = async (
+  value: string
+): Promise<PortPayload["response"]> => {
   const url = new URL(value);
   const resolver = new Resolver();
   resolver.setServers(["1.1.1.1", "1.0.0.1"]);
@@ -356,7 +358,7 @@ export const executePorts = async (): Promise<PortResult> => {
         return {
           body: {
             ...body,
-            response: await preview(body.port.url),
+            response: await requestPreview(body.port.url),
           },
           response,
         };

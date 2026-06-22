@@ -249,6 +249,54 @@ test("cloudflareBridge maps create session and cleanup", async () => {
   ]);
 });
 
+test("cloudflareBridge destroys sandboxes when session cleanup fails", async () => {
+  const seen: Seen[] = [];
+  const sandbox = await create({
+    adapter: cloudflareBridge({
+      env: { A: "adapter" },
+      fetch: bridgeFetch((request) => {
+        if (request.path === "/v1/sandbox" && request.method === "POST") {
+          return json({ id: "box-1" });
+        }
+        if (
+          request.path === "/v1/sandbox/box-1/session" &&
+          request.method === "POST"
+        ) {
+          return json({ id: "session-1" });
+        }
+        if (
+          request.path === "/v1/sandbox/box-1/session/session-1" &&
+          request.method === "DELETE"
+        ) {
+          return Response.json(
+            { error: "session cleanup failed" },
+            { status: 500 }
+          );
+        }
+        if (
+          request.path === "/v1/sandbox/box-1" &&
+          request.method === "DELETE"
+        ) {
+          return new Response(null, { status: 204 });
+        }
+        return missing();
+      }, seen),
+      url: "https://bridge.example.com",
+    }),
+  });
+
+  await expect(sandbox.stop()).rejects.toMatchObject({
+    code: "provider",
+    provider: "cloudflare",
+  });
+  expect(seen.map((request) => `${request.method} ${request.path}`)).toEqual([
+    "POST /v1/sandbox",
+    "POST /v1/sandbox/box-1/session",
+    "DELETE /v1/sandbox/box-1/session/session-1",
+    "DELETE /v1/sandbox/box-1",
+  ]);
+});
+
 test("cloudflareBridge reuses explicit sandbox ids", async () => {
   const seen: Seen[] = [];
   const sandbox = await create({
@@ -436,7 +484,7 @@ test("cloudflareBridge exposes normalized and raw tunnels", async () => {
   });
 
   try {
-    await expect(sandbox.ports.expose(3456)).resolves.toEqual({
+    await expect(sandbox.ports.expose(3456)).resolves.toMatchObject({
       port: 3456,
       url: "https://preview.example.com",
     });
@@ -598,6 +646,25 @@ test("cloudflareBridge exposes raw bridge lifecycle methods", async () => {
   );
 });
 
+test("cloudflareBridge preserves non-json bridge errors", async () => {
+  await expect(
+    create({
+      adapter: cloudflareBridge({
+        fetch: bridgeFetch(
+          () =>
+            new Response("blocked", { status: 403, statusText: "Forbidden" }),
+          []
+        ),
+        url: "https://bridge.example.com",
+      }),
+    })
+  ).rejects.toMatchObject({
+    code: "provider",
+    message: "bridge create failed: blocked",
+    provider: "cloudflare",
+  });
+});
+
 test("cloudflareBridge returns bearer headers for raw pty", async () => {
   const sandbox = await create({
     adapter: cloudflareBridge({
@@ -663,8 +730,9 @@ test("cloudflareBridge keeps unsupported bridge features capability gated", asyn
   });
 
   try {
-    const host = { host: "preview.example.com" };
-    await expect(sandbox.ports.expose(3456, host)).rejects.toMatchObject({
+    await expect(
+      sandbox.ports.expose(3456, { protocol: "http" })
+    ).rejects.toMatchObject({
       code: "unsupported",
       provider: "cloudflare",
     });

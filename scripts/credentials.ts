@@ -224,6 +224,31 @@ const cloudflareRow = (context: Context): Row => {
   return row("cloudflare", "bun run verify:cloudflare", ready());
 };
 
+const cloudflareBridgeRow = (context: Context): Row => {
+  const url = value("CLOUDFLARE_BRIDGE_URL", context);
+  const token = has("CLOUDFLARE_BRIDGE_TOKEN", context);
+  const readyBridge = url !== undefined && token;
+  const partialBridge = url !== undefined || token;
+
+  if (url !== undefined && !validUrl(url)) {
+    return row(
+      "cloudflare-bridge",
+      "bun run verify:cloudflare:bridge",
+      missing("CLOUDFLARE_BRIDGE_URL must be an http or https URL")
+    );
+  }
+  if (!readyBridge) {
+    return row(
+      "cloudflare-bridge",
+      "bun run verify:cloudflare:bridge",
+      partialBridge
+        ? partial("CLOUDFLARE_BRIDGE_URL with CLOUDFLARE_BRIDGE_TOKEN")
+        : missing("CLOUDFLARE_BRIDGE_URL and CLOUDFLARE_BRIDGE_TOKEN")
+    );
+  }
+  return row("cloudflare-bridge", "bun run verify:cloudflare:bridge", ready());
+};
+
 const daytonaRow = (context: Context): Row =>
   row(
     "daytona",
@@ -310,11 +335,24 @@ const allRows = (context: Context): readonly Row[] => [
   vercelRow(context),
 ];
 
+const knownRows = (context: Context): readonly Row[] => [
+  ...allRows(context),
+  cloudflareBridgeRow(context),
+];
+
+export const knownProviders = (): readonly string[] =>
+  knownRows({}).map((entry) => entry.provider);
+
 export const credentialRows = (
   context: Context = {},
   providers: readonly string[] = []
 ): readonly Row[] => {
-  const currentRows = allRows(context);
+  const currentRows = [
+    ...allRows(context),
+    ...(providers.includes("cloudflare-bridge")
+      ? [cloudflareBridgeRow(context)]
+      : []),
+  ];
   if (providers.length === 0) {
     return currentRows;
   }
@@ -368,7 +406,7 @@ export const formatRows = (rows: readonly Row[]): string => {
 if (import.meta.main) {
   const providers = process.argv.slice(2);
   const filtered = credentialRows({}, providers);
-  const known = new Set(credentialRows().map((entry) => entry.provider));
+  const known = new Set(knownProviders());
   const unknown = providers.filter((provider) => !known.has(provider));
 
   if (unknown.length > 0) {
