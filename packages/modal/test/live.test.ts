@@ -105,17 +105,20 @@ live("modal creates and starts from a live snapshot", async () => {
     };
     await record(
       new URL("__fixtures__/source.json", import.meta.url),
-      sourceFixture("modal", payload, [
-        "ports.expose",
-        "process.exec",
-        "process.shell",
-        "process.spawnShell",
-      ])
+      sourceFixture(
+        "modal",
+        payload,
+        ["ports.expose", "process.exec", "process.shell", "process.spawnShell"],
+        true
+      )
     );
   } finally {
-    await Promise.all([derived?.stop(), sandbox.stop()]);
-    if (snapshot !== undefined) {
-      await modalClient.images.delete(snapshot.id);
+    try {
+      await Promise.all([derived?.stop(), sandbox.stop()]);
+    } finally {
+      if (snapshot !== undefined) {
+        await sandbox.snapshots.delete(snapshot.id);
+      }
     }
   }
 });

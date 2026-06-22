@@ -4,7 +4,6 @@ import { setTimeout as delay } from "node:timers/promises";
 
 import { create } from "@sandbox-sdk/core";
 import type { Snapshot } from "@sandbox-sdk/core";
-import { Sandbox as E2BSandbox } from "e2b";
 
 import { record, sourceFixture, workflowFixture } from "../../../test/fixture";
 import type { Source } from "../../../test/fixture";
@@ -237,20 +236,20 @@ live("e2b preserves process state in a live snapshot", async () => {
     };
     await record(
       new URL("__fixtures__/source.json", import.meta.url),
-      sourceFixture("e2b", payload, [
-        "ports.expose",
-        "process.exec",
-        "process.shell",
-        "process.spawnShell",
-      ])
+      sourceFixture(
+        "e2b",
+        payload,
+        ["ports.expose", "process.exec", "process.shell", "process.spawnShell"],
+        true
+      )
     );
   } finally {
-    await Promise.all([
-      derived?.stop(),
-      sandbox.stop(),
-      snapshot === undefined
-        ? undefined
-        : E2BSandbox.deleteSnapshot(snapshot.id),
-    ]);
+    try {
+      await Promise.all([derived?.stop(), sandbox.stop()]);
+    } finally {
+      if (snapshot !== undefined) {
+        await sandbox.snapshots.delete(snapshot.id);
+      }
+    }
   }
 });

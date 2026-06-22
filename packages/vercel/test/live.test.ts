@@ -78,8 +78,13 @@ live("vercel creates and starts from a live snapshot", async () => {
     expectSource(payload);
     await record("source", sourceFixture(payload));
   } finally {
-    await Promise.all([cleanup(derived), cleanup(sandbox)]);
-    await cleanupSnapshot(snapshotId);
+    try {
+      await Promise.all([cleanup(derived), cleanup(sandbox)]);
+    } finally {
+      if (snapshotId !== undefined) {
+        await sandbox.snapshots.delete(snapshotId);
+      }
+    }
   }
 });
 

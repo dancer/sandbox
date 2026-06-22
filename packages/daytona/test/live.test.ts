@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
 import { setTimeout as delay } from "node:timers/promises";
 
+import { Daytona as DaytonaClient } from "@daytona/sdk";
 import { create } from "@sandbox-sdk/core";
 
 import { record, workflowFixture } from "../../../test/fixture";
@@ -84,6 +85,42 @@ live("daytona runs a live sandbox workflow", async () => {
       ])
     );
   } finally {
+    await sandbox.stop();
+  }
+});
+
+live("daytona deletes a durable snapshot", async () => {
+  const cwd = `/tmp/sandbox-sdk-${randomUUID()}`;
+  const name = `sandbox-sdk-live-${randomUUID()}`;
+  const client = new DaytonaClient({
+    apiKey: process.env.DAYTONA_API_KEY,
+    jwtToken: process.env.DAYTONA_JWT_TOKEN,
+    organizationId: process.env.DAYTONA_ORGANIZATION_ID,
+    target: process.env.DAYTONA_TARGET,
+  });
+  const sandbox = await create({
+    adapter: daytona({
+      deleteOnStop: true,
+      timeout: 300_000,
+    }),
+    cwd,
+  });
+  let created = false;
+  let deleted = false;
+
+  try {
+    await sandbox.raw._experimental_createSnapshot(name, 300);
+    created = true;
+
+    await sandbox.snapshots.delete(name);
+    deleted = true;
+  } finally {
+    if (created && !deleted) {
+      await client.snapshot
+        .get(name)
+        .then((snapshot) => client.snapshot.delete(snapshot))
+        .catch(() => {});
+    }
     await sandbox.stop();
   }
 });
