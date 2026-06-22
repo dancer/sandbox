@@ -4,10 +4,21 @@ import type {
   SandboxCreateConfiguration,
 } from "@blaxel/core";
 
-/** native Blaxel sandbox object exposed as `sandbox.raw` */
+/**
+ * native Blaxel sandbox exposed as `sandbox.raw`
+ *
+ * use this for provider-specific behavior that does not belong in the normalized contract
+ */
 export type BlaxelRaw = SandboxInstance;
 
-/** blaxel adapter configuration */
+/**
+ * configure a Blaxel adapter
+ *
+ * explicit configuration takes precedence over environment values and provider credentials are never forwarded into the sandbox environment
+ *
+ * @example
+ * blaxel({ workspace: "acme", apiKey: process.env.BL_API_KEY })
+ */
 export type Blaxel = Readonly<
   Pick<
     BlaxelConfig,

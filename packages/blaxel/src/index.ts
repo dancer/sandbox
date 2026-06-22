@@ -410,18 +410,47 @@ const read = async (raw: Raw, path: string): Promise<Uint8Array> => {
   return new Uint8Array(await value.arrayBuffer());
 };
 
+const status = (error: unknown): number | undefined => {
+  if (!(error instanceof Error)) {
+    return undefined;
+  }
+  try {
+    const value: unknown = JSON.parse(error.message);
+    if (
+      typeof value === "object" &&
+      value !== null &&
+      "status" in value &&
+      typeof value.status === "number"
+    ) {
+      return value.status;
+    }
+  } catch {
+    return undefined;
+  }
+  return undefined;
+};
+
 const exists = async (raw: Raw, path: string): Promise<boolean> => {
   try {
     await raw.fs.ls(path);
     return true;
   } catch (error) {
-    void error;
+    const value = status(error);
+    if (value === 404) {
+      return false;
+    }
+    if (value !== undefined) {
+      throw error;
+    }
   }
   try {
     await raw.fs.readBinary(path);
     return true;
-  } catch {
-    return false;
+  } catch (error) {
+    if (status(error) === 404) {
+      return false;
+    }
+    throw error;
   }
 };
 

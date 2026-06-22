@@ -1536,7 +1536,9 @@ Blaxel adapter for Sandbox SDK
 
 #### `BlaxelRaw`
 
-native Blaxel sandbox object exposed as `sandbox.raw`
+native Blaxel sandbox exposed as `sandbox.raw`
+
+use this for provider-specific behavior that does not belong in the normalized contract
 
 ```ts
 export type BlaxelRaw = SandboxInstance;
@@ -1544,7 +1546,15 @@ export type BlaxelRaw = SandboxInstance;
 
 #### `Blaxel`
 
-blaxel adapter configuration
+configure a Blaxel adapter
+
+explicit configuration takes precedence over environment values and provider credentials are never forwarded into the sandbox environment
+
+**example**
+
+```ts
+blaxel({ workspace: "acme", apiKey: process.env.BL_API_KEY });
+```
 
 ```ts
 export type Blaxel = Readonly<

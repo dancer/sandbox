@@ -556,6 +556,55 @@ test("blaxel preserves spawn provider errors", async () => {
   }
 });
 
+test("blaxel only maps native missing paths to false", async () => {
+  const original = SandboxInstance.create;
+  const reads: string[] = [];
+  const raw = {
+    delete: () => Promise.resolve(),
+    fs: {
+      ls: (path: string) => {
+        if (path.endsWith("file")) {
+          return Promise.reject(new Error('{"error":"Directory not found"}'));
+        }
+        return Promise.reject(
+          new Error(
+            JSON.stringify({ status: path.endsWith("missing") ? 404 : 401 })
+          )
+        );
+      },
+      mkdir: () => Promise.resolve({}),
+      readBinary: (path: string) => {
+        reads.push(path);
+        return Promise.resolve(new Blob(["file"]));
+      },
+    },
+    metadata: { name: "sandbox" },
+  } as unknown as SandboxInstance;
+
+  SandboxInstance.create = (() =>
+    Promise.resolve(raw)) as typeof SandboxInstance.create;
+
+  try {
+    const sandbox = await create({
+      adapter: blaxel({
+        apiKey: "key",
+        workspace: "workspace",
+      }),
+      cwd: "/work",
+    });
+
+    await expect(sandbox.files.exists("missing")).resolves.toBe(false);
+    await expect(sandbox.files.exists("file")).resolves.toBe(true);
+    await expect(sandbox.files.exists("forbidden")).rejects.toMatchObject({
+      code: "provider",
+      provider: "blaxel",
+    });
+    expect(reads).toEqual(["/work/file"]);
+  } finally {
+    SandboxInstance.create = original;
+  }
+});
+
 test("blaxel kills spawned processes on abort", async () => {
   const original = SandboxInstance.create;
   let killed: string | undefined;

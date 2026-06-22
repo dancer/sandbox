@@ -31,6 +31,7 @@ const adapter = (externalId?: string) =>
   blaxel({
     apiKey: process.env.BL_API_KEY,
     clientCredentials: process.env.BL_CLIENT_CREDENTIALS,
+    disableH2: true,
     ...(externalId === undefined ? {} : { externalId }),
     image: "blaxel/base-image:latest",
     name: `sandbox-sdk-${randomUUID()}`,
@@ -78,6 +79,24 @@ live("blaxel runs a live sandbox workflow", async () => {
         "snapshotSource",
       ])
     );
+  } finally {
+    await sandbox.stop();
+  }
+});
+
+live("blaxel maps native missing paths to false", async () => {
+  const cwd = `/app/sandbox-sdk-missing-${randomUUID()}`;
+  const sandbox = await create({
+    adapter: adapter(),
+    cwd,
+  });
+
+  try {
+    const missing = `${cwd}/missing`;
+    await expect(sandbox.raw.fs.ls(missing)).rejects.toMatchObject({
+      message: expect.stringContaining('"status":404'),
+    });
+    await expect(sandbox.files.exists(missing)).resolves.toBe(false);
   } finally {
     await sandbox.stop();
   }
@@ -158,6 +177,7 @@ live("blaxel updates a live sandbox network", async () => {
     adapter: blaxel({
       apiKey: process.env.BL_API_KEY,
       clientCredentials: process.env.BL_CLIENT_CREDENTIALS,
+      disableH2: true,
       image: "blaxel/base-image:latest",
       name: `sdk-net-${randomUUID().slice(0, 8)}`,
       network: {
