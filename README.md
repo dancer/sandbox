@@ -22,9 +22,9 @@ await withSandbox(
     cwd: "/workspace",
   },
   async (sandbox) => {
-    await sandbox.files.write("/workspace/main.ts", "console.log('hello')");
+    await sandbox.files.write("main.ts", "console.log('hello')");
 
-    const result = await sandbox.process.shell("bun /workspace/main.ts");
+    const result = await sandbox.process.shell("bun main.ts");
 
     console.log(result.stdout);
   }
@@ -72,6 +72,14 @@ low-level shape first:
 If a low-level process result already includes `stdout` or `stderr`, the core
 helper preserves those fields. It only falls back to buffered process output
 when the low-level result does not include captured output.
+
+Read the [adapter authoring guide](https://sandbox-sdk.sh/adapter-authoring.md)
+for the runtime contract, capability rules, credential boundary, and release
+verification path.
+
+For portable process calls, use paths relative to `cwd`; command strings and
+argv are forwarded to the provider unchanged. File APIs still accept absolute
+sandbox paths.
 
 ## Previews
 

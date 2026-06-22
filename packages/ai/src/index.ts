@@ -752,6 +752,7 @@ const description = (
     "Use write only for files that belong in the sandbox workspace.",
     `Commands run with a default timeout of ${timeout}ms.`,
     "The exec tool accepts shell command strings; use args only for explicit argv execution.",
+    "Use paths relative to the default working directory for portable commands.",
     `Command stdout and stderr are each capped at ${maxOutput} characters.`,
     unavailable.length === 0
       ? undefined

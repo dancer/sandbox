@@ -42,11 +42,11 @@ const kit = tools(sandbox, {
 const ai = aisdk(kit);
 
 await kit.tools.write?.execute({
-  path: "/workspace/main.ts",
+  path: "main.ts",
   text: "console.log('hi')",
 });
 
-await kit.tools.exec?.execute({ command: "bun /workspace/main.ts" });`;
+await kit.tools.exec?.execute({ command: "bun main.ts" });`;
 
 const AI_SDK_EXAMPLE = `import { generateText } from "ai";
 import { create } from "@sandbox-sdk/core";

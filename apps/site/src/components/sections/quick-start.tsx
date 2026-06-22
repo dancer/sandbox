@@ -10,9 +10,9 @@ await withSandbox(
     cwd: "/workspace",
   },
   async (sandbox) => {
-    await sandbox.files.write("/workspace/main.ts", "console.log('hello')");
+    await sandbox.files.write("main.ts", "console.log('hello')");
 
-    const result = await sandbox.process.shell("bun /workspace/main.ts");
+    const result = await sandbox.process.shell("bun main.ts");
 
     console.log(result.stdout);
   }

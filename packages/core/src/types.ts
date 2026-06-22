@@ -230,6 +230,8 @@ export type Snapshot = Readonly<{
  * command execution options shared by exec, shell, spawn, and spawnShell
  *
  * command environments apply only to that process and are not adapter credentials
+ * command strings and argv are forwarded to the provider, so use paths relative
+ * to `cwd` when portable command behavior matters
  */
 export type Exec = Readonly<{
   /** command working directory inside the sandbox */

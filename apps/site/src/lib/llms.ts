@@ -59,9 +59,9 @@ await withSandbox(
     cwd: "/workspace",
   },
   async (sandbox) => {
-    await sandbox.files.write("/workspace/main.ts", "console.log('hello')");
+    await sandbox.files.write("main.ts", "console.log('hello')");
 
-    const result = await sandbox.process.shell("bun /workspace/main.ts");
+    const result = await sandbox.process.shell("bun main.ts");
 
     console.log(result.stdout);
   }
@@ -409,6 +409,44 @@ bun run verify:e2b
 
 Each provider has its own script: \`verify:blaxel\`, \`verify:cloudflare\`, \`verify:codesandbox\`, \`verify:daytona\`, \`verify:e2b\`, \`verify:modal\`, and \`verify:vercel\`. Credentials are read from \`.env.local\` and stay in host env, never sandbox env.`;
 
+const adapterAuthoring = `# Adapter authoring
+
+Build an adapter around the smallest provider shape that is both real and portable. The shared surface is for files, bounded commands, lifecycle-safe background processes, ports, and snapshot operations with matching semantics. Keep everything else on the adapter's typed \`raw\` value.
+
+The maintained local adapter is the reference implementation: https://github.com/dancer/sandbox/blob/main/packages/local/src/index.ts
+
+## Start from provider facts
+
+- Verify the current official provider documentation, installed declarations, and provider source before deciding which features belong on the normalized surface.
+- Keep native features such as PTY, storage, GPU, custom networking, terminal sessions, and provider-specific snapshot workflows behind \`raw\` unless multiple providers can support one truthful contract.
+- Let explicit factory options win over environment variables. Validate missing or conflicting configuration before making a provider request.
+- Never copy adapter credentials into sandbox environment values. Only pass secrets that the sandbox workload is explicitly allowed to use.
+
+## Implement the low-level runtime
+
+Use \`SandboxRuntime<Raw>\` with \`fromSandboxRuntime()\` for adapters that can map the core contract directly.
+
+- Implement \`files.read()\` as \`ReadableStream<Uint8Array>\` so large files do not need adapter-side buffering. The helper derives \`files.read()\`, \`files.text()\`, and \`files.stream()\` from that stream.
+- Resolve relative paths before calling low-level file methods when the provider needs a concrete working directory. \`fromSandboxRuntime()\` preserves runtime paths unchanged; \`sandboxPath(cwd, path)\` is the shared resolver, not a security boundary.
+- Provide direct bounded \`process.exec()\` and \`process.shell()\` results when the provider has one-shot command APIs. Provide \`spawn()\` and \`spawnShell()\` only when the provider can return a real \`Running\` handle with output, a final result, and lifecycle-safe \`kill()\` behavior.
+- Return only serializable URLs from low-level \`ports.expose()\`. Adapters with provider-authenticated previews should create the higher-level preview directly so authorization headers remain private.
+- Expose the native client as \`raw\` with its actual provider type. Do not erase it to \`unknown\` or accept arbitrary structural test doubles as a public raw client.
+
+## Advertise capability truthfully
+
+\`capabilities\` is a contract, not a feature wishlist. Every advertised flag needs an implementation and a deterministic test. Keep snapshot creation, in-place restore, and create-from-snapshot separate because providers rarely implement all three with the same lifecycle semantics. Keep \`processSpawn\` false when a provider cannot offer a reliable process handle, even if it can run one-shot commands.
+
+Use \`SandboxError\` with a stable code for configuration, unsupported, path, timeout, abort, and normalized provider failures. Do not silently discard unsupported options or make a capability appear supported just because a related native method exists.
+
+## Verify the adapter
+
+1. Add configuration tests that prove invalid input fails before provider work.
+2. Add sanitized fixture replay for normalized inputs and outputs. Fixtures prove contract mapping, not live provider behavior.
+3. Add a credential-gated \`verify:<provider>\` workflow that creates a sandbox, exercises the advertised capabilities, and always cleans up in \`finally\`.
+4. Build the package, typecheck a consumer example against built declarations, run the deterministic suite, regenerate API docs, and dry-run the package before publishing.
+
+Do not ship fake provider support. An explicit unsupported error with typed \`raw\` access is better DX than a broad interface that fails after creating a billable sandbox.`;
+
 const api = `# API reference
 
 Every method lives on the \`Sandbox\` instance returned by \`create()\`. The unified surface only covers what every adapter can do cleanly; anything provider-specific lives on \`sandbox.raw\`. The complete generated reference, including every type, lives at https://github.com/dancer/sandbox/blob/main/docs/api.md.
@@ -433,6 +471,7 @@ Every method lives on the \`Sandbox\` instance returned by \`create()\`. The uni
 ## Adapter authoring
 
 - \`fromSandboxRuntime(runtime)\` lifts a low-level \`SandboxRuntime\` into the public \`Sandbox\` API, deriving \`files.text()\` and \`files.read()\` from streams. Adapters can provide direct bounded \`process.exec()\` and \`process.shell()\` results, or provide stream-first spawn handles and let the helper derive those one-shot methods.
+- Read the complete adapter-authoring guide at https://sandbox-sdk.sh/adapter-authoring.md.
 
 Core types include \`Sandbox\`, \`Capabilities\`, \`Capability\`, \`Mode\`, \`Files\`, \`Process\`, \`Running\`, \`Ports\`, \`Snapshots\`, \`Result\`, \`Entry\`, \`Input\`, \`Options\`, \`Adapter\`, \`SandboxRuntime\`, and \`Code\`.`;
 
@@ -496,6 +535,12 @@ export const docs: readonly Doc[] = [
     slug: "sandbox-type",
     summary: "the shape every adapter returns",
     title: "The Sandbox type",
+  },
+  {
+    body: adapterAuthoring,
+    slug: "adapter-authoring",
+    summary: "build a stream-first, capability-honest provider adapter",
+    title: "Adapter authoring",
   },
   {
     body: errors,

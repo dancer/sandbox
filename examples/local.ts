@@ -8,11 +8,9 @@ export const run = (): Promise<string> =>
       cwd: "/workspace",
     },
     async (sandbox) => {
-      await sandbox.files.write("/workspace/message.txt", "hello from local");
+      await sandbox.files.write("message.txt", "hello from local");
 
-      const result = await sandbox.process.exec("cat", [
-        "/workspace/message.txt",
-      ]);
+      const result = await sandbox.process.exec("cat", ["message.txt"]);
       return result.stdout;
     }
   );

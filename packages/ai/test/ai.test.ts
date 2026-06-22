@@ -55,6 +55,9 @@ test("tools returns prompt context and selected tools", async () => {
 
   expect(kit.description).toContain("isolated local sandbox");
   expect(kit.description).toContain("/workspace");
+  expect(kit.description).toContain(
+    "Use paths relative to the default working directory for portable commands."
+  );
   expect(kit.description).not.toContain("snapshot creation");
   expect(kit.description).not.toContain("snapshot restore");
   expect(kit.description).toContain(

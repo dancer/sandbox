@@ -1,7 +1,15 @@
 import { CodeBlock } from "@/components/code-block";
 import { Heading } from "@/components/heading";
 
-const SANDBOX_TYPE = `type Sandbox<Raw = unknown> = Readonly<{
+const SANDBOX_TYPE = `import type {
+  Capabilities,
+  Files,
+  Ports,
+  Process,
+  Snapshots,
+} from "@sandbox-sdk/core";
+
+type Sandbox<Raw = unknown> = Readonly<{
   id: string;
   provider: string;
   cwd: string;
@@ -12,59 +20,7 @@ const SANDBOX_TYPE = `type Sandbox<Raw = unknown> = Readonly<{
   snapshots: Snapshots;
   raw: Raw;
   stop(): Promise<void>;
-}>;
-
-type Capability =
-  | "environment"
-  | "files"
-  | "process"
-  | "ports"
-  | "snapshots"
-  | "streaming";
-
-type RawCapability =
-  | "backup"
-  | "buckets"
-  | "codegen"
-  | "desktop"
-  | "drives"
-  | "git"
-  | "gpu"
-  | "interpreter"
-  | "lifecycle"
-  | "lsp"
-  | "mcp"
-  | "metrics"
-  | "network"
-  | "previews"
-  | "pty"
-  | "resources"
-  | "secrets"
-  | "sessions"
-  | "ssh"
-  | "system"
-  | "tunnels"
-  | "volumes"
-  | "watching";
-
-type Mode =
-  | boolean
-  | "combined"
-  | "configured"
-  | "create-time"
-  | "derived"
-  | "disk"
-  | "dynamic"
-  | "filesystem"
-  | "memory"
-  | "separate"
-  | "volume";
-
-type Capabilities = Readonly<
-  Partial<Record<Capability, Mode>> & {
-    raw?: Partial<Record<RawCapability, Mode>>;
-  }
->;`;
+}>;`;
 
 export const SandboxType = () => (
   <section>
@@ -85,7 +41,9 @@ export const SandboxType = () => (
       The <code>Raw</code> type parameter is set per-adapter (the local adapter
       sets it to <code>{`{ root: string }`}</code>; cloud adapters set it to
       their native client) so <code>sandbox.raw</code> stays
-      autocomplete-friendly without losing the unified shape.
+      autocomplete-friendly without losing the unified shape. Import the
+      capability types instead of copying their unions: the generated API
+      reference stays the source of truth as the contract evolves.
     </p>
   </section>
 );
