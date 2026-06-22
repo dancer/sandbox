@@ -180,6 +180,11 @@ volumes, drives, previews, sessions, system upgrades, and codegen; and
 CodeSandbox VM lifecycle, preview tokens, sessions, interpreters, terminals,
 and file watchers.
 
+E2B connection settings that must exist before a sandbox is created stay typed
+on `e2b(...)`: use `apiHeaders` for custom control-plane headers, `proxy` for
+outbound controller and sandbox traffic, `integration` for user-agent
+attribution, and `validateApiKey` for nonstandard API-key deployments.
+
 ## AI Tools
 
 `@sandbox-sdk/ai` wraps a configured sandbox as ready-made tools plus prompt context for agents that need to read files, write files, list directories, run commands, and open previews when ports are supported.

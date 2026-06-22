@@ -53,6 +53,22 @@ export const E2B = () => (
             SDK's environment-based defaults.
           </p>
         </PropAccordionItem>
+        <PropAccordionItem
+          name="apiHeaders"
+          status="optional"
+          value="apiHeaders"
+        >
+          <p>
+            Additional E2B control-plane headers for custom authentication or
+            gateway deployments. They are never copied into the sandbox.
+          </p>
+        </PropAccordionItem>
+        <PropAccordionItem name="proxy" status="optional" value="proxy">
+          <p>
+            HTTP proxy for E2B control-plane and sandbox traffic. Use this when
+            your runtime requires an outbound proxy.
+          </p>
+        </PropAccordionItem>
         <PropAccordionItem name="timeout" status="optional" value="timeout">
           <p>
             Maximum lifetime of the sandbox in milliseconds. After it elapses

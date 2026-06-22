@@ -2474,6 +2474,8 @@ e2b adapter configuration
 export type E2B = Readonly<{
   /** e2b access token, usually used for template and account operations */
   accessToken?: string;
+  /** additional headers sent to the E2B control plane */
+  apiHeaders?: Readonly<Record<string, string>>;
   /** allow outbound internet access for the sandbox */
   allowInternetAccess?: boolean;
   /** e2b api key; falls back to E2B_API_KEY */
@@ -2488,8 +2490,10 @@ export type E2B = Readonly<{
   domain?: string;
   /** default environment variables for new sandboxes; rejects E2B_API_KEY and E2B_ACCESS_TOKEN to prevent credential forwarding */
   env?: Readonly<Record<string, string>>;
-  /** extra headers sent to the e2b api */
+  /** @deprecated use apiHeaders for additional E2B control-plane headers */
   headers?: Readonly<Record<string, string>>;
+  /** integration identifier appended to the E2B user agent */
+  integration?: string;
   /** e2b lifecycle behavior such as pause or kill when timeout is reached */
   lifecycle?: SandboxLifecycle;
   /** metadata attached to new sandboxes */
@@ -2500,6 +2504,8 @@ export type E2B = Readonly<{
   network?: SandboxNetworkOpts;
   /** request timeout in milliseconds for e2b api calls */
   requestTimeout?: number;
+  /** HTTP proxy used for E2B control-plane and sandbox requests */
+  proxy?: string;
   /** custom sandbox url for advanced or debug deployments */
   sandboxUrl?: string;
   /** secure sandbox controller traffic when supported by e2b */
@@ -2514,6 +2520,8 @@ export type E2B = Readonly<{
   timeout?: number;
   /** linux user used for file and command operations */
   user?: string;
+  /** validate the E2B API key format before provider requests */
+  validateApiKey?: boolean;
   /** e2b volume mounts keyed by sandbox mount path */
   volumeMounts?: Readonly<Record<string, Volume | string>>;
 }>;

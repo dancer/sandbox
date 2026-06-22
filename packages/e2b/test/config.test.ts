@@ -210,9 +210,11 @@ test("e2b maps create and command options without running a real provider", asyn
     const sandbox = await create({
       adapter: e2b({
         allowInternetAccess: true,
+        apiHeaders: { "x-api-header": "value" },
         apiKey: "key",
         env: { A: "1" },
         headers: { header: "value" },
+        integration: "sandbox-sdk-test/1.0.0",
         lifecycle: { autoResume: true, onTimeout: "pause" },
         mcp: {
           filesystem: {
@@ -225,10 +227,12 @@ test("e2b maps create and command options without running a real provider", asyn
           allowOut: ["registry.npmjs.org"],
           denyOut: ["0.0.0.0/0"],
         },
+        proxy: "http://proxy.example.com:8080",
         requestTimeout: 123,
         template: "option-template",
         timeout: 456,
         user: "runner",
+        validateApiKey: false,
         volumeMounts: {
           "/data": "cache-volume",
         },
@@ -244,9 +248,11 @@ test("e2b maps create and command options without running a real provider", asyn
     expect(sandbox.cwd).toBe("/work");
     expect(createSeen).toMatchObject({
       allowInternetAccess: true,
+      apiHeaders: { "x-api-header": "value" },
       apiKey: "key",
       envs: { A: "1", B: "2" },
       headers: { header: "value" },
+      integration: "sandbox-sdk-test/1.0.0",
       lifecycle: { autoResume: true, onTimeout: "pause" },
       mcp: {
         filesystem: {
@@ -259,9 +265,11 @@ test("e2b maps create and command options without running a real provider", asyn
         allowOut: ["registry.npmjs.org"],
         denyOut: ["0.0.0.0/0"],
       },
+      proxy: "http://proxy.example.com:8080",
       requestTimeoutMs: 123,
       template: "snapshot",
       timeoutMs: 789,
+      validateApiKey: false,
       volumeMounts: {
         "/data": "cache-volume",
       },
