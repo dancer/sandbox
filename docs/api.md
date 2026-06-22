@@ -18,6 +18,7 @@ normalized feature flags adapters expose for runtime branching
 export type Capability =
   | "environment"
   | "files"
+  | "fileStreaming"
   | "ports"
   | "process"
   | "processExec"
@@ -69,6 +70,7 @@ check the specific capability before assuming related operations are supported
 ```ts
 export type Mode =
   | boolean
+  | "buffered"
   | "combined"
   | "configured"
   | "create-time"
@@ -77,6 +79,7 @@ export type Mode =
   | "dynamic"
   | "filesystem"
   | "memory"
+  | "native"
   | "separate"
   | "volume";
 ```

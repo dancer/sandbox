@@ -111,6 +111,7 @@ const secrets = ["DAYTONA_API_KEY", "DAYTONA_JWT_TOKEN"] as const;
 
 const capabilities: Capabilities = {
   environment: true,
+  fileStreaming: "native",
   files: true,
   ports: "dynamic",
   process: true,

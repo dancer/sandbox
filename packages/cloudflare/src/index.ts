@@ -99,6 +99,7 @@ const tunnelPattern = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/u;
 
 const capabilities: Capabilities = {
   environment: true,
+  fileStreaming: "native",
   files: true,
   ports: "dynamic",
   process: true,

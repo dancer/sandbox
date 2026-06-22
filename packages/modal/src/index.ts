@@ -131,6 +131,7 @@ const provider = "modal";
 
 const capabilities: Capabilities = {
   environment: true,
+  fileStreaming: "buffered",
   files: true,
   ports: "create-time",
   process: true,

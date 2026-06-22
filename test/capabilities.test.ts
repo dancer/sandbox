@@ -3,7 +3,12 @@ import { expect, test } from "bun:test";
 import { blaxel } from "@sandbox-sdk/blaxel";
 import { cloudflare, cloudflareBridge } from "@sandbox-sdk/cloudflare";
 import { codesandbox } from "@sandbox-sdk/codesandbox";
-import { rawCapabilityMode, supports, supportsRaw } from "@sandbox-sdk/core";
+import {
+  capabilityMode,
+  rawCapabilityMode,
+  supports,
+  supportsRaw,
+} from "@sandbox-sdk/core";
 import { daytona } from "@sandbox-sdk/daytona";
 import { e2b } from "@sandbox-sdk/e2b";
 import { local } from "@sandbox-sdk/local";
@@ -12,6 +17,7 @@ import { vercel } from "@sandbox-sdk/vercel";
 
 test("adapters expose capability-honest feature modes", () => {
   expect(local().capabilities).toMatchObject({
+    fileStreaming: "buffered",
     files: true,
     ports: "derived",
     processExec: true,
@@ -21,6 +27,7 @@ test("adapters expose capability-honest feature modes", () => {
   });
 
   expect(e2b().capabilities).toMatchObject({
+    fileStreaming: "native",
     files: true,
     ports: "derived",
     processExec: true,
@@ -42,6 +49,7 @@ test("adapters expose capability-honest feature modes", () => {
   });
 
   expect(vercel().capabilities).toMatchObject({
+    fileStreaming: "native",
     files: true,
     ports: "dynamic",
     processExec: true,
@@ -65,6 +73,7 @@ test("adapters expose capability-honest feature modes", () => {
       binding: {} as Parameters<typeof cloudflare>[0]["binding"],
     }).capabilities
   ).toMatchObject({
+    fileStreaming: "native",
     files: true,
     ports: "dynamic",
     processExec: true,
@@ -84,6 +93,7 @@ test("adapters expose capability-honest feature modes", () => {
   });
 
   expect(daytona().capabilities).toMatchObject({
+    fileStreaming: "native",
     files: true,
     ports: "dynamic",
     processExec: true,
@@ -109,6 +119,7 @@ test("adapters expose capability-honest feature modes", () => {
   });
 
   expect(modal().capabilities).toMatchObject({
+    fileStreaming: "buffered",
     files: true,
     ports: "create-time",
     processExec: true,
@@ -130,6 +141,7 @@ test("adapters expose capability-honest feature modes", () => {
   });
 
   expect(blaxel().capabilities).toMatchObject({
+    fileStreaming: "buffered",
     files: true,
     ports: "dynamic",
     processExec: true,
@@ -153,6 +165,7 @@ test("adapters expose capability-honest feature modes", () => {
   });
 
   expect(codesandbox().capabilities).toMatchObject({
+    fileStreaming: "buffered",
     files: true,
     ports: "dynamic",
     processExec: true,
@@ -178,6 +191,7 @@ test("adapters expose capability-honest feature modes", () => {
       url: "https://bridge.example.com",
     }).capabilities
   ).toMatchObject({
+    fileStreaming: "native",
     files: true,
     ports: "dynamic",
     processExec: true,
@@ -201,6 +215,7 @@ test("raw capabilities are separate from normalized capabilities", () => {
   });
 
   expect(supports(current, "ports")).toBe(true);
+  expect(capabilityMode(current, "fileStreaming")).toBe("native");
   expect(supportsRaw(current, "desktop")).toBe(false);
   expect(rawCapabilityMode(current, "desktop")).toBeUndefined();
   expect(supportsRaw(current, "git")).toBe(true);

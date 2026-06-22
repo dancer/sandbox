@@ -240,6 +240,7 @@ export const provider = "cloudflare";
 
 export const bridgeCapabilities: Capabilities = {
   environment: "separate",
+  fileStreaming: "native",
   files: true,
   ports: "dynamic",
   process: true,

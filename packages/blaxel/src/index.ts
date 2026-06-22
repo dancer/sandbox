@@ -51,6 +51,7 @@ const secrets = ["BL_API_KEY", "BL_CLIENT_CREDENTIALS"] as const;
 
 const capabilities: Capabilities = {
   environment: true,
+  fileStreaming: "buffered",
   files: true,
   ports: "dynamic",
   process: true,

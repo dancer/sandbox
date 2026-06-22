@@ -103,6 +103,7 @@ const secrets = ["E2B_ACCESS_TOKEN", "E2B_API_KEY"] as const;
 
 const capabilities: Capabilities = {
   environment: true,
+  fileStreaming: "native",
   files: true,
   ports: "derived",
   process: true,

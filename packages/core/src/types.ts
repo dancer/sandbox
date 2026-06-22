@@ -2,6 +2,7 @@
 export type Capability =
   | "environment"
   | "files"
+  | "fileStreaming"
   | "ports"
   | "process"
   | "processExec"
@@ -45,6 +46,7 @@ export type RawCapability =
  */
 export type Mode =
   | boolean
+  | "buffered"
   | "combined"
   | "configured"
   | "create-time"
@@ -53,6 +55,7 @@ export type Mode =
   | "dynamic"
   | "filesystem"
   | "memory"
+  | "native"
   | "separate"
   | "volume";
 

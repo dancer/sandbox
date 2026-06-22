@@ -387,6 +387,7 @@ const start = (
 export const local = (options: Local = {}): Adapter<Raw> => ({
   capabilities: {
     environment: true,
+    fileStreaming: "buffered",
     files: true,
     ports: "derived",
     process: true,

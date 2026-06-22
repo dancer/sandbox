@@ -94,6 +94,7 @@ const secrets = ["CSB_API_KEY"] as const;
 
 const capabilities: Capabilities = {
   environment: true,
+  fileStreaming: "buffered",
   files: true,
   ports: "dynamic",
   process: true,

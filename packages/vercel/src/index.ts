@@ -237,6 +237,7 @@ const maximumTags = 5;
 
 const capabilities: Capabilities = {
   environment: true,
+  fileStreaming: "native",
   files: true,
   ports: "dynamic",
   process: true,
