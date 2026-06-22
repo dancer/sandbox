@@ -63,8 +63,10 @@ export const Vercel = () => (
         </PropAccordionItem>
         <PropAccordionItem name="fork" status="optional" value="fork">
           <p>
-            Fork from an existing named Vercel sandbox while keeping the shared
-            Sandbox SDK shape.
+            Fork from an existing named Vercel sandbox. Stop or snapshot the
+            source first to copy its filesystem. Fork cannot be combined with
+            <code>source</code>, <code>getOrCreate</code>, or create input{" "}
+            <code>id</code>, <code>snapshot</code>, or <code>template</code>.
           </p>
         </PropAccordionItem>
         <PropAccordionItem name="teamId" status="optional" value="teamId">

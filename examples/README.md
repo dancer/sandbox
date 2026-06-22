@@ -18,5 +18,6 @@ credentials.
 - `e2b.ts`
 - `daytona.ts`
 - `vercel.ts`
+- `vercel-fork.ts`
 - `cloudflare.ts`
 - `modal.ts`
