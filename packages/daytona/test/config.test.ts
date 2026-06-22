@@ -203,6 +203,43 @@ test("daytona rejects invalid create timeouts before provider calls", async () =
   }
 });
 
+test("daytona cleans up a created sandbox when workspace setup fails", async () => {
+  type Client = InstanceType<typeof DaytonaClient>;
+  type Create = Client["create"];
+
+  const client = DaytonaClient.prototype as Client;
+  const original = client.create;
+  let deleted = false;
+  const raw = {
+    delete: () => {
+      deleted = true;
+      return Promise.reject(new Error("cleanup failed"));
+    },
+    fs: {
+      createFolder: () => Promise.reject(new Error("mkdir failed")),
+    },
+    getWorkDir: () => Promise.resolve("/provider"),
+    id: "sandbox",
+  };
+
+  client.create = (() => Promise.resolve(raw)) as Create;
+
+  try {
+    await expect(
+      create({
+        adapter: daytona({ apiKey: "key" }),
+      })
+    ).rejects.toMatchObject({
+      code: "provider",
+      message: "mkdir failed",
+      provider: "daytona",
+    });
+    expect(deleted).toBe(true);
+  } finally {
+    client.create = original;
+  }
+});
+
 test("daytona maps create options without running a real provider", async () => {
   type Client = InstanceType<typeof DaytonaClient>;
   type Create = Client["create"];

@@ -758,19 +758,26 @@ export const daytona = (options: Daytona = {}): Adapter<Raw> => ({
   async create(input = {}) {
     validate(options);
     const client = new DaytonaClient(config(options));
-    const raw =
-      input.id === undefined
-        ? await client.create(
-            params(options, input),
-            createSettings(options, input)
-          )
-        : await client.get(input.id);
-    const cwd =
-      input.cwd ?? options.cwd ?? (await raw.getWorkDir()) ?? "/home/daytona";
+    const owned = input.id === undefined;
+    const raw = owned
+      ? await client.create(
+          params(options, input),
+          createSettings(options, input)
+        )
+      : await client.get(input.id);
+    try {
+      const cwd =
+        input.cwd ?? options.cwd ?? (await raw.getWorkDir()) ?? "/home/daytona";
 
-    await wrap(() => raw.fs.createFolder(cwd, "755"), "mkdir");
+      await wrap(() => raw.fs.createFolder(cwd, "755"), "mkdir");
 
-    return createSandbox(raw, cwd, options);
+      return createSandbox(raw, cwd, options);
+    } catch (error) {
+      if (owned) {
+        await raw.delete().catch(() => null);
+      }
+      throw error;
+    }
   },
   provider,
 });
