@@ -188,6 +188,13 @@ const handleLive = async (env: Env): Promise<Response> => {
       'printf %s "$SANDBOX_SDK_SHELL" > shell-env.txt',
       { cwd, env: { SANDBOX_SDK_SHELL: "shell-env" } }
     );
+    const exported = await sandbox.process.shell(
+      "export SANDBOX_SDK_SESSION_MARKER=retained"
+    );
+    const isolated = await sandbox.process.shell(
+      'test -z "$SANDBOX_SDK_SESSION_MARKER"'
+    );
+    const sessionless = exported.ok && isolated.ok;
     const commands = {
       create: await sandbox.files.text(createFile),
       exec: await sandbox.files.text(execFile),
@@ -225,6 +232,7 @@ const handleLive = async (env: Env): Promise<Response> => {
       commands.create === "create-env",
       commands.exec === "exec-env",
       commands.shell === "shell-env",
+      sessionless,
       !failed.ok,
       failed.code === 7,
       failed.stderr.includes("failed"),
@@ -243,6 +251,7 @@ const handleLive = async (env: Env): Promise<Response> => {
       inputs,
       ok,
       provider: sandbox.provider,
+      sessionless,
       shell,
       spawn: { ...spawn, output, stderrStream, stdoutStream },
     });

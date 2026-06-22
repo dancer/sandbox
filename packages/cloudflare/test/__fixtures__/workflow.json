@@ -54,6 +54,7 @@
     },
     "ok": true,
     "provider": "cloudflare",
+    "sessionless": true,
     "shell": {
       "code": 0,
       "ok": true,
@@ -90,6 +91,7 @@
       "process.exec.options",
       "process.shell",
       "process.shell.options",
+      "process.shell.isolation",
       "process.spawnShell",
       "process.spawnShell.stderr",
       "process.spawnShell.stdout",

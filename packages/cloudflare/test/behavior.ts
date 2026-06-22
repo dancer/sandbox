@@ -59,6 +59,7 @@ export const workflow = ({ body, response }: Result): void => {
     exec: "exec-env",
     shell: "shell-env",
   });
+  expect(body.sessionless).toBe(true);
   expect(body.exec).toMatchObject({
     code: 0,
     ok: true,

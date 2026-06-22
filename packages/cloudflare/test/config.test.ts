@@ -143,7 +143,12 @@ test("cloudflare maps create options before provider calls", async () => {
     expect(getSeen).toEqual([
       binding,
       "input-id",
-      { normalizeId: true, sleepAfter: "1m", transport: "rpc" },
+      {
+        enableDefaultSession: false,
+        normalizeId: true,
+        sleepAfter: "1m",
+        transport: "rpc",
+      },
     ]);
     expect(setEnvSeen).toEqual({ A: "1", B: "2" });
     expect(mkdirSeen).toEqual({
@@ -163,6 +168,30 @@ test("cloudflare maps create options before provider calls", async () => {
       options: { encoding: "none" },
       path: "/work/data.bin",
     });
+  } finally {
+    await sandbox.stop();
+  }
+});
+
+test("cloudflare lets native options opt into implicit sessions", async () => {
+  getSeen = undefined;
+  const sandbox = await create({
+    adapter: cloudflare({
+      binding,
+      options: { enableDefaultSession: true },
+    }),
+  });
+
+  try {
+    expect(getSeen).toEqual([
+      binding,
+      sandbox.id,
+      {
+        enableDefaultSession: true,
+        normalizeId: true,
+        transport: "rpc",
+      },
+    ]);
   } finally {
     await sandbox.stop();
   }

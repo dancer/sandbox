@@ -39,6 +39,7 @@ export type Payload = Readonly<{
   }>;
   ok: boolean;
   provider: string;
+  sessionless: boolean;
   shell: Command;
   spawn: Command &
     Readonly<{ output: string; stderrStream: string; stdoutStream: string }>;
@@ -138,6 +139,7 @@ export const workflowCoverage: Coverage = {
     "process.exec.options",
     "process.shell",
     "process.shell.options",
+    "process.shell.isolation",
     "process.spawnShell",
     "process.spawnShell.stderr",
     "process.spawnShell.stdout",

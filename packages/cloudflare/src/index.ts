@@ -77,7 +77,11 @@ export type Cloudflare = Readonly<{
    * omit it for a zero-config quick tunnel; named tunnels require Worker-side API token, account, and zone configuration
    */
   tunnel?: string;
-  /** low-level options forwarded to `getSandbox`, with the current RPC transport enforced */
+  /**
+   * low-level options forwarded to `getSandbox`, with the current RPC transport enforced
+   *
+   * normalized commands are sessionless by default. set `enableDefaultSession: true` only when native raw operations need shared shell state
+   */
   options?: Omit<SandboxOptions, "transport">;
 }>;
 
@@ -619,6 +623,7 @@ export const cloudflare = <ProviderRaw = unknown>(
       options.binding as DurableObjectNamespace<Native>,
       id,
       {
+        enableDefaultSession: false,
         normalizeId: true,
         ...options.options,
         transport: "rpc",
