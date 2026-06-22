@@ -77,6 +77,7 @@ describe("credentialRows", () => {
       "modal",
       "vercel",
       "cloudflare-bridge",
+      "daytona-snapshot-delete",
     ]);
   });
 
@@ -114,6 +115,29 @@ describe("credentialRows", () => {
     expect(rows.some((entry) => entry.provider === "cloudflare-bridge")).toBe(
       false
     );
+  });
+
+  test("keeps Daytona snapshot deletion verification opt-in", () => {
+    const rows = credentialRows({
+      env: {},
+      exists: () => false,
+      home: "/tmp/sandbox-sdk",
+      now: 1_900_000_000_000,
+    });
+
+    expect(
+      rows.some((entry) => entry.provider === "daytona-snapshot-delete")
+    ).toBe(false);
+    expect(row("daytona-snapshot-delete", {})).toMatchObject({
+      details:
+        "DAYTONA_SNAPSHOT_DELETE_API_KEY with sandbox access, create:snapshots, and delete:snapshots",
+      status: "missing",
+    });
+    expect(
+      row("daytona-snapshot-delete", {
+        DAYTONA_SNAPSHOT_DELETE_API_KEY: "token",
+      })
+    ).toMatchObject({ details: "ready", status: "ready" });
   });
 
   test("reports Cloudflare bridge credentials without using adapter defaults", () => {

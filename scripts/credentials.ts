@@ -256,6 +256,17 @@ const daytonaRow = (context: Context): Row =>
     has("DAYTONA_API_KEY", context) ? ready() : missing("DAYTONA_API_KEY")
   );
 
+const daytonaSnapshotDeleteRow = (context: Context): Row =>
+  row(
+    "daytona-snapshot-delete",
+    "bun run verify:daytona:snapshot-delete",
+    has("DAYTONA_SNAPSHOT_DELETE_API_KEY", context)
+      ? ready()
+      : missing(
+          "DAYTONA_SNAPSHOT_DELETE_API_KEY with sandbox access, create:snapshots, and delete:snapshots"
+        )
+  );
+
 const modalRow = (context: Context): Row => {
   const modalTokens = all(["MODAL_TOKEN_ID", "MODAL_TOKEN_SECRET"], context);
   const modalPartial = any(["MODAL_TOKEN_ID", "MODAL_TOKEN_SECRET"], context);
@@ -338,6 +349,7 @@ const allRows = (context: Context): readonly Row[] => [
 const knownRows = (context: Context): readonly Row[] => [
   ...allRows(context),
   cloudflareBridgeRow(context),
+  daytonaSnapshotDeleteRow(context),
 ];
 
 export const knownProviders = (): readonly string[] =>
@@ -351,6 +363,9 @@ export const credentialRows = (
     ...allRows(context),
     ...(providers.includes("cloudflare-bridge")
       ? [cloudflareBridgeRow(context)]
+      : []),
+    ...(providers.includes("daytona-snapshot-delete")
+      ? [daytonaSnapshotDeleteRow(context)]
       : []),
   ];
   if (providers.length === 0) {

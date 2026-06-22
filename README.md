@@ -429,6 +429,7 @@ bun run verify:env
 bun run test
 bun run verify:providers
 bun run verify:e2b
+bun run verify:daytona:snapshot-delete
 ```
 
 The default test suite never loads `.env.local`, even when it exists. It covers
@@ -454,6 +455,11 @@ CodeSandbox config and replay tests.
 - E2B: `E2B_API_KEY` or `E2B_ACCESS_TOKEN`
 - Modal: `MODAL_TOKEN_ID` and `MODAL_TOKEN_SECRET`, or Modal CLI config
 - Vercel: `VERCEL_OIDC_TOKEN`, or `VERCEL_TOKEN`, `VERCEL_TEAM_ID`, and `VERCEL_PROJECT_ID`
+
+The default Daytona verifier does not create or delete durable snapshots. To
+verify that destructive path, set `DAYTONA_SNAPSHOT_DELETE_API_KEY` with
+sandbox access plus `create:snapshots` and `delete:snapshots`, then run
+`bun run verify:daytona:snapshot-delete`.
 
 ## License
 

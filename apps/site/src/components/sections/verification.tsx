@@ -13,7 +13,8 @@ bun run verify:providers
 bun run verify:vercel
 bun run verify:cloudflare
 bun run verify:cloudflare:bridge
-bun run verify:e2b`;
+bun run verify:e2b
+bun run verify:daytona:snapshot-delete`;
 
 export const Verification = () => (
   <section>

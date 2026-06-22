@@ -16,6 +16,9 @@ const credentialed = Boolean(
 );
 const enabled = credentialed;
 const live = enabled ? test : test.skip;
+const snapshotLive = process.env.DAYTONA_SNAPSHOT_DELETE_API_KEY
+  ? test
+  : test.skip;
 
 const withTimeout = async <Value>(
   promise: Promise<Value>,
@@ -59,6 +62,32 @@ const restricted = (error: unknown): boolean =>
     "Network access is restricted and cannot be overridden at the sandbox level"
   );
 
+const missing = (error: unknown): boolean =>
+  typeof error === "object" &&
+  error !== null &&
+  "statusCode" in error &&
+  error.statusCode === 404;
+
+const retryDelete = async (
+  client: DaytonaClient,
+  name: string
+): Promise<void> => {
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    try {
+      await client.snapshot.delete(await client.snapshot.get(name));
+      return;
+    } catch (error) {
+      if (missing(error)) {
+        return;
+      }
+      if (attempt === 9) {
+        throw error;
+      }
+      await delay(1000);
+    }
+  }
+};
+
 live("daytona runs a live sandbox workflow", async () => {
   const cwd = `/tmp/sandbox-sdk-${randomUUID()}`;
   const sandbox = await create({
@@ -89,17 +118,15 @@ live("daytona runs a live sandbox workflow", async () => {
   }
 });
 
-live("daytona deletes a durable snapshot", async () => {
+snapshotLive("daytona deletes a durable snapshot", async () => {
   const cwd = `/tmp/sandbox-sdk-${randomUUID()}`;
   const name = `sandbox-sdk-live-${randomUUID()}`;
   const client = new DaytonaClient({
-    apiKey: process.env.DAYTONA_API_KEY,
-    jwtToken: process.env.DAYTONA_JWT_TOKEN,
-    organizationId: process.env.DAYTONA_ORGANIZATION_ID,
-    target: process.env.DAYTONA_TARGET,
+    apiKey: process.env.DAYTONA_SNAPSHOT_DELETE_API_KEY,
   });
   const sandbox = await create({
     adapter: daytona({
+      apiKey: process.env.DAYTONA_SNAPSHOT_DELETE_API_KEY,
       deleteOnStop: true,
       timeout: 300_000,
     }),
@@ -109,19 +136,22 @@ live("daytona deletes a durable snapshot", async () => {
   let deleted = false;
 
   try {
-    await sandbox.raw._experimental_createSnapshot(name, 300);
     created = true;
+    await client.snapshot.create(
+      { image: "python:3.12", name },
+      { timeout: 120 }
+    );
 
     await sandbox.snapshots.delete(name);
     deleted = true;
   } finally {
-    if (created && !deleted) {
-      await client.snapshot
-        .get(name)
-        .then((snapshot) => client.snapshot.delete(snapshot))
-        .catch(() => {});
+    try {
+      await sandbox.stop();
+    } finally {
+      if (created && !deleted) {
+        await retryDelete(client, name);
+      }
     }
-    await sandbox.stop();
   }
 });
 

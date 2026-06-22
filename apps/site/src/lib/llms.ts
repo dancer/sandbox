@@ -416,9 +416,10 @@ bun run verify:vercel
 bun run verify:cloudflare
 bun run verify:cloudflare:bridge
 bun run verify:e2b
+bun run verify:daytona:snapshot-delete
 \`\`\`
 
-Each provider has its own script: \`verify:blaxel\`, \`verify:cloudflare\`, \`verify:cloudflare:bridge\`, \`verify:codesandbox\`, \`verify:daytona\`, \`verify:e2b\`, \`verify:modal\`, and \`verify:vercel\`. The bridge verifier is optional and uses \`CLOUDFLARE_BRIDGE_URL\` with \`CLOUDFLARE_BRIDGE_TOKEN\`. Credentials are read from \`.env.local\` and stay in host env, never sandbox env.`;
+Each provider has its own script: \`verify:blaxel\`, \`verify:cloudflare\`, \`verify:cloudflare:bridge\`, \`verify:codesandbox\`, \`verify:daytona\`, \`verify:daytona:snapshot-delete\`, \`verify:e2b\`, \`verify:modal\`, and \`verify:vercel\`. The bridge verifier is optional and uses \`CLOUDFLARE_BRIDGE_URL\` with \`CLOUDFLARE_BRIDGE_TOKEN\`. Daytona snapshot deletion is separately opt-in and requires \`DAYTONA_SNAPSHOT_DELETE_API_KEY\` with sandbox access, \`create:snapshots\`, and \`delete:snapshots\`. Credentials are read from \`.env.local\` and stay in host env, never sandbox env.`;
 
 const adapterAuthoring = `# Adapter authoring
 
