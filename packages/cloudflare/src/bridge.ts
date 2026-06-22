@@ -21,6 +21,20 @@ import {
   rejectUnsupported,
 } from "./bridge-exec.js";
 
+const secrets = ["SANDBOX_API_KEY"] as const;
+
+const assertSandboxEnv = (value: Readonly<Record<string, string>>): void => {
+  const leaked = secrets.filter((name) => value[name] !== undefined);
+  if (leaked.length === 0) {
+    return;
+  }
+  throw sandboxError(
+    provider,
+    `Cloudflare bridge credentials cannot be forwarded into sandbox env: ${leaked.join(", ")}`,
+    "configuration"
+  );
+};
+
 export type {
   CloudflareBridge,
   CloudflareBridgeJson,
@@ -71,6 +85,8 @@ export const cloudflareBridge = (
 ): Adapter<CloudflareBridgeRaw> => ({
   capabilities: bridgeCapabilities,
   create: async (input = {}): Promise<Sandbox<CloudflareBridgeRaw>> => {
+    const environment = { ...options.env, ...input.env };
+    assertSandboxEnv(environment);
     const raw = bridge(options);
     const cwd = input.cwd ?? options.cwd ?? "/workspace";
     let id = input.id ?? options.id;
@@ -78,7 +94,6 @@ export const cloudflareBridge = (
       const { id: created } = await raw.create();
       id = created;
     }
-    const environment = { ...options.env, ...input.env };
     const createdSession =
       Object.keys(environment).length === 0
         ? undefined

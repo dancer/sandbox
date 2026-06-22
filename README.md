@@ -260,6 +260,9 @@ warm-pool controls, health, OpenAPI schema access, raw tunnel controls, and PTY
 connection descriptors are available through `sandbox.raw`. Normalized
 snapshots and terminal I/O stay unsupported because the bridge does not expose
 the same snapshot or WebSocket ownership contract as the Worker binding adapter.
+`SANDBOX_API_KEY` authenticates the bridge and is rejected from sandbox
+environment configuration so the control-plane credential is not forwarded into
+the remote sandbox.
 
 ## Cloudflare Validation
 

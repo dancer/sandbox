@@ -152,7 +152,7 @@ export type CloudflareBridge = Readonly<{
   /**
    * default environment variables for bridge execution sessions
    *
-   * create input values override these defaults. values are copied into the bridge sandbox, so pass only values the sandbox may use
+   * create input values override these defaults. values are copied into the bridge sandbox, so pass only values the sandbox may use. `SANDBOX_API_KEY` is rejected because it authenticates the bridge
    */
   env?: Readonly<Record<string, string>>;
   /** custom fetch implementation for tests or non-standard runtimes */

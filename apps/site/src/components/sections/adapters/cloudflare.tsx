@@ -74,7 +74,9 @@ export const Cloudflare = () => (
       lifecycle, sessions, persist, hydrate, bucket mounts, warm-pool controls,
       health, OpenAPI schema access, and raw tunnel controls stay typed on{" "}
       <code>sandbox.raw</code>. PTY support returns a typed WebSocket connection
-      descriptor so your app can own the terminal client.
+      descriptor so your app can own the terminal client.{" "}
+      <code>SANDBOX_API_KEY</code> authenticates the bridge and is rejected from
+      sandbox environment configuration.
     </p>
     <CodeBlock code={CLOUDFLARE_BRIDGE_EXAMPLE} lang="ts" />
     <div className="flex flex-col gap-2">

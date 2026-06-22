@@ -104,6 +104,45 @@ test("cloudflareBridge rejects invalid bridge urls", async () => {
   });
 });
 
+test("cloudflareBridge rejects bridge credentials in sandbox environments", async () => {
+  let calls = 0;
+  const fetch = bridgeFetch(() => {
+    calls += 1;
+    return json({ id: "box-1" });
+  }, []);
+  const message =
+    "Cloudflare bridge credentials cannot be forwarded into sandbox env: SANDBOX_API_KEY";
+
+  await expect(
+    create({
+      adapter: cloudflareBridge({
+        env: { SANDBOX_API_KEY: "secret" },
+        fetch,
+        url: "https://bridge.example.com",
+      }),
+    })
+  ).rejects.toMatchObject({
+    code: "configuration",
+    message,
+    provider: "cloudflare",
+  });
+  await expect(
+    create({
+      adapter: cloudflareBridge({
+        fetch,
+        url: "https://bridge.example.com",
+      }),
+      env: { SANDBOX_API_KEY: "secret" },
+    })
+  ).rejects.toMatchObject({
+    code: "configuration",
+    message,
+    provider: "cloudflare",
+  });
+
+  expect(calls).toBe(0);
+});
+
 test("cloudflareBridge keeps paths under workspace", async () => {
   const sandbox = await create({
     adapter: cloudflareBridge({
