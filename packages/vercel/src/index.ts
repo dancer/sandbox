@@ -150,7 +150,11 @@ export type Vercel = Readonly<{
   networkPolicy?: NetworkPolicy;
   /** initial public ports, with a Vercel maximum of four ports per sandbox */
   ports?: readonly number[];
-  /** enable or disable automatic filesystem restore between Vercel sandbox sessions */
+  /**
+   * control automatic filesystem restoration between Vercel sandbox sessions
+   *
+   * Vercel defaults to `true`. set `false` when resumed sessions must start without restored files. use durable storage for artifacts that must outlive the sandbox
+   */
   persistent?: boolean;
   /** Vercel project id; falls back to VERCEL_PROJECT_ID when using access-token auth */
   projectId?: string;
