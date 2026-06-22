@@ -40,10 +40,10 @@ export type { Sandbox as CloudflareSandbox } from "@cloudflare/sandbox";
 
 type Native = CloudflareSandbox<unknown>;
 
-/** native Cloudflare Sandbox object exposed as `sandbox.raw` */
+/** native Cloudflare Sandbox object exposed as `sandbox.raw` for Worker-only features */
 export type CloudflareRaw = Native;
 
-/** structural Durable Object namespace binding accepted by the adapter */
+/** structural Durable Object namespace binding accepted by the Worker-native adapter */
 export type CloudflareBinding = Readonly<{
   /** return a Durable Object stub for a resolved id */
   get(id: unknown): unknown;
@@ -51,9 +51,13 @@ export type CloudflareBinding = Readonly<{
   idFromName(name: string): unknown;
 }>;
 
-/** Cloudflare Sandbox adapter configuration */
+/**
+ * Cloudflare Worker-native Sandbox adapter configuration
+ *
+ * use `cloudflareBridge()` for a deployed HTTP bridge outside a Cloudflare Worker
+ */
 export type Cloudflare = Readonly<{
-  /** Durable Object binding for the Cloudflare Sandbox class, usually `env.Sandbox` */
+  /** required Durable Object binding for the Cloudflare Sandbox class, usually `env.Sandbox` */
   binding: CloudflareBinding;
   /**
    * default working directory for normalized file and process operations
@@ -61,15 +65,19 @@ export type Cloudflare = Readonly<{
    * @default "/workspace"
    */
   cwd?: string;
-  /** default environment variables written to the sandbox when it is created */
+  /** default environment variables written to new sandboxes, excluding Worker secrets */
   env?: Readonly<Record<string, string>>;
   /** stable sandbox id used when create input omits id */
   id?: string;
   /** list options forwarded to Cloudflare `listFiles` */
   list?: ListFilesOptions;
-  /** stable named tunnel label with lowercase letters, digits, and internal hyphens that requires Cloudflare API token, account, and zone configuration in the Worker */
+  /**
+   * optional named tunnel label with lowercase letters, digits, and internal hyphens
+   *
+   * omit it for a zero-config quick tunnel; named tunnels require Worker-side API token, account, and zone configuration
+   */
   tunnel?: string;
-  /** low-level Cloudflare Sandbox options forwarded to `getSandbox` with RPC transport enforced */
+  /** low-level options forwarded to `getSandbox`, with the current RPC transport enforced */
   options?: Omit<SandboxOptions, "transport">;
 }>;
 

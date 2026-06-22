@@ -54,7 +54,7 @@ export type {
   SnapshotTreeNodeData as VercelSnapshotTreeNodeData,
 } from "@vercel/sandbox";
 
-/** native Vercel Sandbox object exposed as `sandbox.raw` */
+/** native Vercel Sandbox object exposed as `sandbox.raw` for provider-specific controls */
 export type VercelRaw = VercelSandbox;
 
 /** source used to seed a new Vercel sandbox */
@@ -87,13 +87,21 @@ export type Source =
       url: string;
     }>;
 
-/** Vercel sandbox resource request */
+/**
+ * Vercel Sandbox resource request
+ *
+ * each requested vcpu includes 2048 MB of memory, subject to Vercel plan limits
+ */
 export type Resources = Readonly<{
   /** requested virtual cpu count */
   vcpus: number;
 }>;
 
-/** Vercel sandbox runtime id */
+/**
+ * Vercel Sandbox runtime identifier
+ *
+ * the string fallback accepts a newer Vercel runtime before this package is updated
+ */
 export type Runtime =
   | "node26"
   | "node24"
@@ -101,43 +109,48 @@ export type Runtime =
   | "python3.13"
   | (string & { readonly __vercelRuntime?: never });
 
-/** Vercel sandbox snapshot retention policy */
+/** Vercel Sandbox snapshot retention policy */
 export type KeepLastSnapshots = Readonly<{
-  /** number of snapshots to retain */
+  /** number of snapshots to retain, from 1 through 10 */
   count: number;
-  /** expiration in milliseconds applied to retained snapshots */
+  /** expiration in milliseconds applied to retained snapshots, with zero disabling expiration */
   expiration?: number;
-  /** delete evicted snapshots immediately when true */
+  /** delete evicted snapshots immediately instead of keeping their default expiration */
   deleteEvicted?: boolean;
 }>;
 
-/** Vercel sandbox fork source */
+/** Vercel Sandbox fork source */
 export type Fork = Readonly<{
-  /** source sandbox name to fork from */
+  /** named source sandbox whose current snapshot and configuration seed the fork */
   sourceSandbox: string;
 }>;
 
-/** Vercel sandbox adapter configuration */
+/**
+ * Vercel Sandbox adapter configuration
+ *
+ * authentication uses `VERCEL_OIDC_TOKEN` when present or `token`, `teamId`, and
+ * `projectId` together for explicit access-token authentication
+ */
 export type Vercel = Readonly<{
   /** default working directory for normalized file and process operations */
   cwd?: string;
-  /** default environment variables applied when creating a sandbox */
+  /** default process environment for new sandboxes, excluding Vercel credentials */
   env?: Readonly<Record<string, string>>;
-  /** custom fetch implementation passed to @vercel/sandbox */
+  /** custom fetch implementation passed to `@vercel/sandbox` */
   fetch?: typeof fetch;
-  /** fork a new sandbox from an existing named Vercel sandbox */
+  /** fork every new sandbox from an existing named Vercel sandbox */
   fork?: Fork | string;
-  /** use Sandbox.getOrCreate for idempotent named sandbox creation */
+  /** reuse a named sandbox when present and create it when absent */
   getOrCreate?: boolean;
-  /** retain only the most recent snapshots for this sandbox */
+  /** retention policy for snapshots created by this sandbox */
   keepLastSnapshots?: KeepLastSnapshots;
-  /** Vercel sandbox name for create and getOrCreate flows */
+  /** provider sandbox name used when the create input does not supply an id */
   name?: string;
-  /** Vercel network policy for the sandbox */
+  /** outbound network policy for the sandbox, including optional Vercel transformations */
   networkPolicy?: NetworkPolicy;
-  /** ports exposed when the sandbox is created; ports.expose can add more later */
+  /** initial public ports, with a Vercel maximum of four ports per sandbox */
   ports?: readonly number[];
-  /** enable or disable automatic restore between Vercel sandbox sessions */
+  /** enable or disable automatic filesystem restore between Vercel sandbox sessions */
   persistent?: boolean;
   /** Vercel project id; falls back to VERCEL_PROJECT_ID when using access-token auth */
   projectId?: string;
@@ -145,25 +158,25 @@ export type Vercel = Readonly<{
   resources?: Resources;
   /** Vercel runtime id such as node26, node24, node22, or python3.13 */
   runtime?: Runtime;
-  /** abort signal for sandbox creation, get, getOrCreate, or fork */
+  /** signal that cancels sandbox creation, get, get-or-create, or fork requests */
   signal?: AbortSignal;
   /** git or tarball source used for new sandboxes */
   source?: Source;
-  /** run commands with sudo when supported by Vercel Sandbox */
+  /** run normalized commands with sudo when supported by Vercel Sandbox */
   sudo?: boolean;
-  /** expiration in milliseconds for snapshots created through the normalized api */
+  /** default expiration in milliseconds for snapshots created through the normalized API */
   snapshotExpiration?: number;
   /** metadata tags attached to the Vercel sandbox */
   tags?: Readonly<Record<string, string>>;
   /** Vercel team id; falls back to VERCEL_TEAM_ID when using access-token auth */
   teamId?: string;
-  /** sandbox lifetime timeout in milliseconds */
+  /** requested sandbox lifetime in milliseconds, subject to Vercel plan limits */
   timeout?: number;
   /** Vercel access token; falls back to VERCEL_TOKEN */
   token?: string;
-  /** called by @vercel/sandbox when a named sandbox is newly created */
+  /** called with the native sandbox when a named get-or-create sandbox is newly created */
   onCreate?: (sandbox: VercelRaw) => Promise<void>;
-  /** called by @vercel/sandbox when a named sandbox session resumes */
+  /** called with the native sandbox when a named sandbox session resumes */
   onResume?: (sandbox: VercelRaw) => Promise<void>;
 }>;
 
