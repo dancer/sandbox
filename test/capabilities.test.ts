@@ -38,6 +38,7 @@ test("adapters expose capability-honest feature modes", () => {
     snapshotCreate: "memory",
     snapshotRestore: false,
     snapshotSource: "create-time",
+    streaming: "separate",
   });
 
   expect(vercel().capabilities).toMatchObject({
@@ -168,6 +169,7 @@ test("adapters expose capability-honest feature modes", () => {
     snapshotCreate: "memory",
     snapshotRestore: false,
     snapshotSource: "create-time",
+    streaming: "combined",
   });
 
   expect(

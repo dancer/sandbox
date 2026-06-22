@@ -1,8 +1,11 @@
 import {
+  capabilityMode,
   isSandboxError,
+  requireCapability,
   sandboxError,
   supports,
   supportsRaw,
+  unsupported,
 } from "@sandbox-sdk/core";
 import type {
   RawCapability,
@@ -91,6 +94,8 @@ export type Options = Readonly<{
   /**
    * generated tools exposed to the model
    *
+   * requested tools unavailable on the selected sandbox are omitted rather than exposed as calls that fail at runtime
+   *
    * @default ["read", "list"]
    */
   allow?: readonly Name[];
@@ -156,8 +161,9 @@ export type AisdkOptions = Readonly<{
  * agent-facing sandbox session compatible with the AI SDK sandbox contract
  *
  * this restricted session omits host-only lifecycle, networking, and raw
- * provider controls from `Sandbox`. the generated tool allowlist does not
- * constrain direct session methods, so custom tools must enforce their own policy
+ * provider controls from `Sandbox`. session methods reject capabilities the
+ * adapter does not advertise before provider work. the generated tool allowlist
+ * does not constrain direct session methods, so custom tools must enforce their own policy
  */
 export type SandboxSession = Readonly<{
   /** normalized capabilities advertised by the underlying sandbox */
@@ -212,7 +218,8 @@ export type AgentSandbox = SandboxSession;
  * streaming process handle compatible with the current AI SDK sandbox contract
  *
  * consume `stdout` and `stderr` as web streams, then call `wait()` to observe
- * the exit code. `kill()` is idempotent
+ * the exit code. `kill()` is idempotent. `spawn()` rejects when the provider
+ * cannot expose separate stdout and stderr streams
  */
 export type SandboxProcess = Readonly<{
   /** bytes written by the process to standard error */
@@ -428,6 +435,27 @@ const integer = (name: string, value: number): void => {
   );
 };
 
+const available = (sandbox: Sandbox, name: Name): boolean => {
+  if (name === "exec") {
+    return supports(sandbox, "processExec");
+  }
+  if (name === "preview") {
+    return supports(sandbox, "ports");
+  }
+  return supports(sandbox, "files");
+};
+
+const spawnable = (sandbox: Sandbox): void => {
+  requireCapability(sandbox, "processSpawn");
+  if (capabilityMode(sandbox, "streaming") === "separate") {
+    return;
+  }
+  unsupported(
+    sandbox.provider,
+    "AI SDK background processes with separate stdout and stderr"
+  );
+};
+
 const port = (value: number): void => {
   if (Number.isInteger(value) && value >= 1 && value <= 65_535) {
     return;
@@ -482,6 +510,7 @@ const write = async (
     path: string;
   }
 ): Promise<void> => {
+  requireCapability(sandbox, "files");
   assertActive(input.abortSignal);
   try {
     const directory = parent(input.path);
@@ -508,6 +537,7 @@ const readText = async (
   sandbox: Sandbox,
   input: TextFile
 ): Promise<string | null> => {
+  requireCapability(sandbox, "files");
   assertActive(input.abortSignal);
   try {
     const bytes = await sandbox.files.read(input.path);
@@ -581,6 +611,7 @@ const run = async (
   timeout: number,
   beforeExec?: Policy<Exec, "exec">
 ): Promise<CommandResult> => {
+  requireCapability(sandbox, "processExec");
   assertActive(input.abortSignal);
   await beforeExec?.(
     {
@@ -614,6 +645,7 @@ const spawn = async (
   timeout: number,
   beforeExec?: Policy<Exec, "exec">
 ): Promise<SandboxProcess> => {
+  spawnable(sandbox);
   assertActive(input.abortSignal);
   await beforeExec?.(
     {
@@ -659,6 +691,7 @@ const schema = <Input>(
 const description = (
   sandbox: Sandbox,
   allowed: readonly Name[],
+  unavailable: readonly Name[],
   cwd: string,
   timeout: number,
   maxOutput: number
@@ -691,11 +724,13 @@ const description = (
       "watching",
     ] as const
   ).filter((capability: RawCapability) => supportsRaw(sandbox, capability));
-  const unavailable = [
-    supports(sandbox, "ports") ? undefined : "ports",
-    supports(sandbox, "snapshotCreate") ? undefined : "snapshot creation",
-    supports(sandbox, "snapshotRestore") ? undefined : "snapshot restore",
-    supports(sandbox, "processSpawn") ? undefined : "background processes",
+  const session = [
+    supports(sandbox, "files") ? undefined : "file operations",
+    supports(sandbox, "processExec") ? undefined : "command execution",
+    supports(sandbox, "processSpawn") &&
+    capabilityMode(sandbox, "streaming") === "separate"
+      ? undefined
+      : "background processes with separate stdout and stderr",
   ].filter((item): item is string => item !== undefined);
 
   return [
@@ -708,12 +743,17 @@ const description = (
     "The exec tool accepts shell command strings; use args only for explicit argv execution.",
     `Command stdout and stderr are each capped at ${maxOutput} characters.`,
     unavailable.length === 0
-      ? "All normalized sandbox capabilities are available."
-      : `Unavailable normalized capabilities: ${unavailable.join(", ")}.`,
+      ? undefined
+      : `Unavailable requested tools: ${unavailable.join(", ")}.`,
+    session.length === 0
+      ? "All AI SDK session capabilities are available."
+      : `Unavailable AI SDK session capabilities: ${session.join(", ")}.`,
     raw.length === 0
       ? "No provider-specific raw capabilities are advertised."
       : `Provider-specific raw capabilities: ${raw.join(", ")}. Host code can use sandbox.raw for these; the agent tools only expose the normalized tools above.`,
-  ].join("\n");
+  ]
+    .filter((line): line is string => line !== undefined)
+    .join("\n");
 };
 
 const agent = (
@@ -728,6 +768,7 @@ const agent = (
     description: details,
     provider: sandbox.provider,
     readBinaryFile: async (input: File) => {
+      requireCapability(sandbox, "files");
       assertActive(input.abortSignal);
       try {
         const output = await sandbox.files.read(input.path);
@@ -738,6 +779,7 @@ const agent = (
       }
     },
     readFile: async (input: File) => {
+      requireCapability(sandbox, "files");
       assertActive(input.abortSignal);
       try {
         const output = await sandbox.files.stream(input.path);
@@ -789,10 +831,9 @@ export const tools = (sandbox: Sandbox, options: Options = {}): Kit => {
   const maxOutput = options.maxOutput ?? 20_000;
   integer("timeout", timeout);
   integer("maxOutput", maxOutput);
-  const requested = options.allow ?? names;
-  const allow = requested.filter(
-    (name) => name !== "preview" || supports(sandbox, "ports")
-  );
+  const requested = [...new Set<Name>(options.allow ?? names)];
+  const unavailable = requested.filter((name) => !available(sandbox, name));
+  const allow = requested.filter((name) => available(sandbox, name));
   const enabled = new Set<Name>(allow);
   const output: DraftTools = {};
 
@@ -800,6 +841,7 @@ export const tools = (sandbox: Sandbox, options: Options = {}): Kit => {
     output.read = {
       description: "Read a text file from the sandbox",
       execute: async (input: Path): Promise<TextResult> => {
+        requireCapability(sandbox, "files");
         await options.beforeRead?.(input, context(sandbox, cwd, "read"));
         return {
           text: await sandbox.files.text(input.path),
@@ -830,6 +872,7 @@ export const tools = (sandbox: Sandbox, options: Options = {}): Kit => {
     output.list = {
       description: "List files in a sandbox directory",
       execute: async (input: Partial<Path>): Promise<ListResult> => {
+        requireCapability(sandbox, "files");
         await options.beforeList?.(input, context(sandbox, cwd, "list"));
         return {
           entries: await sandbox.files.list(input.path),
@@ -844,6 +887,7 @@ export const tools = (sandbox: Sandbox, options: Options = {}): Kit => {
     output.exec = {
       description: "Run a shell command inside the sandbox",
       execute: async (input: Exec): Promise<ExecResult> => {
+        requireCapability(sandbox, "processExec");
         await options.beforeExec?.(input, context(sandbox, cwd, "exec"));
         const execution = {
           cwd: input.cwd ?? cwd,
@@ -879,6 +923,7 @@ export const tools = (sandbox: Sandbox, options: Options = {}): Kit => {
       description:
         "Expose or retrieve a serializable preview URL for a sandbox port",
       execute: async (input: Preview): Promise<PreviewResult> => {
+        requireCapability(sandbox, "ports");
         port(input.port);
         await options.beforePreview?.(input, context(sandbox, cwd, "preview"));
         const preview = await sandbox.ports.expose(input.port);
@@ -892,7 +937,14 @@ export const tools = (sandbox: Sandbox, options: Options = {}): Kit => {
     };
   }
 
-  const text = description(sandbox, allow, cwd, timeout, maxOutput);
+  const text = description(
+    sandbox,
+    allow,
+    unavailable,
+    cwd,
+    timeout,
+    maxOutput
+  );
 
   return {
     description: text,

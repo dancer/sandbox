@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 
 import { RunContext } from "@openai/agents";
+import { codesandbox } from "@sandbox-sdk/codesandbox";
 import { create, isSandboxError } from "@sandbox-sdk/core";
 import { local } from "@sandbox-sdk/local";
 
@@ -600,11 +601,108 @@ test("tools omit preview when ports are unsupported", async () => {
 
   expect(kit.tools.preview).toBeUndefined();
   expect(kit.description).toContain("Allowed sandbox tools: none");
+  expect(kit.description).toContain("Unavailable requested tools: preview");
+
+  await sandbox.stop();
+});
+
+test("tools omit unavailable model-facing operations", async () => {
+  const sandbox = await create({ adapter: local() });
+  const kit = tools(
+    {
+      ...sandbox,
+      capabilities: {
+        ...sandbox.capabilities,
+        files: false,
+        ports: false,
+        processExec: false,
+      },
+    },
+    { allow: ["read", "write", "list", "exec", "preview"] }
+  );
+
+  expect(kit.tools).toEqual({});
   expect(kit.description).toContain(
-    "Unavailable normalized capabilities: ports"
+    "Unavailable requested tools: read, write, list, exec, preview"
+  );
+  expect(kit.description).toContain(
+    "Unavailable AI SDK session capabilities: file operations, command execution"
   );
 
   await sandbox.stop();
+});
+
+test("ai sdk spawn rejects codesandbox combined provider streams", async () => {
+  const sandbox = await create({ adapter: local(), cwd: "/workspace" });
+  let spawned = false;
+  const agent = tools({
+    ...sandbox,
+    capabilities: { ...codesandbox().capabilities },
+    process: {
+      ...sandbox.process,
+      spawnShell: () => {
+        spawned = true;
+        return sandbox.process.spawnShell("printf unexpected");
+      },
+    },
+    provider: "codesandbox",
+  }).sandbox;
+
+  try {
+    await expect(
+      agent.spawn({ command: "printf ignored" })
+    ).rejects.toMatchObject({
+      code: "unsupported",
+      provider: "codesandbox",
+    });
+    expect(spawned).toBe(false);
+    expect(agent.description).toContain(
+      "Unavailable AI SDK session capabilities: background processes with separate stdout and stderr"
+    );
+  } finally {
+    await sandbox.stop();
+  }
+});
+
+test("ai sdk session rejects unavailable operations before provider work", async () => {
+  const sandbox = await create({ adapter: local(), cwd: "/workspace" });
+  let read = false;
+  let ran = false;
+  const agent = tools({
+    ...sandbox,
+    capabilities: {
+      ...sandbox.capabilities,
+      files: false,
+      processExec: false,
+    },
+    files: {
+      ...sandbox.files,
+      stream: () => {
+        read = true;
+        return sandbox.files.stream("/workspace/unexpected.txt");
+      },
+    },
+    process: {
+      ...sandbox.process,
+      shell: () => {
+        ran = true;
+        return sandbox.process.shell("printf unexpected");
+      },
+    },
+  }).sandbox;
+
+  try {
+    await expect(
+      agent.readFile({ path: "/workspace/unavailable.txt" })
+    ).rejects.toMatchObject({ code: "unsupported", provider: "local" });
+    await expect(
+      agent.run({ command: "printf ignored" })
+    ).rejects.toMatchObject({ code: "unsupported", provider: "local" });
+    expect(read).toBe(false);
+    expect(ran).toBe(false);
+  } finally {
+    await sandbox.stop();
+  }
 });
 
 test("tools describe provider raw capabilities", async () => {
