@@ -210,7 +210,11 @@ export type Files = Readonly<{
   write(path: string, input: Input): Promise<void>;
   /** list entries in a directory */
   list(path?: string): Promise<readonly Entry[]>;
-  /** return true when a path exists */
+  /**
+   * return whether a file or directory exists
+   *
+   * resolve relative paths from `sandbox.cwd` and preserve absolute sandbox paths
+   */
   exists(path: string): Promise<boolean>;
   /** create a directory and missing parents */
   mkdir(path: string): Promise<void>;
@@ -358,7 +362,11 @@ export type SandboxRuntimeFiles = Readonly<{
   write(path: string, input: Input): Promise<void>;
   /** list entries in a directory */
   list(path?: string): Promise<readonly Entry[]>;
-  /** return true when a path exists */
+  /**
+   * return whether a file or directory exists
+   *
+   * resolve relative paths before this call because `fromSandboxRuntime()` preserves paths unchanged
+   */
   exists(path: string): Promise<boolean>;
   /** create a directory and missing parents */
   mkdir(path: string): Promise<void>;
