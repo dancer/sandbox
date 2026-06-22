@@ -72,9 +72,9 @@ export const cloudflareBridge = (
       const { id: created } = await raw.create();
       id = created;
     }
-    const environment = input.env;
+    const environment = { ...options.env, ...input.env };
     const createdSession =
-      environment === undefined
+      Object.keys(environment).length === 0
         ? undefined
         : await raw.session.create(id, {
             cwd,

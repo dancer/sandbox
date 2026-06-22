@@ -141,6 +141,7 @@ test("cloudflareBridge maps create session and cleanup", async () => {
   const seen: Seen[] = [];
   const sandbox = await create({
     adapter: cloudflareBridge({
+      env: { A: "adapter", B: "adapter" },
       fetch: bridgeFetch((request) => {
         if (request.path === "/v1/sandbox" && request.method === "POST") {
           return json({ id: "box-1" });
@@ -148,7 +149,7 @@ test("cloudflareBridge maps create session and cleanup", async () => {
         if (request.path === "/v1/sandbox/box-1/session") {
           expect(JSON.parse(request.body ?? "{}")).toEqual({
             cwd: "/workspace/app",
-            env: { A: "1" },
+            env: { A: "create", B: "adapter", C: "create" },
           });
           return json({ id: "session-1" });
         }
@@ -161,7 +162,7 @@ test("cloudflareBridge maps create session and cleanup", async () => {
       url: "https://bridge.example.com/",
     }),
     cwd: "/workspace/app",
-    env: { A: "1" },
+    env: { A: "create", C: "create" },
   });
 
   expect(sandbox.id).toBe("box-1");

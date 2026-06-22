@@ -1883,6 +1883,12 @@ export type CloudflareBridge = Readonly<{
    * @default "/workspace"
    */
   cwd?: string;
+  /**
+   * default environment variables for bridge execution sessions
+   *
+   * create input values override these defaults. values are copied into the bridge sandbox, so pass only values the sandbox may use
+   */
+  env?: Readonly<Record<string, string>>;
   /** custom fetch implementation for tests or non-standard runtimes */
   fetch?: typeof fetch;
   /** stable sandbox id used when create input omits id */
