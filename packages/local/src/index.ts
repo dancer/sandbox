@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { once } from "node:events";
+import { createReadStream } from "node:fs";
 import {
   cp,
   mkdir,
@@ -19,6 +20,7 @@ import {
   relative,
   resolve as pathResolve,
 } from "node:path";
+import { Readable } from "node:stream";
 
 import {
   SandboxError,
@@ -169,6 +171,18 @@ const wrap = async <Value>(operation: () => Promise<Value>): Promise<Value> => {
     }
     throw error;
   }
+};
+
+const fileStream = async (
+  root: string,
+  cwd: string,
+  path: string
+): Promise<ReadableStream<Uint8Array>> => {
+  const target = inside(root, cwd, path);
+  await wrap(() => stat(target));
+  return Readable.toWeb(
+    createReadStream(target)
+  ) as unknown as ReadableStream<Uint8Array>;
 };
 
 const check = (signal?: AbortSignal): void => {
@@ -387,7 +401,7 @@ const start = (
 export const local = (options: Local = {}): Adapter<Raw> => ({
   capabilities: {
     environment: true,
-    fileStreaming: "buffered",
+    fileStreaming: "native",
     files: true,
     ports: "derived",
     process: true,
@@ -536,7 +550,14 @@ export const local = (options: Local = {}): Adapter<Raw> => ({
       },
     };
 
-    return fromSandboxRuntime(sandbox);
+    const current = fromSandboxRuntime(sandbox);
+    return {
+      ...current,
+      files: {
+        ...current.files,
+        stream: (path) => fileStream(root, cwd, path),
+      },
+    };
   },
   provider: "local",
 });

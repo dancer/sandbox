@@ -157,6 +157,10 @@ test("local rejects filesystem root sandboxes", async () => {
 test("local normalizes missing path errors", async () => {
   const sandbox = await create({ adapter: local() });
 
+  await expect(sandbox.files.stream("/missing.txt")).rejects.toMatchObject({
+    code: "not_found",
+    provider: "local",
+  });
   await expect(sandbox.files.text("/missing.txt")).rejects.toMatchObject({
     code: "not_found",
     provider: "local",
@@ -165,6 +169,31 @@ test("local normalizes missing path errors", async () => {
     code: "not_found",
     provider: "local",
   });
+
+  await sandbox.stop();
+});
+
+test("local streams files incrementally", async () => {
+  const sandbox = await create({ adapter: local() });
+  const input = new Uint8Array(256 * 1024).fill(120);
+
+  await sandbox.files.write("large.bin", input);
+
+  const stream = await sandbox.files.stream("large.bin");
+  const reader = stream.getReader();
+  let chunks = 0;
+  let size = 0;
+  while (true) {
+    const value = await reader.read();
+    if (value.done) {
+      break;
+    }
+    chunks += 1;
+    size += value.value.byteLength;
+  }
+
+  expect(chunks).toBeGreaterThan(1);
+  expect(size).toBe(input.byteLength);
 
   await sandbox.stop();
 });

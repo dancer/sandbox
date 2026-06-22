@@ -17,7 +17,7 @@ import { vercel } from "@sandbox-sdk/vercel";
 
 test("adapters expose capability-honest feature modes", () => {
   expect(local().capabilities).toMatchObject({
-    fileStreaming: "buffered",
+    fileStreaming: "native",
     files: true,
     ports: "derived",
     processExec: true,
