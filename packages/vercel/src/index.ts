@@ -1,5 +1,6 @@
 import { Buffer } from "node:buffer";
 import { dirname } from "node:path/posix";
+import { Readable } from "node:stream";
 
 import {
   SandboxError,
@@ -604,27 +605,7 @@ const stream = (
 const fileStream = (
   source: NodeJS.ReadableStream
 ): ReadableStream<Uint8Array> =>
-  new ReadableStream({
-    cancel() {
-      const value = source as NodeJS.ReadableStream & {
-        destroy?: () => void;
-      };
-      value.destroy?.();
-    },
-    start(controller) {
-      source.on("data", (chunk: string | Uint8Array) => {
-        controller.enqueue(
-          typeof chunk === "string" ? new TextEncoder().encode(chunk) : chunk
-        );
-      });
-      source.on("end", () => {
-        controller.close();
-      });
-      source.on("error", (error) => {
-        controller.error(error);
-      });
-    },
-  });
+  Readable.toWeb(source as Readable) as unknown as ReadableStream<Uint8Array>;
 
 const wrap = async <Value>(
   action: () => Promise<Value> | Value,

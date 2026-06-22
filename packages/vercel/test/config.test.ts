@@ -1124,6 +1124,54 @@ test("vercel uses native file streams", async () => {
   }
 });
 
+test("vercel keeps native file streams bounded before consumption", async () => {
+  const original = VercelSandbox.create;
+  let pushed = 0;
+  const source = new Readable({
+    highWaterMark: 1,
+    read() {
+      while (pushed < 100) {
+        pushed += 1;
+        if (!this.push(Buffer.from("x"))) {
+          return;
+        }
+      }
+      this.push(null);
+    },
+  });
+  const raw = {
+    fs: {
+      mkdir: () => Promise.resolve(),
+    },
+    name: "sandbox",
+    readFile: () => Promise.resolve(source),
+    stop: () => Promise.resolve(),
+  } as unknown as VercelSandbox;
+
+  VercelSandbox.create = (() =>
+    Promise.resolve(raw)) as typeof VercelSandbox.create;
+
+  try {
+    const sandbox = await create({
+      adapter: vercel({
+        projectId: "project",
+        teamId: "team",
+        token: "token",
+      }),
+      cwd: "/work",
+    });
+    const stream = await sandbox.files.stream("file.txt");
+
+    await Bun.sleep(0);
+
+    expect(pushed).toBeLessThan(10);
+    await stream.cancel();
+    expect(source.destroyed).toBe(true);
+  } finally {
+    VercelSandbox.create = original;
+  }
+});
+
 test("vercel creates parent directories before file writes", async () => {
   const original = VercelSandbox.create;
   let mkdirSeen: unknown;
