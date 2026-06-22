@@ -67,13 +67,15 @@ export type Cloudflare = Readonly<{
   id?: string;
   /** list options forwarded to Cloudflare `listFiles` */
   list?: ListFilesOptions;
-  /** stable DNS label used for named tunnels created by `ports.expose` */
+  /** stable named tunnel label with lowercase letters, digits, and internal hyphens that requires Cloudflare API token, account, and zone configuration in the Worker */
   tunnel?: string;
   /** low-level Cloudflare Sandbox options forwarded to `getSandbox` with RPC transport enforced */
   options?: Omit<SandboxOptions, "transport">;
 }>;
 
 const provider = "cloudflare";
+
+const tunnelPattern = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/u;
 
 const capabilities: Capabilities = {
   environment: true,
@@ -99,15 +101,20 @@ const capabilities: Capabilities = {
 };
 
 const validate = (options: Cloudflare): void => {
-  if (options.binding !== undefined) {
-    return;
+  if (options.binding === undefined) {
+    throw sandboxError(
+      provider,
+      "Cloudflare binding missing. Pass the Durable Object binding from env.Sandbox to cloudflare().",
+      "configuration"
+    );
   }
-
-  throw sandboxError(
-    provider,
-    "Cloudflare binding missing. Pass the Durable Object binding from env.Sandbox to cloudflare().",
-    "configuration"
-  );
+  if (options.tunnel !== undefined && !tunnelPattern.test(options.tunnel)) {
+    throw sandboxError(
+      provider,
+      "Cloudflare named tunnel labels must use 1 to 63 lowercase letters, digits, and internal hyphens",
+      "configuration"
+    );
+  }
 };
 
 const binary = (content: string): Uint8Array =>

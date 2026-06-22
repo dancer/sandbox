@@ -1459,6 +1459,8 @@ export type Blaxel = Readonly<
     cwd?: string;
     /** default environment variables applied when creating a sandbox */
     env?: Readonly<Record<string, string>>;
+    /** application-owned identifier stored with the new Blaxel sandbox and usable with `SandboxInstance.getByExternalId` */
+    externalId?: string;
     /** sandbox expiration time forwarded to blaxel */
     expires?: Date;
     /** default blaxel image for new sandboxes */
@@ -1477,6 +1479,7 @@ export type Blaxel = Readonly<
     options?: Omit<
       SandboxCreateConfiguration,
       | "envs"
+      | "externalId"
       | "expires"
       | "image"
       | "labels"
@@ -1509,12 +1512,43 @@ export type Blaxel = Readonly<
 
 #### `updateNetwork`
 
-replace the network configuration for a running Blaxel sandbox and return a refreshed native instance
+replace the network configuration for a running Blaxel sandbox and return its refreshed native instance
+
+@example
+await updateNetwork(sandbox.raw, { proxy: { allowedDomains: ["api.example.com"], routing: [] } })
 
 ```ts
 export declare const updateNetwork: (
   sandbox: Raw | string,
   network: SandboxUpdateNetwork["network"]
+) => Promise<Raw>;
+```
+
+#### `updateTtl`
+
+replace or clear the ttl for a running Blaxel sandbox and return its refreshed native instance
+
+@example
+await updateTtl(sandbox.raw, "1h")
+
+```ts
+export declare const updateTtl: (
+  sandbox: Raw | string,
+  ttl: string | null
+) => Promise<Raw>;
+```
+
+#### `updateLifecycle`
+
+replace or clear the lifecycle configuration for a running Blaxel sandbox and return its refreshed native instance
+
+@example
+await updateLifecycle(sandbox.raw, { autoStop: { maxDuration: "1h" } })
+
+```ts
+export declare const updateLifecycle: (
+  sandbox: Raw | string,
+  lifecycle: SandboxLifecycle | null
 ) => Promise<Raw>;
 ```
 
@@ -1531,7 +1565,7 @@ export declare const blaxel: (options?: Blaxel) => Adapter<Raw>;
 #### `re-export`
 
 ```ts
-export type { SandboxUpdateNetwork } from "@blaxel/core";
+export type { SandboxLifecycle, SandboxUpdateNetwork } from "@blaxel/core";
 ```
 
 ## @sandbox-sdk/cloudflare
@@ -1731,7 +1765,7 @@ export type Cloudflare = Readonly<{
   id?: string;
   /** list options forwarded to Cloudflare `listFiles` */
   list?: ListFilesOptions;
-  /** stable DNS label used for named tunnels created by `ports.expose` */
+  /** stable named tunnel label with lowercase letters, digits, and internal hyphens that requires Cloudflare API token, account, and zone configuration in the Worker */
   tunnel?: string;
   /** low-level Cloudflare Sandbox options forwarded to `getSandbox` with RPC transport enforced */
   options?: Omit<SandboxOptions, "transport">;

@@ -378,6 +378,47 @@ test("cloudflare forwards configured named tunnels", async () => {
   }
 });
 
+test("cloudflare accepts 63 character named tunnel labels", async () => {
+  tunnelCalls = 0;
+  tunnelSeen = undefined;
+  const tunnel = "a".repeat(63);
+  const sandbox = await create({
+    adapter: cloudflare({ binding, tunnel }),
+  });
+
+  try {
+    await sandbox.ports.expose(8080);
+    expect(tunnelCalls).toBe(1);
+    expect(tunnelSeen).toEqual({
+      options: { name: tunnel },
+      port: 8080,
+    });
+  } finally {
+    await sandbox.stop();
+  }
+});
+
+test("cloudflare rejects invalid named tunnel labels before provider calls", async () => {
+  for (const tunnel of [
+    "API",
+    "api.example.com",
+    "-api",
+    "api-",
+    "a".repeat(64),
+  ]) {
+    getSeen = undefined;
+    await expect(
+      create({
+        adapter: cloudflare({ binding, tunnel }),
+      })
+    ).rejects.toMatchObject({
+      code: "configuration",
+      provider: "cloudflare",
+    });
+    expect(getSeen).toBeUndefined();
+  }
+});
+
 test("cloudflare rejects unsupported normalized tunnel options", async () => {
   tunnelCalls = 0;
   const sandbox = await create({
