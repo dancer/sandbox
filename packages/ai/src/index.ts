@@ -379,7 +379,7 @@ export type WriteResult = Readonly<{
 
 /** result returned by the preview tool */
 export type PreviewResult = Readonly<{
-  /** exposed preview URL */
+  /** preview URL; treat provider-issued signed or tokenized urls as credentials */
   url: string;
 }>;
 
@@ -876,7 +876,8 @@ export const tools = (sandbox: Sandbox, options: Options = {}): Kit => {
 
   if (enabled.has("preview")) {
     output.preview = {
-      description: "Expose or retrieve a preview URL for a sandbox port",
+      description:
+        "Expose or retrieve a serializable preview URL for a sandbox port",
       execute: async (input: Preview): Promise<PreviewResult> => {
         port(input.port);
         await options.beforePreview?.(input, context(sandbox, cwd, "preview"));

@@ -106,14 +106,14 @@ CodeSandbox microVMs via \`@codesandbox/sdk\`. Creates or resumes sandboxes, con
 
 ## Daytona (@sandbox-sdk/daytona)
 
-Daytona dev environments via \`@daytona/sdk\`. Spins up a workspace from the given image, mounts a workdir, and threads files and processes through Daytona's API. Standard private preview URLs require the native preview token in an \`x-daytona-preview-token\` header. Set \`signedPreview\` for a self-contained URL. Network limits are configured at creation time; native \`raw.updateNetworkSettings()\` is available when the account tier supports runtime changes.
+Daytona dev environments via \`@daytona/sdk\`. Spins up a workspace from the given image, mounts a workdir, and threads files and processes through Daytona's API. Standard private previews work through \`preview.request()\`, which retains Daytona's preview token. Standard tokens reset after a sandbox restart, so expose the port again after restarting. Set \`signedPreview\` when an external client needs a self-contained URL. Network limits are configured at creation time; native \`raw.updateNetworkSettings()\` is available when the account tier supports runtime changes.
 
 - \`image\`, \`apiKey\`, \`target\`, \`networkBlockAll\`, \`networkAllowList\`.
 - Credentials: \`DAYTONA_API_KEY\`.
 
 ## E2B (@sandbox-sdk/e2b)
 
-E2B microVM sandboxes via \`e2b\`. Can pin a template at construction and threads writes, commands, ports, and snapshots through the E2B SDK. E2B snapshots capture filesystem and memory state, briefly pausing the source sandbox and dropping active command, PTY, and WebSocket connections. Use the shared \`snapshot\` create option to start a fresh sandbox from a snapshot id. \`ports.expose()\` returns E2B's derived HTTP or HTTPS URL. When \`network.allowPublicTraffic\` is false, send \`sandbox.raw.trafficAccessToken\` in the \`e2b-traffic-access-token\` request header.
+E2B microVM sandboxes via \`e2b\`. Can pin a template at construction and threads writes, commands, ports, and snapshots through the E2B SDK. E2B snapshots capture filesystem and memory state, briefly pausing the source sandbox and dropping active command, PTY, and WebSocket connections. Use the shared \`snapshot\` create option to start a fresh sandbox from a snapshot id. \`ports.expose()\` returns E2B's derived HTTP or HTTPS URL. When \`network.allowPublicTraffic\` is false, \`preview.request()\` retains E2B's traffic access header.
 
 - \`template\`, \`apiKey\`, \`timeout\`.
 - Credentials: \`E2B_API_KEY\` or \`E2B_ACCESS_TOKEN\`.
@@ -202,7 +202,7 @@ Options shared by all four: \`cwd\`, \`env\` (a \`Record<string, string>\`), \`t
 
 const ports = `# Ports
 
-Expose a port running inside the sandbox and get its provider-derived URL. Local sandboxes return derived localhost URLs; provider adapters may return public tunnels or create-time port URLs, or reject unsupported exposure. Branch on \`sandbox.capabilities.ports\` first.
+Expose a port running inside the sandbox and get a provider-aware preview. Local sandboxes return derived localhost URLs; provider adapters may return public tunnels or create-time port URLs, or reject unsupported exposure. Branch on \`sandbox.capabilities.ports\` first.
 
 \`\`\`ts
 const result = await sandbox.process.shell("bun dev --host 0.0.0.0", {
@@ -215,13 +215,14 @@ if (!result.ok && !supports(sandbox, "processSpawn")) {
 }
 
 const preview = await sandbox.ports.expose(3000);
-console.log(preview.url);
+const response = await preview.request("/health");
+console.log(preview.url, response.status);
 \`\`\`
 
-\`ports.expose(port, options?)\` returns \`{ url, port }\`. Options are provider-specific and unsupported values throw at \`expose()\` time:
+\`ports.expose(port, options?)\` returns \`{ url, port, request() }\`. \`request(path?, init?)\` only accepts same-origin paths and retains header-based provider access credentials outside serialized data. This makes restricted E2B and standard private Daytona previews usable without passing headers through agent output. Treat any provider-issued signed or tokenized \`url\` as a credential. Options are provider-specific and unsupported values throw at \`expose()\` time:
 
 - \`protocol\`: \`"http"\`, \`"https"\`, or \`"tcp"\`. Consult the adapter docs for supported protocols; \`capabilities.ports\` describes port exposure mode, not protocol support.
-- \`token\`: provider-issued preview URL token when the adapter supports it. Use \`sandbox.raw\` for provider-specific preview controls.`;
+- \`token\`: provider-issued preview URL token when the adapter supports it. Use \`sandbox.raw\` for provider-specific preview controls, not private preview request headers.`;
 
 const snapshots = `# Snapshots
 
@@ -475,7 +476,7 @@ export const docs: readonly Doc[] = [
   {
     body: ports,
     slug: "ports",
-    summary: "expose a sandbox port and get a reachable URL",
+    summary: "expose a sandbox port and make provider-aware preview requests",
     title: "Ports",
   },
   {

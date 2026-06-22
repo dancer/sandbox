@@ -29,6 +29,11 @@ export const E2B = () => (
       PTY, and WebSocket connections. Use <code>template</code> for provider
       template ids and names.
     </p>
+    <p>
+      When E2B restricts preview traffic, call <code>preview.request()</code>{" "}
+      after <code>ports.expose()</code>. It retains the traffic access header
+      without returning it in serializable data.
+    </p>
     <CodeBlock code={E2B_EXAMPLE} lang="ts" />
     <div className="flex flex-col gap-2">
       <Heading as="h4" id="adapter-e2b-options">

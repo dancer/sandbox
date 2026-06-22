@@ -73,10 +73,13 @@ await proc.kill("SIGTERM");
 // either way, await the final result
 const result = await proc.result;`;
 
-const PORTS_EXAMPLE = `const { url, port } = await sandbox.ports.expose(3000, {
+const PORTS_EXAMPLE = `const preview = await sandbox.ports.expose(3000, {
   protocol: "https",
 });
-// → { url: "https://abc-3000.sandbox-sdk.sh", port: 3000 }`;
+
+const response = await preview.request("/health");
+
+console.log(preview.url, preview.port, response.status);`;
 
 const SNAPSHOTS_EXAMPLE = `import { supports } from "@sandbox-sdk/core";
 
@@ -289,11 +292,18 @@ export const ApiReference = () => (
         ports.expose(port, options?)
       </Heading>
       <p>
-        Returns the provider-derived URL for <code>port</code>. Local sandboxes
-        return derived localhost URLs; provider adapters may return public
-        tunnels, create-time port URLs, or reject unsupported exposure with{" "}
-        <code>SandboxError</code>. Branch on{" "}
+        Returns a provider-aware preview for <code>port</code>. Its{" "}
+        <code>request()</code> retains header-based access credentials outside
+        serialized data. Use <code>request()</code> to call a same-origin
+        endpoint. Local sandboxes return derived localhost URLs; provider
+        adapters may return public tunnels, create-time port URLs, or reject
+        unsupported exposure with <code>SandboxError</code>. Branch on{" "}
         <code>sandbox.capabilities.ports</code> first.
+      </p>
+      <p>
+        Treat a provider-issued signed or tokenized <code>url</code> as a
+        credential. It is intentionally usable by an external client and may
+        therefore contain provider access data.
       </p>
       <CodeBlock code={PORTS_EXAMPLE} lang="ts" />
       <div className="flex flex-col gap-2">
@@ -313,8 +323,9 @@ export const ApiReference = () => (
           <PropAccordionItem name="token" status="optional" value="token">
             <p>
               Provider-issued preview URL token when the adapter supports it.
-              Use <code>sandbox.raw</code> for provider-specific preview
-              credentials.
+              Private provider headers stay inside{" "}
+              <code>preview.request()</code> and never appear in a serialized
+              preview result. Signed or tokenized URLs are still credentials.
             </p>
           </PropAccordionItem>
         </Accordion>

@@ -229,8 +229,8 @@ normalized preview URL namespace
 
 ```ts
 export type Ports = Readonly<{
-  /** expose a sandbox port and return its provider-derived URL; adapters reject options they cannot honor */
-  expose(port: number, options?: Port): Promise<Url>;
+  /** expose a sandbox port and return a provider-aware preview; adapters reject options they cannot honor */
+  expose(port: number, options?: Port): Promise<Preview>;
 }>;
 ```
 
@@ -252,7 +252,7 @@ export type Snapshots = Readonly<{
 
 #### `Url`
 
-preview URL returned by `ports.expose`
+serializable preview endpoint returned by a low-level adapter
 
 ```ts
 export type Url = Readonly<{
@@ -261,6 +261,41 @@ export type Url = Readonly<{
   /** exposed sandbox port */
   port: number;
 }>;
+```
+
+#### `PreviewOptions`
+
+private provider options used by the `preview()` helper
+
+```ts
+export type PreviewOptions = Readonly<{
+  /** provider headers applied only when `Preview.request` runs and override caller-supplied values */
+  headers?: Readonly<Record<string, string>>;
+  /** provider name used when preview request validation fails */
+  provider?: string;
+}>;
+```
+
+#### `Preview`
+
+provider-aware preview returned by `ports.expose`
+
+`request` adds provider-required access headers without exposing them in returned data. it preserves provider URL query parameters, so treat provider-issued signed or tokenized urls as credentials
+
+**example**
+
+```ts
+const preview = await sandbox.ports.expose(3000);
+const response = await preview.request("/health");
+```
+
+```ts
+export type Preview = Readonly<
+  Url & {
+    /** request a same-origin preview path with provider-required access headers and query parameters */
+    request(path?: string, init?: RequestInit): Promise<Response>;
+  }
+>;
 ```
 
 #### `Snapshot`
@@ -313,7 +348,7 @@ adapters reject unsupported values instead of silently ignoring them. custom dom
 export type Port = Readonly<{
   /** preview protocol preference when the provider supports it */
   protocol?: "http" | "https" | "tcp";
-  /** provider-issued preview URL token when the adapter supports it */
+  /** provider-issued preview URL token when the adapter supports it; treat it as a bearer credential */
   token?: string;
 }>;
 ```
@@ -392,6 +427,17 @@ export type SandboxRuntimeProcess = Readonly<{
 }>;
 ```
 
+#### `SandboxRuntimePorts`
+
+preview url contract for low-level provider adapters
+
+```ts
+export type SandboxRuntimePorts = Readonly<{
+  /** expose a sandbox port and return a serializable provider url */
+  expose(port: number, options?: Port): Promise<Url>;
+}>;
+```
+
 #### `SandboxRuntime`
 
 low-level vendor contract that keeps large I/O stream-first
@@ -410,7 +456,7 @@ export type SandboxRuntime<Raw = unknown> = Readonly<{
   /** provider sandbox id */
   id: string;
   /** preview URL operations */
-  ports: Ports;
+  ports: SandboxRuntimePorts;
   /** process operations scoped to the sandbox */
   process: SandboxRuntimeProcess;
   /** provider name */
@@ -681,6 +727,20 @@ validate and return a normalized tcp port number
 
 ```ts
 export declare const port: (value: number, provider?: string) => number;
+```
+
+#### `preview`
+
+create a provider-aware preview with access headers kept out of serializable data
+
+adapter authors pass provider-required request headers here instead of placing credentials in the returned url. requests are limited to the preview origin
+
+```ts
+export declare const preview: (
+  url: string,
+  value: number,
+  options?: PreviewOptions
+) => Preview;
 ```
 
 #### `portOptions`
@@ -1372,7 +1432,7 @@ result returned by the preview tool
 
 ```ts
 export type PreviewResult = Readonly<{
-  /** exposed preview URL */
+  /** preview URL; treat provider-issued signed or tokenized urls as credentials */
   url: string;
 }>;
 ```
@@ -2308,13 +2368,13 @@ export type Daytona = DaytonaConfig &
     networkAllowList?: string;
     /** block outbound network access at sandbox creation when supported by Daytona */
     networkBlockAll?: boolean;
-    /** signed preview URL expiration in seconds */
+    /** signed preview URL expiration in seconds; set explicitly because Daytona defaults to 60 seconds */
     previewExpires?: number;
     /** make the Daytona sandbox public when supported */
     public?: boolean;
     /** resource request for new sandboxes */
     resources?: Resources;
-    /** use self-contained signed preview URLs instead of standard links that can require the native preview-token header */
+    /** use a self-contained signed preview URL for external clients; `preview.request()` handles standard private preview headers */
     signedPreview?: boolean;
     /** Daytona snapshot id used when create input omits snapshot */
     snapshot?: string;
@@ -2335,7 +2395,7 @@ export type Daytona = DaytonaConfig &
 
 create a Daytona adapter with normalized sandbox operations
 
-standard private preview URLs require the token returned by `sandbox.raw.getPreviewLink()` in the `x-daytona-preview-token` request header. set `signedPreview` for a self-contained preview URL
+standard private previews work through `preview.request()`, which retains Daytona's preview token. standard tokens reset when a sandbox restarts, so expose the port again after restart. set `signedPreview` only when an external client needs a self-contained URL
 
 ```ts
 export declare const daytona: (options?: Daytona) => Adapter<Raw>;
@@ -2351,7 +2411,7 @@ E2B adapter for Sandbox SDK
 
 native E2B sandbox object exposed as `sandbox.raw`
 
-use `trafficAccessToken` with the `e2b-traffic-access-token` header when `network.allowPublicTraffic` restricts a preview URL
+`preview.request()` adds `trafficAccessToken` when E2B restricts preview traffic
 
 ```ts
 export type E2BRaw = E2BSandbox;
@@ -2387,7 +2447,7 @@ export type E2B = Readonly<{
   metadata?: Readonly<Record<string, string>>;
   /** e2b mcp gateway configuration enabled for new sandboxes */
   mcp?: McpServer;
-  /** E2B network policy for outbound traffic and previews; restricted preview URLs require `sandbox.raw.trafficAccessToken` as an `e2b-traffic-access-token` header */
+  /** E2B network policy for outbound traffic and previews; `preview.request()` retains traffic access credentials for restricted previews */
   network?: SandboxNetworkOpts;
   /** request timeout in milliseconds for e2b api calls */
   requestTimeout?: number;
@@ -2418,7 +2478,7 @@ create an E2B adapter with normalized sandbox operations
 
 E2B snapshots capture filesystem and memory state. creation briefly pauses the source sandbox and drops active command, pty, and WebSocket connections. create a fresh sandbox with `create({ snapshot })`; in-place restore is not normalized
 
-`ports.expose` returns E2B's derived HTTP or HTTPS URL. when `network.allowPublicTraffic` is false, send `sandbox.raw.trafficAccessToken` in the `e2b-traffic-access-token` request header
+`ports.expose()` returns E2B's derived HTTP or HTTPS URL. when `network.allowPublicTraffic` is false, `preview.request()` adds E2B's traffic access header without exposing it in serializable data
 
 ```ts
 export declare const e2b: (options?: E2B) => Adapter<Raw>;

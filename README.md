@@ -70,6 +70,27 @@ If a low-level process result already includes `stdout` or `stderr`, the core
 helper preserves those fields. It only falls back to buffered process output
 when the low-level result does not include captured output.
 
+## Previews
+
+`ports.expose()` returns a preview object with `url`, `port`, and `request()`.
+`request()` and its header-based provider credentials stay out of serialized data.
+Use `request()` when code needs to call a same-origin preview endpoint because
+it retains provider-required access headers without exposing them in data:
+
+```ts
+const preview = await sandbox.ports.expose(3000);
+const response = await preview.request("/health");
+
+console.log(preview.url, response.status);
+```
+
+This makes restricted E2B and standard private Daytona previews work through
+the same API. A signed Daytona preview remains useful when an external client
+needs a self-contained URL. Treat any provider-issued signed or tokenized URL
+as a credential and do not log or return it to an untrusted consumer. Daytona
+standard preview tokens reset on sandbox restart, so call `ports.expose()` again
+after restarting a sandbox.
+
 ## Snapshots
 
 Snapshot support is capability-gated because providers expose different
