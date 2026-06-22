@@ -416,14 +416,22 @@ process contract for low-level provider adapters
 
 ```ts
 export type SandboxRuntimeProcess = Readonly<{
+  /** run a bounded executable when the provider exposes a direct command result */
+  exec?: (
+    command: string,
+    args?: readonly string[],
+    options?: Exec
+  ) => Promise<Result>;
+  /** run a bounded shell command when the provider exposes a direct command result */
+  shell?: (command: string, options?: Exec) => Promise<Result>;
   /** start an executable with explicit argv arguments and stream output */
-  spawn(
+  spawn?: (
     command: string,
     args?: readonly string[],
     options?: Spawn
-  ): Promise<Running>;
+  ) => Promise<Running>;
   /** start a shell command string and stream output */
-  spawnShell(command: string, options?: Spawn): Promise<Running>;
+  spawnShell?: (command: string, options?: Spawn) => Promise<Running>;
 }>;
 ```
 

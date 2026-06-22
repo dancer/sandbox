@@ -148,7 +148,8 @@ export const ApiReference = () => (
         <li className="px-4 py-3">
           <code>fromSandboxRuntime(runtime)</code>: for adapter authors, lifts a
           low-level <code>SandboxRuntime</code> into the public{" "}
-          <code>Sandbox</code> API.
+          <code>Sandbox</code> API, using direct bounded commands when available
+          and stream-first process handles otherwise.
         </li>
       </ul>
     </section>

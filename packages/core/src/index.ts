@@ -480,6 +480,14 @@ const guarded = <Value>(
   }
 };
 
+const missingRuntime = (provider: string, feature: string): never => {
+  throw sandboxError(
+    provider,
+    `SandboxRuntime ${feature} implementation missing for its advertised capability`,
+    "configuration"
+  );
+};
+
 /**
  * lift a stream-first provider runtime into the public sandbox api
  *
@@ -526,21 +534,39 @@ export const fromSandboxRuntime = <Raw = unknown>(
   },
   process: {
     exec: (executable, args, options) =>
-      guarded(input, "processExec", "process.exec", async () =>
-        settle(await input.process.spawn(executable, args, options))
-      ),
+      guarded(input, "processExec", "process.exec", async () => {
+        if (input.process.exec !== undefined) {
+          return input.process.exec(executable, args, options);
+        }
+        if (input.process.spawn !== undefined) {
+          return settle(await input.process.spawn(executable, args, options));
+        }
+        return missingRuntime(input.provider, "process.exec");
+      }),
     shell: (command, options) =>
-      guarded(input, "processExec", "process.shell", async () =>
-        settle(await input.process.spawnShell(command, options))
-      ),
+      guarded(input, "processExec", "process.shell", async () => {
+        if (input.process.shell !== undefined) {
+          return input.process.shell(command, options);
+        }
+        if (input.process.spawnShell !== undefined) {
+          return settle(await input.process.spawnShell(command, options));
+        }
+        return missingRuntime(input.provider, "process.shell");
+      }),
     spawn: (executable, args, options) =>
-      guarded(input, "processSpawn", "process.spawn", () =>
-        input.process.spawn(executable, args, options)
-      ),
+      guarded(input, "processSpawn", "process.spawn", () => {
+        if (input.process.spawn === undefined) {
+          return missingRuntime(input.provider, "process.spawn");
+        }
+        return input.process.spawn(executable, args, options);
+      }),
     spawnShell: (command, options) =>
-      guarded(input, "processSpawn", "process.spawnShell", () =>
-        input.process.spawnShell(command, options)
-      ),
+      guarded(input, "processSpawn", "process.spawnShell", () => {
+        if (input.process.spawnShell === undefined) {
+          return missingRuntime(input.provider, "process.spawnShell");
+        }
+        return input.process.spawnShell(command, options);
+      }),
   },
   provider: input.provider,
   raw: input.raw,

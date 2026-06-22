@@ -428,7 +428,7 @@ Every method lives on the \`Sandbox\` instance returned by \`create()\`. The uni
 
 ## Adapter authoring
 
-- \`fromSandboxRuntime(runtime)\` lifts a low-level \`SandboxRuntime\` into the public \`Sandbox\` API, deriving \`files.text()\`, \`files.read()\`, \`process.exec()\`, and \`process.shell()\` from the stream-first contract.
+- \`fromSandboxRuntime(runtime)\` lifts a low-level \`SandboxRuntime\` into the public \`Sandbox\` API, deriving \`files.text()\` and \`files.read()\` from streams. Adapters can provide direct bounded \`process.exec()\` and \`process.shell()\` results, or provide stream-first spawn handles and let the helper derive those one-shot methods.
 
 Core types include \`Sandbox\`, \`Capabilities\`, \`Capability\`, \`Mode\`, \`Files\`, \`Process\`, \`Running\`, \`Ports\`, \`Snapshots\`, \`Result\`, \`Entry\`, \`Input\`, \`Options\`, \`Adapter\`, \`SandboxRuntime\`, and \`Code\`.`;
 

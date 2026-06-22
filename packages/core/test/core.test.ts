@@ -374,6 +374,76 @@ test("fromSandboxRuntime derives exec from spawn output", async () => {
   ]);
 });
 
+test("fromSandboxRuntime uses direct one-shot process methods", async () => {
+  const seen: unknown[] = [];
+  const current = fromSandboxRuntime({
+    ...sandbox({ processExec: true }),
+    files: {
+      exists: () => Promise.reject(new Error("not used")),
+      list: () => Promise.reject(new Error("not used")),
+      mkdir: () => Promise.reject(new Error("not used")),
+      read: () => Promise.reject(new Error("not used")),
+      remove: () => Promise.reject(new Error("not used")),
+      write: () => Promise.reject(new Error("not used")),
+    },
+    process: {
+      exec: (executable, args, options) => {
+        seen.push({ args, command: executable, options });
+        if (executable === "fail") {
+          return Promise.reject(new Error("failed"));
+        }
+        return Promise.resolve(result(0, "direct exec"));
+      },
+      shell: (line, options) => {
+        seen.push({ command: line, options });
+        return Promise.resolve(result(0, "direct shell"));
+      },
+    },
+  } satisfies SandboxRuntime);
+
+  expect(
+    await current.process.exec("bun", ["test"], { cwd: "/workspace" })
+  ).toMatchObject({ stdout: "direct exec" });
+  expect(await current.process.shell("echo ok")).toMatchObject({
+    stdout: "direct shell",
+  });
+  expect(seen).toEqual([
+    { args: ["test"], command: "bun", options: { cwd: "/workspace" } },
+    { command: "echo ok", options: undefined },
+  ]);
+  await expect(current.process.spawn("bun")).rejects.toMatchObject({
+    code: "unsupported",
+    provider: "test",
+  });
+  await expect(current.process.exec("fail")).rejects.toMatchObject({
+    code: "provider",
+    message: "process.exec failed",
+    provider: "test",
+  });
+});
+
+test("fromSandboxRuntime rejects missing advertised process implementations", async () => {
+  const current = fromSandboxRuntime({
+    ...sandbox({ processExec: true }),
+    files: {
+      exists: () => Promise.reject(new Error("not used")),
+      list: () => Promise.reject(new Error("not used")),
+      mkdir: () => Promise.reject(new Error("not used")),
+      read: () => Promise.reject(new Error("not used")),
+      remove: () => Promise.reject(new Error("not used")),
+      write: () => Promise.reject(new Error("not used")),
+    },
+    process: {},
+  } satisfies SandboxRuntime);
+
+  await expect(current.process.exec("bun")).rejects.toMatchObject({
+    code: "configuration",
+    message:
+      "SandboxRuntime process.exec implementation missing for its advertised capability",
+    provider: "test",
+  });
+});
+
 test("fromSandboxRuntime preserves explicit stderr", async () => {
   const current = fromSandboxRuntime({
     ...sandbox({ processExec: true, processSpawn: true }),

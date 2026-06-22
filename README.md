@@ -47,10 +47,11 @@ Swap the adapter import to target a provider and keep the rest of your agent loo
 ## Foundation
 
 `SandboxRuntime` is the low-level contract for vendor implementations.
-It keeps file reads stream-first, process execution handle-based, and provider
-power available through `raw`. Higher-level helpers can still expose convenient
-methods like `files.text()`, but the foundation stays flexible enough for large
-files, long-running commands, and provider-specific behavior.
+It keeps file reads stream-first, supports direct bounded results and process
+handles where each is truthful, and keeps provider power available through
+`raw`. Higher-level helpers can still expose convenient methods like
+`files.text()`, but the foundation stays flexible enough for large files,
+long-running commands, and provider-specific behavior.
 Adapter authors can use `fromSandboxRuntime()` to lift that contract
 into the public `Sandbox` API.
 
@@ -58,13 +59,15 @@ For adapter authors, the best path is to implement the smallest truthful
 low-level shape first:
 
 - expose stream-first file reads through `SandboxRuntimeFiles.read()`
-- expose process handles through `spawn()` and `spawnShell()`
+- expose direct `exec()` and `shell()` results when a provider only supports bounded commands
+- expose process handles through `spawn()` and `spawnShell()` only when the provider can control their lifecycle
 - expose `stdout` and `stderr` streams on process handles when the provider
   supports separate output streams
 - advertise only capabilities that are actually implemented
 - keep provider-specific methods and escape hatches on `raw`
 - let `fromSandboxRuntime()` derive `files.text()`, `files.read()`,
-  `process.exec()`, and `process.shell()` for the public API
+  `process.exec()`, and `process.shell()` from stream-first spawn methods when
+  direct results are unavailable
 
 If a low-level process result already includes `stdout` or `stderr`, the core
 helper preserves those fields. It only falls back to buffered process output
