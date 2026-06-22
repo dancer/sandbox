@@ -160,7 +160,12 @@ export type Vercel = Readonly<{
   env?: Readonly<Record<string, string>>;
   /** custom fetch implementation passed to `@vercel/sandbox` */
   fetch?: VercelFetch;
-  /** fork every new sandbox from an existing named Vercel sandbox */
+  /**
+   * fork every new sandbox from an existing named Vercel sandbox
+   *
+   * cannot be combined with `source`, `getOrCreate`, or create input `id`,
+   * `snapshot`, or `template` because those select a different native creation path
+   */
   fork?: Fork | string;
   /** reuse a named sandbox when present and create it when absent */
   getOrCreate?: boolean;
@@ -519,6 +524,30 @@ const getInput = (options: Vercel, id: string): VercelGet =>
     resume: true,
     signal: options.signal,
   }) as VercelGet;
+
+const validateFork = (
+  options: Vercel,
+  input: NonNullable<Parameters<Adapter<Raw>["create"]>[0]>
+): void => {
+  if (options.fork === undefined) {
+    return;
+  }
+  const conflicts = [
+    options.getOrCreate ? "getOrCreate" : undefined,
+    options.source === undefined ? undefined : "source",
+    input.id === undefined ? undefined : "id",
+    input.snapshot === undefined ? undefined : "snapshot",
+    input.template === undefined ? undefined : "template",
+  ].filter((value): value is string => value !== undefined);
+  if (conflicts.length === 0) {
+    return;
+  }
+  throw sandboxError(
+    provider,
+    `Vercel fork cannot be combined with ${conflicts.join(", ")}`,
+    "configuration"
+  );
+};
 
 const forkInput = (
   options: Vercel,
@@ -963,6 +992,7 @@ export const vercel = (options: Vercel = {}): Adapter<Raw> => ({
   capabilities,
   async create(input = {}) {
     validate(options);
+    validateFork(options, input);
     const cwd = input.cwd ?? options.cwd ?? "/vercel/sandbox";
     const ports = declaredPorts(input.ports ?? options.ports ?? []);
     const raw = await createRaw(options, input, ports);

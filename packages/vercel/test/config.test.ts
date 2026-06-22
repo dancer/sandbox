@@ -425,6 +425,49 @@ test("vercel forks named sandboxes with normalized create options", async () => 
   }
 });
 
+test("vercel rejects conflicting fork configuration before provider calls", async () => {
+  const nativeCreate = VercelSandbox.create;
+  const nativeFork = VercelSandbox.fork;
+  const nativeGet = VercelSandbox.get;
+  let called = false;
+  const fail = () => {
+    called = true;
+    return Promise.reject(new Error("provider called"));
+  };
+
+  VercelSandbox.create = fail as typeof VercelSandbox.create;
+  VercelSandbox.fork = fail as typeof VercelSandbox.fork;
+  VercelSandbox.get = fail as typeof VercelSandbox.get;
+
+  try {
+    await expect(
+      create({
+        adapter: vercel({
+          fork: "source",
+          getOrCreate: true,
+          projectId: "project",
+          source: { type: "git", url: "https://github.com/acme/example.git" },
+          teamId: "team",
+          token: "token",
+        }),
+        id: "existing",
+        snapshot: "snapshot",
+        template: "template",
+      })
+    ).rejects.toMatchObject({
+      code: "configuration",
+      message:
+        "Vercel fork cannot be combined with getOrCreate, source, id, snapshot, template",
+      provider: "vercel",
+    });
+    expect(called).toBe(false);
+  } finally {
+    VercelSandbox.create = nativeCreate;
+    VercelSandbox.fork = nativeFork;
+    VercelSandbox.get = nativeGet;
+  }
+});
+
 test("vercel forwards process kill signals", async () => {
   const original = VercelSandbox.create;
   let signal: unknown;

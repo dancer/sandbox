@@ -2758,7 +2758,12 @@ export type Vercel = Readonly<{
   env?: Readonly<Record<string, string>>;
   /** custom fetch implementation passed to `@vercel/sandbox` */
   fetch?: VercelFetch;
-  /** fork every new sandbox from an existing named Vercel sandbox */
+  /**
+   * fork every new sandbox from an existing named Vercel sandbox
+   *
+   * cannot be combined with `source`, `getOrCreate`, or create input `id`,
+   * `snapshot`, or `template` because those select a different native creation path
+   */
   fork?: Fork | string;
   /** reuse a named sandbox when present and create it when absent */
   getOrCreate?: boolean;
