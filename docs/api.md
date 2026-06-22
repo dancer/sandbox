@@ -1179,16 +1179,32 @@ export type SandboxSession = Readonly<{
 }>;
 ```
 
-#### `NetworkSandboxSession`
+#### `SandboxBackend`
 
-host-owned sandbox with infrastructure capabilities kept away from AI SDK tools
-
-call `restricted()` to pass only the AI SDK session contract to tool execution
+host-owned sandbox infrastructure kept outside the AI SDK session contract
 
 ```ts
-export type NetworkSandboxSession = Sandbox &
+export type SandboxBackend<Raw = unknown> = Sandbox<Raw>;
+```
+
+#### `NetworkSandboxSession`
+
+host-owned AI SDK session with a separate infrastructure backend
+
+this is itself compatible with the AI SDK sandbox contract. call
+`restricted()` before passing a session to untrusted tool execution so raw
+provider controls, lifecycle, and networking remain host-owned
+
+```ts
+export type NetworkSandboxSession<Raw = unknown> = SandboxSession &
   Readonly<{
-    /** return the restricted session safe to pass into agent tool execution */
+    /** host-owned sandbox infrastructure and provider-specific raw controls */
+    backend: SandboxBackend<Raw>;
+    /** provider sandbox id for host lifecycle and persistence bookkeeping */
+    id: string;
+    /** default working directory for commands without an explicit override */
+    defaultWorkingDirectory: string;
+    /** return the bare AI SDK sandbox session without host-owned infrastructure */
     restricted(): SandboxSession;
   }>;
 ```
@@ -1488,6 +1504,25 @@ const kit = tools(sandbox, {
 
 ```ts
 export declare const tools: (sandbox: Sandbox, options?: Options) => Kit;
+```
+
+#### `network`
+
+create a host-owned AI SDK session with a restricted agent view
+
+**example**
+
+```ts
+const session = network(sandbox);
+const preview = await session.backend.ports.expose(3000);
+const agentSession = session.restricted();
+```
+
+```ts
+export declare const network: <Raw>(
+  sandbox: Sandbox<Raw>,
+  options?: Options
+) => NetworkSandboxSession<Raw>;
 ```
 
 ## @sandbox-sdk/ai/claude

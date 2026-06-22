@@ -13,7 +13,7 @@ import { MockLanguageModelV4 } from "ai-v7/test";
 import { MockLanguageModelV3 } from "ai/test";
 import { z } from "zod/v4";
 
-import { aisdk, tools } from "../src/index";
+import { aisdk, network, tools } from "../src/index";
 
 const usage = {
   inputTokens: {
@@ -100,6 +100,21 @@ test("ai sdk v7 executes sandbox tools", async () => {
     });
 
     expect(await sandbox.files.text("/workspace/v7.txt")).toBe("v7");
+  } finally {
+    await sandbox.stop();
+  }
+});
+
+test("ai sdk v7 accepts network sandbox sessions", async () => {
+  const sandbox = await create({ adapter: local(), cwd: "/workspace" });
+
+  try {
+    const session = network(sandbox);
+    const networkSession: SandboxV7 = session;
+    const restrictedSession: SandboxV7 = session.restricted();
+
+    expect(networkSession.description).toBe(restrictedSession.description);
+    expect("backend" in restrictedSession).toBe(false);
   } finally {
     await sandbox.stop();
   }

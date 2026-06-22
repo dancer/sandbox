@@ -10,6 +10,7 @@ import type {
   Kit,
   ListResult,
   Name,
+  NetworkSandboxSession,
   Options as AiOptions,
   Path,
   Policy,
@@ -17,6 +18,7 @@ import type {
   PreviewResult,
   Schema,
   SchemaResult,
+  SandboxBackend,
   SandboxProcess,
   SandboxSession,
   TextResult,
@@ -88,6 +90,7 @@ export type EntrypointTypes = Readonly<{
   aiKit: Kit;
   aiListResult: ListResult;
   aiName: Name;
+  aiNetworkSandboxSession: NetworkSandboxSession;
   aiOptions: AiOptions;
   aiPath: Path;
   aiPolicy: Policy<Path>;
@@ -95,6 +98,7 @@ export type EntrypointTypes = Readonly<{
   aiPreviewResult: PreviewResult;
   aiSchema: Schema;
   aiSchemaResult: SchemaResult;
+  aiSandboxBackend: SandboxBackend;
   aiSandboxProcess: SandboxProcess;
   aiSandboxSession: SandboxSession;
   aisdk: AisdkOptions;

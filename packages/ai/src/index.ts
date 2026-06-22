@@ -200,14 +200,25 @@ export type SandboxSession = Readonly<{
   runCommand(input: Command): PromiseLike<CommandResult>;
 }>;
 
+/** host-owned sandbox infrastructure kept outside the AI SDK session contract */
+export type SandboxBackend<Raw = unknown> = Sandbox<Raw>;
+
 /**
- * host-owned sandbox with infrastructure capabilities kept away from AI SDK tools
+ * host-owned AI SDK session with a separate infrastructure backend
  *
- * call `restricted()` to pass only the AI SDK session contract to tool execution
+ * this is itself compatible with the AI SDK sandbox contract. call
+ * `restricted()` before passing a session to untrusted tool execution so raw
+ * provider controls, lifecycle, and networking remain host-owned
  */
-export type NetworkSandboxSession = Sandbox &
+export type NetworkSandboxSession<Raw = unknown> = SandboxSession &
   Readonly<{
-    /** return the restricted session safe to pass into agent tool execution */
+    /** host-owned sandbox infrastructure and provider-specific raw controls */
+    backend: SandboxBackend<Raw>;
+    /** provider sandbox id for host lifecycle and persistence bookkeeping */
+    id: string;
+    /** default working directory for commands without an explicit override */
+    defaultWorkingDirectory: string;
+    /** return the bare AI SDK sandbox session without host-owned infrastructure */
     restricted(): SandboxSession;
   }>;
 
@@ -950,5 +961,27 @@ export const tools = (sandbox: Sandbox, options: Options = {}): Kit => {
     description: text,
     sandbox: agent(sandbox, text, cwd, timeout, options.beforeExec),
     tools: output as Tools,
+  };
+};
+
+/**
+ * create a host-owned AI SDK session with a restricted agent view
+ *
+ * @example
+ * const session = network(sandbox)
+ * const preview = await session.backend.ports.expose(3000)
+ * const agentSession = session.restricted()
+ */
+export const network = <Raw>(
+  sandbox: Sandbox<Raw>,
+  options: Options = {}
+): NetworkSandboxSession<Raw> => {
+  const kit = tools(sandbox, options);
+  return {
+    ...kit.sandbox,
+    backend: sandbox,
+    defaultWorkingDirectory: kit.sandbox.workingDirectory,
+    id: sandbox.id,
+    restricted: () => kit.sandbox,
   };
 };

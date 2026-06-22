@@ -6,8 +6,8 @@ import { create, isSandboxError } from "@sandbox-sdk/core";
 import { local } from "@sandbox-sdk/local";
 
 import { claude } from "../src/claude";
-import type { SandboxSession } from "../src/index";
-import { aisdk, tools } from "../src/index";
+import type { NetworkSandboxSession, SandboxSession } from "../src/index";
+import { aisdk, network, tools } from "../src/index";
 import { openai } from "../src/openai";
 
 interface OpenAiTool {
@@ -90,6 +90,39 @@ test("tools returns prompt context and selected tools", async () => {
   expect(kit.tools.exec?.strict).toBe(true);
 
   await sandbox.stop();
+});
+
+test("network sessions separate host infrastructure from the restricted view", async () => {
+  const sandbox = await create({ adapter: local(), cwd: "/workspace" });
+
+  try {
+    const session = network(sandbox, {
+      allow: ["read", "write", "exec"],
+    });
+    const networkSession: NetworkSandboxSession = session;
+    const agent: SandboxSession = session;
+    const restricted = session.restricted();
+
+    expect(session.backend).toBe(sandbox);
+    expect(typeof session.backend.raw.root).toBe("string");
+    expect(session.defaultWorkingDirectory).toBe("/workspace");
+    expect(session.id).toBe(sandbox.id);
+    expect(networkSession.id).toBe(session.id);
+    expect(agent.description).toBe(session.description);
+    expect(restricted).not.toBe(session);
+    expect("backend" in restricted).toBe(false);
+    expect("restricted" in restricted).toBe(false);
+
+    await restricted.writeTextFile({
+      content: "restricted",
+      path: "/workspace/restricted.txt",
+    });
+    expect(await sandbox.files.text("/workspace/restricted.txt")).toBe(
+      "restricted"
+    );
+  } finally {
+    await sandbox.stop();
+  }
 });
 
 test("tools can read, write, list, and execute", async () => {
