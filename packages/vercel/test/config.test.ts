@@ -930,6 +930,115 @@ test("vercel rejects invalid snapshot retention before provider calls", async ()
   }
 });
 
+test("vercel deletes a created sandbox when workspace setup fails", async () => {
+  const original = VercelSandbox.create;
+  let deleted = false;
+  const raw = {
+    delete: () => {
+      deleted = true;
+      return Promise.reject(new Error("cleanup failed"));
+    },
+    fs: {
+      mkdir: () => Promise.reject(new Error("mkdir failed")),
+    },
+    name: "sandbox",
+  } as unknown as VercelSandbox;
+
+  VercelSandbox.create = (() =>
+    Promise.resolve(raw)) as typeof VercelSandbox.create;
+
+  try {
+    await expect(
+      create({
+        adapter: vercel({
+          projectId: "project",
+          teamId: "team",
+          token: "token",
+        }),
+      })
+    ).rejects.toThrow("mkdir failed");
+    expect(deleted).toBe(true);
+  } finally {
+    VercelSandbox.create = original;
+  }
+});
+
+test("vercel preserves existing get-or-create sandboxes when setup fails", async () => {
+  const original = VercelSandbox.getOrCreate;
+  let deleted = false;
+  const raw = {
+    delete: () => {
+      deleted = true;
+      return Promise.resolve();
+    },
+    fs: {
+      mkdir: () => Promise.reject(new Error("mkdir failed")),
+    },
+    name: "shared",
+  } as unknown as VercelSandbox;
+
+  VercelSandbox.getOrCreate = (() =>
+    Promise.resolve(raw)) as typeof VercelSandbox.getOrCreate;
+
+  try {
+    await expect(
+      create({
+        adapter: vercel({
+          getOrCreate: true,
+          name: "shared",
+          projectId: "project",
+          teamId: "team",
+          token: "token",
+        }),
+      })
+    ).rejects.toThrow("mkdir failed");
+    expect(deleted).toBe(false);
+  } finally {
+    VercelSandbox.getOrCreate = original;
+  }
+});
+
+test("vercel deletes new get-or-create sandboxes when setup fails", async () => {
+  const original = VercelSandbox.getOrCreate;
+  let deleted = false;
+  const raw = {
+    delete: () => {
+      deleted = true;
+      return Promise.resolve();
+    },
+    fs: {
+      mkdir: () => Promise.reject(new Error("mkdir failed")),
+    },
+    name: "shared",
+  } as unknown as VercelSandbox;
+
+  VercelSandbox.getOrCreate = ((input?: {
+    onCreate?: (sandbox: VercelSandbox) => Promise<void>;
+  }) =>
+    input?.onCreate === undefined
+      ? Promise.resolve(raw)
+      : input
+          .onCreate(raw)
+          .then(() => raw)) as typeof VercelSandbox.getOrCreate;
+
+  try {
+    await expect(
+      create({
+        adapter: vercel({
+          getOrCreate: true,
+          name: "shared",
+          projectId: "project",
+          teamId: "team",
+          token: "token",
+        }),
+      })
+    ).rejects.toThrow("mkdir failed");
+    expect(deleted).toBe(true);
+  } finally {
+    VercelSandbox.getOrCreate = original;
+  }
+});
+
 test("vercel maps create options and updates dynamic ports", async () => {
   const original = VercelSandbox.create;
   let createSeen: unknown;

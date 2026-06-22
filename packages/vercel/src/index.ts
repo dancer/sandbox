@@ -570,11 +570,12 @@ const forkInput = (
 const getOrCreateInput = (
   options: Vercel,
   input: NonNullable<Parameters<Adapter<Raw>["create"]>[0]>,
-  ports: readonly number[]
+  ports: readonly number[],
+  onCreate: (sandbox: Raw) => Promise<void>
 ): Parameters<typeof VercelSandbox.getOrCreate>[0] =>
   ({
     ...createInput(options, input, ports),
-    onCreate: options.onCreate,
+    onCreate,
   }) as Parameters<typeof VercelSandbox.getOrCreate>[0];
 
 const stream = (
@@ -645,21 +646,42 @@ const routePorts = (raw: Raw): readonly number[] => {
   }
 };
 
-const createRaw = (
+const createRaw = async (
   options: Vercel,
   input: NonNullable<Parameters<Adapter<Raw>["create"]>[0]>,
   ports: readonly number[]
-): Promise<Raw> => {
+): Promise<Readonly<{ owned: boolean; raw: Raw }>> => {
   if (input.id !== undefined) {
-    return VercelSandbox.get(getInput(options, input.id));
+    return {
+      owned: false,
+      raw: await VercelSandbox.get(getInput(options, input.id)),
+    };
   }
   if (options.fork !== undefined) {
-    return VercelSandbox.fork(forkInput(options, input, ports));
+    return {
+      owned: true,
+      raw: await VercelSandbox.fork(forkInput(options, input, ports)),
+    };
   }
   if (options.getOrCreate) {
-    return VercelSandbox.getOrCreate(getOrCreateInput(options, input, ports));
+    let owned = false;
+    const raw = await VercelSandbox.getOrCreate(
+      getOrCreateInput(options, input, ports, async (sandbox) => {
+        owned = true;
+        try {
+          await options.onCreate?.(sandbox);
+        } catch (error) {
+          await sandbox.delete().catch(() => null);
+          throw error;
+        }
+      })
+    );
+    return { owned, raw };
   }
-  return VercelSandbox.create(createInput(options, input, ports));
+  return {
+    owned: true,
+    raw: await VercelSandbox.create(createInput(options, input, ports)),
+  };
 };
 
 const read = async (
@@ -977,14 +999,21 @@ export const vercel = (options: Vercel = {}): Adapter<Raw> => ({
     validateFork(options, input);
     const cwd = input.cwd ?? options.cwd ?? "/vercel/sandbox";
     const ports = declaredPorts(input.ports ?? options.ports ?? []);
-    const raw = await createRaw(options, input, ports);
+    const created = await createRaw(options, input, ports);
 
     if (input.id === undefined) {
-      await raw.fs.mkdir(cwd, { recursive: true });
+      try {
+        await created.raw.fs.mkdir(cwd, { recursive: true });
+      } catch (error) {
+        if (created.owned) {
+          await created.raw.delete().catch(() => null);
+        }
+        throw error;
+      }
     }
 
     return createSandbox(
-      raw,
+      created.raw,
       cwd,
       options.sudo,
       ports,
