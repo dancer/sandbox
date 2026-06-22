@@ -2251,6 +2251,17 @@ export type CloudflareBinding<
 > = DurableObjectNamespace<ProviderRaw>;
 ```
 
+#### `CloudflareBackups`
+
+native Cloudflare R2 backup options for normalized filesystem snapshots
+
+`dir` is the sandbox cwd and `name` comes from `snapshots.create(name?)`
+configure `BACKUP_BUCKET` and production R2 credentials on the Worker before enabling this
+
+```ts
+export type CloudflareBackups = Readonly<Omit<BackupOptions, "dir" | "name">>;
+```
+
 #### `Cloudflare`
 
 Cloudflare Worker-native Sandbox adapter configuration
@@ -2264,6 +2275,8 @@ export type Cloudflare<ProviderRaw extends CloudflareRaw = CloudflareRaw> =
   Readonly<{
     /** required Durable Object binding for the Cloudflare Sandbox class, usually `env.Sandbox` */
     binding: CloudflareBinding<ProviderRaw>;
+    /** configured R2 backups that enable normalized filesystem snapshot create and restore */
+    backups?: CloudflareBackups;
     /**
      * default working directory for normalized file and process operations
      *

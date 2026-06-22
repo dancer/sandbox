@@ -122,8 +122,8 @@ const ROWS: { capability: string; cells: Record<ColumnKey, Cell> }[] = [
       blaxel: no(
         "Blaxel snapshot behavior is provider-specific today and stays behind raw until the normalized contract is right."
       ),
-      cloudflare: no(
-        "Cloudflare Sandbox backups and hibernation are provider-specific today. The adapter keeps them behind raw until the normalized snapshot contract is right."
+      cloudflare: warn(
+        "Cloudflare creates R2-backed filesystem snapshots when cloudflare({ backups }) is configured on a Worker with the required R2 binding and credentials."
       ),
       codesandbox: warn(
         "CodeSandbox snapshot creation hibernates the current VM and returns its sandbox id for create-time snapshot sources."
@@ -152,7 +152,7 @@ const ROWS: { capability: string; cells: Record<ColumnKey, Cell> }[] = [
         "Blaxel snapshot deletion stays behind raw until its snapshot lifecycle has a matching normalized contract."
       ),
       cloudflare: no(
-        "Cloudflare Sandbox backups and hibernation stay behind raw until their lifecycle maps cleanly to durable snapshots."
+        "Cloudflare has no native backup deletion operation. Use an R2 lifecycle rule for cleanup and raw only when direct object management is appropriate."
       ),
       codesandbox: no(
         "CodeSandbox normalized snapshots are hibernated sandbox ids, so deleting one would delete the source sandbox."
@@ -180,8 +180,8 @@ const ROWS: { capability: string; cells: Record<ColumnKey, Cell> }[] = [
       blaxel: no(
         "Blaxel restore and fork flows are provider-specific in this adapter today."
       ),
-      cloudflare: no(
-        "Cloudflare backup and restore is provider-specific today and stays behind raw until the normalized contract is right."
+      cloudflare: warn(
+        "Cloudflare restores configured R2 backups into the adapter cwd. Production restores are copy-on-write mounts lost when the sandbox sleeps or restarts."
       ),
       codesandbox: no("CodeSandbox has no normalized in-place restore."),
       daytona: no(
@@ -208,7 +208,7 @@ const ROWS: { capability: string; cells: Record<ColumnKey, Cell> }[] = [
         "Blaxel snapshot source flows stay behind raw until the normalized create-from-snapshot contract is right."
       ),
       cloudflare: no(
-        "Cloudflare backup and hibernation flows stay behind raw until the normalized create-from-snapshot contract is right."
+        "Cloudflare restores backups in place. Creating a fresh sandbox from a backup id stays provider-specific through raw."
       ),
       codesandbox: warn(
         "CodeSandbox can create a fresh sandbox from a hibernated sandbox id through the shared snapshot source option."

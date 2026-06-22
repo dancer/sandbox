@@ -44,6 +44,21 @@ const result = await sandbox.process.shell("bun /workspace/main.ts");
 
 console.log(result.stdout);`;
 
+const CLOUDFLARE_BACKUPS_EXAMPLE = `const sandbox = await create({
+  adapter: cloudflare({
+    binding: env.Sandbox,
+    backups: {
+      gitignore: true,
+      ttl: 86_400,
+    },
+  }),
+  cwd: "/workspace",
+});
+
+const snapshot = await sandbox.snapshots.create("before-upgrade");
+
+await sandbox.snapshots.restore(snapshot.id);`;
+
 export const Cloudflare = () => (
   <section>
     <Heading as="h3" id="adapter-cloudflare">
@@ -65,6 +80,19 @@ export const Cloudflare = () => (
       Cloudflare zone.
     </p>
     <CodeBlock code={CLOUDFLARE_EXAMPLE} lang="ts" />
+    <p>
+      Set <code>backups</code> to opt into normalized filesystem snapshots
+      through Cloudflare R2 backups. Add a <code>BACKUP_BUCKET</code> binding
+      and, in production, the R2 presigned URL credentials to the Worker.
+      Snapshot creation uses the adapter cwd and names are persisted in
+      Cloudflare backup metadata. Restore writes back to that cwd. Production
+      restores are copy-on-write mounts, so restore again after a sandbox sleeps
+      or restarts. Configure an R2 lifecycle rule because backup TTL limits
+      restoration but does not delete stored objects. Snapshot deletion and
+      fresh sandbox creation from a backup stay unavailable through the
+      normalized API.
+    </p>
+    <CodeBlock code={CLOUDFLARE_BACKUPS_EXAMPLE} lang="ts" />
     <p>
       For Node apps and other non-Worker runtimes, deploy Cloudflare's HTTP
       bridge and use <code>cloudflareBridge()</code>. It keeps normalized files,
@@ -97,6 +125,23 @@ export const Cloudflare = () => (
             <code>wrangler.jsonc</code>. Pass the binding from{" "}
             <code>env.Sandbox</code>; the adapter materializes the sandbox with
             <code>@cloudflare/sandbox</code> when <code>create()</code> runs.
+          </p>
+        </PropAccordionItem>
+        <PropAccordionItem
+          name="backups"
+          status="optional"
+          value="CloudflareBackups"
+        >
+          <p>
+            Enables R2-backed filesystem snapshot creation and in-place restore.
+            The Worker needs a <code>BACKUP_BUCKET</code> binding. Production
+            also needs <code>R2_ACCESS_KEY_ID</code>,{" "}
+            <code>R2_SECRET_ACCESS_KEY</code>,{" "}
+            <code>CLOUDFLARE_ACCOUNT_ID</code>, and{" "}
+            <code>BACKUP_BUCKET_NAME</code>. The adapter controls the backup
+            directory from <code>cwd</code> and the backup name from{" "}
+            <code>snapshots.create(name?)</code>. Use <code>raw</code> when a
+            restore needs a different directory or native backup handle.
           </p>
         </PropAccordionItem>
         <PropAccordionItem name="cwd" status="optional" value="/workspace">
