@@ -325,6 +325,8 @@ The kit also returns prompt context describing the sandbox, its workspace path, 
 
 \`aisdk()\` returns the shape used by Vercel AI SDK: \`system\`, \`tools\`, and \`experimental_sandbox\`. The same tool definitions work with \`generateText\`, \`streamText\`, and agent loops. With AI Gateway, pass a \`provider/model\` string directly as \`model\`.
 
+Use \`network(sandbox)\` when trusted host code also needs lifecycle, ports, or provider-specific \`raw\` controls. The returned network session is itself AI SDK-compatible. Pass \`session.restricted()\` to agent execution when it must not receive the host-owned \`backend\`.
+
 \`\`\`ts
 import { aisdk, tools } from "@sandbox-sdk/ai";
 import { withSandbox } from "@sandbox-sdk/core";

@@ -200,6 +200,12 @@ export const AiTools = () => (
         tool execution. With AI Gateway, pass a <code>provider/model</code>{" "}
         string directly as <code>model</code>.
       </p>
+      <p>
+        Use <code>network(sandbox)</code> when trusted host code also needs
+        lifecycle, ports, or <code>raw</code> provider controls. The returned
+        session is AI SDK-compatible, while <code>restricted()</code> returns a
+        separate session without the host-owned <code>backend</code>.
+      </p>
       <CodeBlock code={AI_SDK_EXAMPLE} lang="tsx" />
     </section>
 

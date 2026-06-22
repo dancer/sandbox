@@ -209,6 +209,18 @@ await generateText({
 });
 ```
 
+When trusted host code also needs lifecycle, ports, or provider-specific
+controls, use `network()`. It is AI SDK session-compatible, while
+`restricted()` returns a separate object without the host-owned backend:
+
+```ts
+import { network } from "@sandbox-sdk/ai";
+
+const session = network(sandbox);
+const preview = await session.backend.ports.expose(3000);
+const agentSession = session.restricted();
+```
+
 With Vercel AI Gateway and AI SDK v6, use a `provider/model` string directly:
 
 ```ts
