@@ -103,6 +103,33 @@ live("vercel restores a live snapshot in place", async () => {
   }
 });
 
+live("vercel forks a stopped sandbox from its current snapshot", async () => {
+  const file = path("fork");
+  const base = await create({
+    adapter: adapter({ persistent: true }),
+    cwd,
+  });
+  let fork: LiveSandbox | undefined;
+
+  try {
+    await base.files.write(file, "forked");
+    await base.stop();
+
+    const snapshot = base.raw.currentSnapshotId;
+    expect(snapshot).toBeTruthy();
+
+    fork = await create({
+      adapter: adapter({ fork: { sourceSandbox: base.id } }),
+      cwd,
+    });
+
+    expect(fork.raw.sourceSnapshotId).toBe(snapshot);
+    await expect(fork.files.text(file)).resolves.toBe("forked");
+  } finally {
+    await Promise.all([cleanup(fork), cleanup(base)]);
+  }
+});
+
 live("vercel exposes ports after creation", async () => {
   const sandbox = await create({
     adapter: adapter({ ports: [] }),

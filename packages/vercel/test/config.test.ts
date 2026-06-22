@@ -377,6 +377,54 @@ test("vercel gets named sandboxes and preserves existing routes", async () => {
   }
 });
 
+test("vercel forks named sandboxes with normalized create options", async () => {
+  const original = VercelSandbox.fork;
+  const raw = {
+    fs: {
+      mkdir: () => Promise.resolve(),
+    },
+    name: "fork",
+    stop: () => Promise.resolve(),
+  } as unknown as VercelSandbox;
+  let seen: unknown;
+
+  VercelSandbox.fork = ((input: unknown) => {
+    seen = input;
+    return Promise.resolve(raw);
+  }) as typeof VercelSandbox.fork;
+
+  try {
+    const sandbox = await create({
+      adapter: vercel({
+        fork: { sourceSandbox: "source" },
+        name: "fork",
+        projectId: "project",
+        resources: { vcpus: 2 },
+        teamId: "team",
+        token: "token",
+      }),
+      env: { SOURCE: "create" },
+      metadata: { purpose: "test" },
+      ports: [3000],
+    });
+
+    expect(sandbox.id).toBe("fork");
+    expect(seen).toMatchObject({
+      env: { SOURCE: "create" },
+      name: "fork",
+      ports: [3000],
+      projectId: "project",
+      resources: { vcpus: 2 },
+      sourceSandbox: "source",
+      tags: { purpose: "test" },
+      teamId: "team",
+      token: "token",
+    });
+  } finally {
+    VercelSandbox.fork = original;
+  }
+});
+
 test("vercel forwards process kill signals", async () => {
   const original = VercelSandbox.create;
   let signal: unknown;
