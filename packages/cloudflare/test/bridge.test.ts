@@ -3,6 +3,10 @@ import { expect, test } from "bun:test";
 import { create } from "@sandbox-sdk/core";
 
 import { cloudflareBridge } from "../src/index";
+import type {
+  CloudflareBridgeFetch,
+  CloudflareBridgeTunnel,
+} from "../src/index";
 
 type Seen = Readonly<{
   body?: string;
@@ -43,18 +47,18 @@ const missing = (): Response =>
 
 const requestBody = (
   body: BodyInit | null | undefined
-): Promise<string | undefined> => {
+): Promise<string> | string | undefined => {
   if (typeof body === "string") {
-    return Promise.resolve(body);
+    return body;
   }
   if (body === undefined || body === null) {
-    return Promise.resolve();
+    return;
   }
   return new Response(body).text();
 };
 
 const bridgeFetch =
-  (handler: Handler, seen: Seen[]): typeof fetch =>
+  (handler: Handler, seen: Seen[]): CloudflareBridgeFetch =>
   async (input, init = {}) => {
     const url = String(input);
     const body = await requestBody(init.body);
@@ -102,6 +106,29 @@ test("cloudflareBridge rejects invalid bridge urls", async () => {
     code: "configuration",
     provider: "cloudflare",
   });
+});
+
+test("cloudflareBridge distinguishes quick and named tunnel records", () => {
+  const quick: CloudflareBridgeTunnel = {
+    createdAt: "2026-06-22T00:00:00.000Z",
+    hostname: "quick.trycloudflare.com",
+    id: "quick-1",
+    port: 4567,
+    url: "https://quick.trycloudflare.com",
+  };
+  const named: CloudflareBridgeTunnel = {
+    createdAt: "2026-06-22T00:00:00.000Z",
+    hostname: "preview.example.com",
+    id: "named-1",
+    name: "preview",
+    port: 4567,
+    url: "https://preview.example.com",
+  };
+  const quickName: undefined = quick.name;
+  const namedName: string = named.name;
+
+  expect(quickName).toBeUndefined();
+  expect(namedName).toBe("preview");
 });
 
 test("cloudflareBridge rejects bridge credentials in sandbox environments", async () => {

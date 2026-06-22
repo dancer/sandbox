@@ -1785,6 +1785,17 @@ Cloudflare Sandbox adapter for Sandbox SDK
 
 ### types
 
+#### `CloudflareBridgeFetch`
+
+minimal Fetch API contract accepted by Cloudflare bridge requests
+
+```ts
+export type CloudflareBridgeFetch = (
+  input: RequestInfo | URL,
+  init?: RequestInit
+) => Promise<Response>;
+```
+
 #### `CloudflareBridgeJson`
 
 generic JSON object returned by bridge utility routes
@@ -1797,21 +1808,38 @@ export type CloudflareBridgeJson = Readonly<Record<string, unknown>>;
 
 public tunnel returned by the Cloudflare bridge
 
+quick tunnels omit `name`, while named tunnels always include the requested DNS label
+
 ```ts
-export type CloudflareBridgeTunnel = Readonly<{
-  /** bridge tunnel id */
-  id: string;
-  /** port exposed inside the sandbox */
-  port: number;
-  /** public HTTPS tunnel URL */
-  url: string;
-  /** public tunnel hostname */
-  hostname: string;
-  /** ISO timestamp when the bridge created the tunnel */
-  createdAt: string;
-  /** named tunnel label when the bridge created a named tunnel */
-  name?: string;
-}>;
+export type CloudflareBridgeTunnel =
+  | Readonly<{
+      /** bridge tunnel id */
+      id: string;
+      /** port exposed inside the sandbox */
+      port: number;
+      /** public HTTPS tunnel URL */
+      url: string;
+      /** public tunnel hostname */
+      hostname: string;
+      /** ISO timestamp when the bridge created the tunnel */
+      createdAt: string;
+      /** named tunnel label used for a stable Cloudflare hostname */
+      name: string;
+    }>
+  | Readonly<{
+      /** bridge tunnel id */
+      id: string;
+      /** port exposed inside the sandbox */
+      port: number;
+      /** public HTTPS tunnel URL */
+      url: string;
+      /** public tunnel hostname */
+      hostname: string;
+      /** ISO timestamp when the bridge created the tunnel */
+      createdAt: string;
+      /** quick tunnels do not have a named DNS label */
+      name?: never;
+    }>;
 ```
 
 #### `CloudflareBridgeTunnelOptions`
@@ -1843,7 +1871,7 @@ export type CloudflareBridgeRaw = Readonly<{
   /** permanently delete a bridge-managed sandbox */
   delete(id: string): Promise<void>;
   /** fetch implementation used for bridge requests */
-  fetch: typeof fetch;
+  fetch: CloudflareBridgeFetch;
   /** query the bridge health endpoint */
   health(): Promise<CloudflareBridgeJson>;
   /** restore a bridge workspace archive into a sandbox */
@@ -1937,7 +1965,7 @@ export type CloudflareBridge = Readonly<{
    */
   env?: Readonly<Record<string, string>>;
   /** custom fetch implementation for tests or non-standard runtimes */
-  fetch?: typeof fetch;
+  fetch?: CloudflareBridgeFetch;
   /** stable sandbox id used when create input omits id */
   id?: string;
   /**

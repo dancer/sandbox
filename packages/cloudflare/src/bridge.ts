@@ -37,6 +37,7 @@ const assertSandboxEnv = (value: Readonly<Record<string, string>>): void => {
 
 export type {
   CloudflareBridge,
+  CloudflareBridgeFetch,
   CloudflareBridgeJson,
   CloudflareBridgeRaw,
   CloudflareBridgeMount,

@@ -28,6 +28,7 @@ import type {
 export { cloudflareBridge } from "./bridge.js";
 export type {
   CloudflareBridge,
+  CloudflareBridgeFetch,
   CloudflareBridgeJson,
   CloudflareBridgeMount,
   CloudflareBridgePersist,
