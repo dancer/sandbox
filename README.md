@@ -141,6 +141,8 @@ The `snapshot` create option is supported by adapters that advertise
 
 Snapshot names are supported only when the selected provider persists them.
 Other adapters reject a name instead of silently discarding it.
+When present, `Snapshot.name` is the provider-persisted value and can differ
+from the requested label when the provider adds a namespace or tag.
 
 ## Adapters
 

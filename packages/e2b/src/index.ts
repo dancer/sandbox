@@ -646,9 +646,10 @@ const createSandbox = (
         () => raw.createSnapshot(name === undefined ? undefined : { name }),
         "snapshot"
       );
-      return name === undefined
-        ? { id: snapshot.snapshotId }
-        : { id: snapshot.snapshotId, name };
+      return {
+        id: snapshot.snapshotId,
+        ...(snapshot.names[0] === undefined ? {} : { name: snapshot.names[0] }),
+      };
     },
     restore: () => rejectUnsupported("in-place snapshot restore"),
   },
@@ -661,6 +662,7 @@ const createSandbox = (
  * create an E2B adapter with normalized sandbox operations
  *
  * E2B snapshots capture filesystem and memory state. creation briefly pauses the source sandbox and drops active command, pty, and WebSocket connections. create a fresh sandbox with `create({ snapshot })`; in-place restore is not normalized
+ * named snapshots return E2B's provider-persisted canonical name, which can include a namespace and tag
  *
  * `ports.expose()` returns E2B's derived HTTP or HTTPS URL. when `network.allowPublicTraffic` is false, `preview.request()` adds E2B's traffic access header without exposing it in serializable data
  */

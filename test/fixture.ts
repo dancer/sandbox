@@ -127,7 +127,10 @@ export const sourceFixture = (
   },
   payload: {
     ...payload,
-    snapshot: { ...payload.snapshot, id: "snapshot" },
+    snapshot: {
+      id: "snapshot",
+      ...(payload.snapshot.name === undefined ? {} : { name: "snapshot" }),
+    },
     ...(payload.source === undefined ? {} : { source: "snapshot" }),
   },
 });

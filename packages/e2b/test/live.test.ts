@@ -3,6 +3,8 @@ import { randomUUID } from "node:crypto";
 import { setTimeout as delay } from "node:timers/promises";
 
 import { create } from "@sandbox-sdk/core";
+import type { Snapshot } from "@sandbox-sdk/core";
+import { Sandbox as E2BSandbox } from "e2b";
 
 import { record, sourceFixture, workflowFixture } from "../../../test/fixture";
 import type { Source } from "../../../test/fixture";
@@ -198,6 +200,7 @@ live("e2b preserves process state in a live snapshot", async () => {
     cwd,
   });
   let derived: typeof sandbox | undefined;
+  let snapshot: Snapshot | undefined;
 
   try {
     await sandbox.files.write(file, "ready");
@@ -205,8 +208,11 @@ live("e2b preserves process state in a live snapshot", async () => {
       background: true,
     });
 
-    const snapshot = await sandbox.snapshots.create("sandbox-sdk-live");
+    snapshot = await sandbox.snapshots.create(
+      `sandbox-sdk-live-${randomUUID()}`
+    );
     expect(snapshot.id).toBeTruthy();
+    expect(snapshot.name).toBeTruthy();
 
     derived = await create({
       adapter: e2b({ timeout: 300_000 }),
@@ -239,6 +245,12 @@ live("e2b preserves process state in a live snapshot", async () => {
       ])
     );
   } finally {
-    await Promise.all([derived?.stop(), sandbox.stop()]);
+    await Promise.all([
+      derived?.stop(),
+      sandbox.stop(),
+      snapshot === undefined
+        ? undefined
+        : E2BSandbox.deleteSnapshot(snapshot.id),
+    ]);
   }
 });

@@ -27,7 +27,8 @@ export const E2B = () => (
       sandbox from a snapshot id. E2B snapshots capture filesystem and memory
       state, briefly pausing the source sandbox and dropping active command,
       PTY, and WebSocket connections. Use <code>template</code> for provider
-      template ids and names.
+      template ids and names. Named snapshots return E2B's persisted canonical
+      name, which can include a namespace and tag.
     </p>
     <p>
       When E2B restricts preview traffic, call <code>preview.request()</code>{" "}

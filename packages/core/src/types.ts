@@ -251,7 +251,7 @@ export type Preview = Readonly<
 export type Snapshot = Readonly<{
   /** provider snapshot id */
   id: string;
-  /** provider-persisted snapshot name when supported */
+  /** provider-persisted snapshot name when supported; may differ from the requested label */
   name?: string;
 }>;
 

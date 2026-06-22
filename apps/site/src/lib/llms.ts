@@ -114,7 +114,7 @@ Daytona dev environments via \`@daytona/sdk\`. Spins up a workspace from the giv
 
 ## E2B (@sandbox-sdk/e2b)
 
-E2B microVM sandboxes via \`e2b\`. Can pin a template at construction and threads writes, commands, ports, and snapshots through the E2B SDK. E2B snapshots capture filesystem and memory state, briefly pausing the source sandbox and dropping active command, PTY, and WebSocket connections. Use the shared \`snapshot\` create option to start a fresh sandbox from a snapshot id. \`ports.expose()\` returns E2B's derived HTTP or HTTPS URL. When \`network.allowPublicTraffic\` is false, \`preview.request()\` retains E2B's traffic access header.
+E2B microVM sandboxes via \`e2b\`. Can pin a template at construction and threads writes, commands, ports, and snapshots through the E2B SDK. E2B snapshots capture filesystem and memory state, briefly pausing the source sandbox and dropping active command, PTY, and WebSocket connections. Use the shared \`snapshot\` create option to start a fresh sandbox from a snapshot id. Named snapshots return E2B's persisted canonical name, which can include a namespace and tag. \`ports.expose()\` returns E2B's derived HTTP or HTTPS URL. When \`network.allowPublicTraffic\` is false, \`preview.request()\` retains E2B's traffic access header.
 
 - \`template\`, \`apiKey\`, \`apiHeaders\`, \`proxy\`, \`integration\`, \`validateApiKey\`, \`timeout\`.
 - Credentials: \`E2B_API_KEY\` or \`E2B_ACCESS_TOKEN\`.
@@ -245,7 +245,7 @@ if (supports(sandbox, "snapshotCreate")) {
 }
 \`\`\`
 
-- \`snapshots.create(name?)\` captures provider state when \`snapshotCreate\` is supported. Snapshot names are accepted only when the provider persists them. Other adapters reject a name rather than silently discarding it.
+- \`snapshots.create(name?)\` captures provider state when \`snapshotCreate\` is supported. Snapshot names are accepted only when the provider persists them. Other adapters reject a name rather than silently discarding it. When present, \`Snapshot.name\` is the provider-persisted value and can differ from the requested label.
 - \`snapshots.restore(id)\` means in-place restore of the current sandbox, gated separately by \`snapshotRestore\`.
 - To create a fresh sandbox from a snapshot, pass the snapshot id as the \`snapshot\` create option on adapters that advertise \`snapshotSource\`. Provider template ids still use \`template\`.`;
 

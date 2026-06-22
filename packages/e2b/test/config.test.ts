@@ -202,7 +202,10 @@ test("e2b maps create and command options without running a real provider", asyn
     createSnapshot: (options?: unknown) => {
       snapshotSeen = options;
       snapshotted = true;
-      return Promise.resolve({ snapshotId: "snapshot-id" });
+      return Promise.resolve({
+        names: ["team/ready:default"],
+        snapshotId: "snapshot-id",
+      });
     },
     files: {
       makeDir: (path: string, options: unknown) => {
@@ -427,7 +430,7 @@ test("e2b maps create and command options without running a real provider", asyn
 
     await expect(sandbox.snapshots.create("ready")).resolves.toEqual({
       id: "snapshot-id",
-      name: "ready",
+      name: "team/ready:default",
     });
     expect(snapshotSeen).toEqual({ name: "ready" });
     expect(snapshotted).toBe(true);
