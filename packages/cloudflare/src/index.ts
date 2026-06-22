@@ -1,4 +1,5 @@
 import type {
+  BackupOptions,
   ListFilesOptions,
   Sandbox as CloudflareSandbox,
   SandboxOptions,
@@ -58,6 +59,14 @@ export type CloudflareBinding<
 > = DurableObjectNamespace<ProviderRaw>;
 
 /**
+ * native Cloudflare R2 backup options for normalized filesystem snapshots
+ *
+ * `dir` is the sandbox cwd and `name` comes from `snapshots.create(name?)`
+ * configure `BACKUP_BUCKET` and production R2 credentials on the Worker before enabling this
+ */
+export type CloudflareBackups = Readonly<Omit<BackupOptions, "dir" | "name">>;
+
+/**
  * Cloudflare Worker-native Sandbox adapter configuration
  *
  * `ProviderRaw` is inferred from `binding`, so `sandbox.raw` keeps the exact native Cloudflare Sandbox environment type
@@ -68,6 +77,8 @@ export type Cloudflare<ProviderRaw extends CloudflareRaw = CloudflareRaw> =
   Readonly<{
     /** required Durable Object binding for the Cloudflare Sandbox class, usually `env.Sandbox` */
     binding: CloudflareBinding<ProviderRaw>;
+    /** configured R2 backups that enable normalized filesystem snapshot create and restore */
+    backups?: CloudflareBackups;
     /**
      * default working directory for normalized file and process operations
      *
@@ -102,7 +113,7 @@ export type Cloudflare<ProviderRaw extends CloudflareRaw = CloudflareRaw> =
 
 const provider = "cloudflare";
 
-const capabilities: Capabilities = {
+const capabilities = (backups: boolean): Capabilities => ({
   environment: true,
   fileStreaming: "native",
   files: true,
@@ -120,12 +131,20 @@ const capabilities: Capabilities = {
     tunnels: "dynamic",
     watching: true,
   },
-  snapshotCreate: false,
+  snapshotCreate: backups ? "filesystem" : false,
   snapshotDelete: false,
-  snapshotRestore: false,
-  snapshots: false,
+  snapshotRestore: backups ? "filesystem" : false,
+  snapshots: backups ? "filesystem" : false,
   streaming: "separate",
-};
+});
+
+const backupRoots = [
+  "/workspace",
+  "/home",
+  "/tmp",
+  "/var/tmp",
+  "/app",
+] as const;
 
 const validate = (options: Cloudflare): void => {
   if (options.binding === undefined) {
@@ -136,6 +155,37 @@ const validate = (options: Cloudflare): void => {
     );
   }
   validateTunnels(options.tunnel, options.tunnels);
+};
+
+const validateBackupCwd = (cwd: string): void => {
+  if (!cwd.startsWith("/")) {
+    throw sandboxError(
+      provider,
+      "Cloudflare backup cwd must be absolute",
+      "configuration"
+    );
+  }
+  if (cwd.includes("\0")) {
+    throw sandboxError(
+      provider,
+      "Cloudflare backup cwd must not contain null bytes",
+      "configuration"
+    );
+  }
+  if (cwd.split("/").includes("..")) {
+    throw sandboxError(
+      provider,
+      'Cloudflare backup cwd must not contain ".." path segments',
+      "configuration"
+    );
+  }
+  if (!backupRoots.some((root) => cwd === root || cwd.startsWith(`${root}/`))) {
+    throw sandboxError(
+      provider,
+      "Cloudflare backup cwd must be under /workspace, /home, /tmp, /var/tmp, or /app",
+      "configuration"
+    );
+  }
 };
 
 const binary = (content: string): Uint8Array =>
@@ -193,6 +243,45 @@ const wrap = async <Value>(
   } catch (error) {
     if (error instanceof SandboxError) {
       throw error;
+    }
+    throw sandboxError(provider, `${feature} failed`, "provider", error);
+  }
+};
+
+const providerCode = (error: unknown): string | undefined => {
+  if (typeof error !== "object" || error === null || !("code" in error)) {
+    return;
+  }
+  const { code } = error;
+  return typeof code === "string" ? code : undefined;
+};
+
+const backupWrap = async <Value>(
+  action: () => Promise<Value> | Value,
+  feature: string
+): Promise<Value> => {
+  try {
+    return await action();
+  } catch (error) {
+    if (error instanceof SandboxError) {
+      throw error;
+    }
+    const code = providerCode(error);
+    if (code === "INVALID_BACKUP_CONFIG") {
+      throw sandboxError(
+        provider,
+        "Cloudflare backup configuration is invalid. Check BACKUP_BUCKET, production R2 credentials, cwd, and backup options.",
+        "configuration",
+        error
+      );
+    }
+    if (code === "BACKUP_NOT_FOUND") {
+      throw sandboxError(
+        provider,
+        "Cloudflare snapshot not found",
+        "not_found",
+        error
+      );
     }
     throw sandboxError(provider, `${feature} failed`, "provider", error);
   }
@@ -511,11 +600,13 @@ const spawn = (
 const createSandbox = <ProviderRaw extends CloudflareRaw>(
   raw: ProviderRaw,
   cwd: string,
-  options: Cloudflare<ProviderRaw>
+  options: Cloudflare<ProviderRaw>,
+  support: Capabilities
 ): Sandbox<ProviderRaw> => {
+  const { backups } = options;
   const labels = new Map<string, number>();
   return {
-    capabilities,
+    capabilities: support,
     cwd,
     files: {
       exists: async (path) => {
@@ -612,9 +703,53 @@ const createSandbox = <ProviderRaw extends CloudflareRaw>(
     provider,
     raw,
     snapshots: {
-      create: () => rejectUnsupported("snapshots"),
+      create: async (name) => {
+        if (backups === undefined) {
+          return rejectUnsupported("snapshots");
+        }
+        const backup = await backupWrap(
+          () =>
+            raw.createBackup({
+              ...backups,
+              dir: cwd,
+              ...(name === undefined ? {} : { name }),
+            }),
+          "snapshot create"
+        );
+        return {
+          id: backup.id,
+          ...(name === undefined || name.length === 0 ? {} : { name }),
+        };
+      },
       delete: () => rejectUnsupported("snapshots"),
-      restore: () => rejectUnsupported("snapshots"),
+      restore: async (id) => {
+        if (backups === undefined) {
+          return rejectUnsupported("snapshots");
+        }
+        if (id.length === 0) {
+          throw sandboxError(
+            provider,
+            "Cloudflare snapshot id is required for restore",
+            "configuration"
+          );
+        }
+        const restored = await backupWrap(
+          () =>
+            raw.restoreBackup({
+              dir: cwd,
+              id,
+              ...(backups.localBucket === true ? { localBucket: true } : {}),
+            }),
+          "snapshot restore"
+        );
+        if (!restored.success) {
+          throw sandboxError(
+            provider,
+            "Cloudflare snapshot restore failed",
+            "provider"
+          );
+        }
+      },
     },
     stop: async () => {
       await wrap(() => raw.destroy(), "stop");
@@ -629,27 +764,33 @@ const createSandbox = <ProviderRaw extends CloudflareRaw>(
  */
 export const cloudflare = <ProviderRaw extends CloudflareRaw = CloudflareRaw>(
   options: Cloudflare<ProviderRaw>
-): Adapter<ProviderRaw> => ({
-  capabilities,
-  async create(input = {}) {
-    validate(options);
-    const id = input.id ?? options.id ?? crypto.randomUUID();
-    const cwd = input.cwd ?? options.cwd ?? "/workspace";
-    const { getSandbox } = await import("@cloudflare/sandbox");
-    const raw = getSandbox(options.binding, id, {
-      enableDefaultSession: false,
-      normalizeId: true,
-      ...options.options,
-      transport: "rpc",
-    });
-    const env = { ...options.env, ...input.env };
+): Adapter<ProviderRaw> => {
+  const support = capabilities(options.backups !== undefined);
+  return {
+    capabilities: support,
+    async create(input = {}) {
+      validate(options);
+      const id = input.id ?? options.id ?? crypto.randomUUID();
+      const cwd = input.cwd ?? options.cwd ?? "/workspace";
+      if (options.backups !== undefined) {
+        validateBackupCwd(cwd);
+      }
+      const { getSandbox } = await import("@cloudflare/sandbox");
+      const raw = getSandbox(options.binding, id, {
+        enableDefaultSession: false,
+        normalizeId: true,
+        ...options.options,
+        transport: "rpc",
+      });
+      const env = { ...options.env, ...input.env };
 
-    if (Object.keys(env).length > 0) {
-      await raw.setEnvVars(env);
-    }
-    await raw.mkdir(cwd, { recursive: true });
+      if (Object.keys(env).length > 0) {
+        await raw.setEnvVars(env);
+      }
+      await raw.mkdir(cwd, { recursive: true });
 
-    return createSandbox<ProviderRaw>(raw, cwd, { ...options, id });
-  },
-  provider,
-});
+      return createSandbox<ProviderRaw>(raw, cwd, { ...options, id }, support);
+    },
+    provider,
+  };
+};

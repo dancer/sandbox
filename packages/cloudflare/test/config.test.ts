@@ -6,16 +6,23 @@ import { create } from "@sandbox-sdk/core";
 
 import { cloudflare } from "../src/index";
 
+type BackupFailure = "BACKUP_NOT_FOUND" | "INVALID_BACKUP_CONFIG";
+
 let executeSeen: unknown;
 let getSeen: unknown;
 let killedSignal: unknown;
 let mkdirSeen: unknown;
 let readSeen: unknown;
+let backupFailure: BackupFailure | undefined;
+let restoreSeen: unknown;
+let restoreFailure: BackupFailure | undefined;
+let restoreSuccess = true;
 let setEnvSeen: unknown;
 let startProcessSeen: unknown;
 let tunnelCalls = 0;
 let tunnelSeen: unknown;
 let writeSeen: unknown;
+let backupSeen: unknown;
 
 const sse = (
   ...events: readonly [string, string][]
@@ -34,6 +41,22 @@ const sse = (
   });
 
 const raw = {
+  createBackup: (options: unknown) => {
+    backupSeen = options;
+    const code = backupFailure;
+    if (code !== undefined) {
+      return Promise.reject(
+        Object.assign(new Error("backup configuration failed"), {
+          code,
+        })
+      );
+    }
+    return Promise.resolve({
+      dir: (options as { dir: string }).dir,
+      id: "0d75bca9-6f81-43c9-8e34-252bde61336b",
+      localBucket: (options as { localBucket?: boolean }).localBucket,
+    });
+  },
   destroy: () => Promise.resolve(),
   exec: (line: string, options: unknown) => {
     executeSeen = { line, options };
@@ -65,6 +88,22 @@ const raw = {
       });
     }
     return Promise.resolve({ content: "c3RyZWFtZWQ=" });
+  },
+  restoreBackup: (backup: unknown) => {
+    restoreSeen = backup;
+    const code = restoreFailure;
+    if (code !== undefined) {
+      return Promise.reject(
+        Object.assign(new Error("backup restore failed"), {
+          code,
+        })
+      );
+    }
+    return Promise.resolve({
+      dir: (backup as { dir: string }).dir,
+      id: (backup as { id: string }).id,
+      success: restoreSuccess,
+    });
   },
   setEnvVars: (input: unknown) => {
     setEnvSeen = input;
@@ -140,6 +179,12 @@ test("cloudflare maps create options before provider calls", async () => {
   try {
     expect(sandbox.id).toBe("input-id");
     expect(sandbox.cwd).toBe("/work");
+    expect(sandbox.capabilities).toMatchObject({
+      snapshotCreate: false,
+      snapshotDelete: false,
+      snapshotRestore: false,
+      snapshots: false,
+    });
     expect(getSeen).toEqual([
       binding,
       "input-id",
@@ -193,6 +238,143 @@ test("cloudflare lets native options opt into implicit sessions", async () => {
       },
     ]);
   } finally {
+    await sandbox.stop();
+  }
+});
+
+test("cloudflare enables configured R2 backup snapshots", async () => {
+  backupSeen = undefined;
+  restoreSeen = undefined;
+  const sandbox = await create({
+    adapter: cloudflare({
+      backups: {
+        compression: { format: "zstd", threads: 2 },
+        excludes: ["node_modules", "*.log"],
+        gitignore: true,
+        localBucket: true,
+        multipart: false,
+        ttl: 600,
+      },
+      binding,
+    }),
+    cwd: "/workspace/project",
+  });
+
+  try {
+    expect(sandbox.capabilities).toMatchObject({
+      snapshotCreate: "filesystem",
+      snapshotDelete: false,
+      snapshotRestore: "filesystem",
+      snapshots: "filesystem",
+    });
+    const snapshot = await sandbox.snapshots.create("before-upgrade");
+    expect(snapshot).toEqual({
+      id: "0d75bca9-6f81-43c9-8e34-252bde61336b",
+      name: "before-upgrade",
+    });
+    expect(backupSeen).toEqual({
+      compression: { format: "zstd", threads: 2 },
+      dir: "/workspace/project",
+      excludes: ["node_modules", "*.log"],
+      gitignore: true,
+      localBucket: true,
+      multipart: false,
+      name: "before-upgrade",
+      ttl: 600,
+    });
+
+    await sandbox.snapshots.restore(snapshot.id);
+    expect(restoreSeen).toEqual({
+      dir: "/workspace/project",
+      id: "0d75bca9-6f81-43c9-8e34-252bde61336b",
+      localBucket: true,
+    });
+    await expect(sandbox.snapshots.delete(snapshot.id)).rejects.toMatchObject({
+      code: "unsupported",
+      provider: "cloudflare",
+    });
+  } finally {
+    await sandbox.stop();
+  }
+});
+
+test("cloudflare rejects unsupported backup directories before provider calls", async () => {
+  for (const cwd of [
+    "workspace",
+    "/workspace/../tmp",
+    "/etc",
+    "/workspace/\0unsafe",
+  ]) {
+    getSeen = undefined;
+    await expect(
+      create({
+        adapter: cloudflare({ backups: {}, binding }),
+        cwd,
+      })
+    ).rejects.toMatchObject({
+      code: "configuration",
+      provider: "cloudflare",
+    });
+    expect(getSeen).toBeUndefined();
+  }
+});
+
+test("cloudflare surfaces unsuccessful backup restores", async () => {
+  restoreSeen = undefined;
+  restoreSuccess = false;
+  const sandbox = await create({
+    adapter: cloudflare({ backups: {}, binding }),
+  });
+
+  try {
+    await expect(
+      sandbox.snapshots.restore("0d75bca9-6f81-43c9-8e34-252bde61336b")
+    ).rejects.toMatchObject({
+      code: "provider",
+      provider: "cloudflare",
+    });
+    expect(restoreSeen).toEqual({
+      dir: "/workspace",
+      id: "0d75bca9-6f81-43c9-8e34-252bde61336b",
+    });
+  } finally {
+    restoreSuccess = true;
+    await sandbox.stop();
+  }
+});
+
+test("cloudflare normalizes backup configuration errors", async () => {
+  backupFailure = "INVALID_BACKUP_CONFIG";
+  const sandbox = await create({
+    adapter: cloudflare({ backups: {}, binding }),
+  });
+
+  try {
+    await expect(sandbox.snapshots.create()).rejects.toMatchObject({
+      code: "configuration",
+      provider: "cloudflare",
+    });
+  } finally {
+    backupFailure = undefined;
+    await sandbox.stop();
+  }
+});
+
+test("cloudflare normalizes missing backup errors", async () => {
+  restoreFailure = "BACKUP_NOT_FOUND";
+  const sandbox = await create({
+    adapter: cloudflare({ backups: {}, binding }),
+  });
+
+  try {
+    await expect(
+      sandbox.snapshots.restore("0d75bca9-6f81-43c9-8e34-252bde61336b")
+    ).rejects.toMatchObject({
+      code: "not_found",
+      provider: "cloudflare",
+    });
+  } finally {
+    restoreFailure = undefined;
     await sandbox.stop();
   }
 });
