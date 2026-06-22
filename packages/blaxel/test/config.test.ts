@@ -223,12 +223,18 @@ test("blaxel updates native sandbox lifecycle settings", async () => {
     await expect(updateTtl(raw, null)).resolves.toBe(raw);
     await expect(
       updateLifecycle("sandbox", {
-        autoStop: { maxDuration: "1h" },
+        expirationPolicies: [
+          { action: "delete", type: "ttl-max-age", value: "1h" },
+        ],
       })
     ).resolves.toBe(raw);
     expect(ttlSeen).toEqual({ name: "sandbox", ttl: null });
     expect(lifecycleSeen).toEqual({
-      lifecycle: { autoStop: { maxDuration: "1h" } },
+      lifecycle: {
+        expirationPolicies: [
+          { action: "delete", type: "ttl-max-age", value: "1h" },
+        ],
+      },
       name: "sandbox",
     });
   } finally {

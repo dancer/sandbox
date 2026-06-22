@@ -1526,7 +1526,8 @@ export declare const updateNetwork: (
 
 #### `updateTtl`
 
-replace or clear the ttl for a running Blaxel sandbox and return its refreshed native instance
+replace or request clearing the ttl for a running Blaxel sandbox and return its refreshed native instance
+workspace quota tiers can still enforce a ttl after a clear request
 
 @example
 await updateTtl(sandbox.raw, "1h")
@@ -1543,7 +1544,9 @@ export declare const updateTtl: (
 replace or clear the lifecycle configuration for a running Blaxel sandbox and return its refreshed native instance
 
 @example
-await updateLifecycle(sandbox.raw, { autoStop: { maxDuration: "1h" } })
+await updateLifecycle(sandbox.raw, {
+expirationPolicies: [{ action: "delete", type: "ttl-idle", value: "1h" }],
+})
 
 ```ts
 export declare const updateLifecycle: (

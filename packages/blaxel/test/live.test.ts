@@ -5,11 +5,17 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 
+import { SandboxInstance } from "@blaxel/core";
 import { create } from "@sandbox-sdk/core";
 
 import { record, workflowFixture } from "../../../test/fixture";
 import { workflow } from "../../../test/workflow";
-import { blaxel, updateNetwork } from "../src/index";
+import {
+  blaxel,
+  updateLifecycle,
+  updateNetwork,
+  updateTtl,
+} from "../src/index";
 
 const config = (): boolean =>
   existsSync(join(homedir(), ".blaxel", "config.yaml"));
@@ -21,10 +27,11 @@ const enabled = Boolean(
 );
 const live = enabled ? test : test.skip;
 
-const adapter = () =>
+const adapter = (externalId?: string) =>
   blaxel({
     apiKey: process.env.BL_API_KEY,
     clientCredentials: process.env.BL_CLIENT_CREDENTIALS,
+    ...(externalId === undefined ? {} : { externalId }),
     image: "blaxel/base-image:latest",
     name: `sandbox-sdk-${randomUUID()}`,
     region: process.env.BL_REGION,
@@ -175,6 +182,43 @@ live("blaxel updates a live sandbox network", async () => {
     expect(updated.spec.network?.proxy?.allowedDomains).toEqual([
       "example.com",
     ]);
+  } finally {
+    await sandbox.stop();
+  }
+});
+
+live("blaxel updates live expiration and external id", async () => {
+  const externalId = `sandbox-sdk-${randomUUID()}`;
+  const file = `/app/sandbox-sdk-lifecycle-${randomUUID()}.txt`;
+  const sandbox = await create({
+    adapter: adapter(externalId),
+    cwd: "/app",
+  });
+
+  try {
+    expect(sandbox.raw.metadata.externalId).toBe(externalId);
+    const found = await SandboxInstance.getByExternalId(externalId);
+    expect(found.metadata.name).toBe(sandbox.id);
+
+    await sandbox.files.write(file, "before update");
+
+    const ttl = await updateTtl(sandbox.raw, "30m");
+    expect(ttl.spec.runtime?.ttl).toBe("30m");
+
+    const cleared = await updateTtl(ttl, null);
+    expect(cleared.spec.runtime?.ttl).not.toBe("30m");
+
+    const lifecycle = {
+      expirationPolicies: [
+        { action: "delete" as const, type: "ttl-idle" as const, value: "1h" },
+      ],
+    };
+    const updated = await updateLifecycle(cleared, lifecycle);
+    expect(updated.spec.lifecycle?.expirationPolicies).toEqual(
+      lifecycle.expirationPolicies
+    );
+    await updated.wait({ interval: 1000, maxWait: 60_000 });
+    expect(await updated.fs.read(file)).toBe("before update");
   } finally {
     await sandbox.stop();
   }
