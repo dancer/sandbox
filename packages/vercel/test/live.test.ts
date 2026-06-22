@@ -99,6 +99,26 @@ live("vercel creates and starts from a live snapshot", async () => {
   }
 });
 
+live("vercel restores a live snapshot in place", async () => {
+  const file = path("restore");
+  const sandbox = await create({
+    adapter: adapter(),
+    cwd,
+  });
+  let snapshotId: string | undefined;
+
+  try {
+    await sandbox.files.write(file, "restored");
+    const snapshot = await sandbox.snapshots.create("sandbox-sdk-live");
+    snapshotId = snapshot.id;
+
+    await sandbox.snapshots.restore(snapshot.id);
+    await expect(sandbox.files.text(file)).resolves.toBe("restored");
+  } finally {
+    await Promise.all([cleanup(sandbox), cleanupSnapshot(snapshotId)]);
+  }
+});
+
 live("vercel exposes ports after creation", async () => {
   const sandbox = await create({
     adapter: adapter({ ports: [] }),

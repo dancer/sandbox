@@ -6,6 +6,7 @@ import { create } from "@sandbox-sdk/core";
 import { Sandbox as VercelSandbox } from "@vercel/sandbox";
 
 import { vercel } from "../src/index";
+import type { VercelFetch } from "../src/index";
 
 const restore = (name: string, value: string | undefined): void => {
   if (value === undefined) {
@@ -33,6 +34,8 @@ const encode = (value: unknown): string =>
 
 const jwt = (payload: Record<string, unknown>): string =>
   `${encode({ alg: "none", typ: "JWT" })}.${encode(payload)}.`;
+
+const customFetch: VercelFetch = () => Promise.resolve(new Response());
 
 test("vercel reports missing credentials before provider calls", async () => {
   const oidc = process.env.VERCEL_OIDC_TOKEN;
@@ -665,6 +668,101 @@ test("vercel rejects invalid declared ports before provider calls", async () => 
       code: "configuration",
       provider: "vercel",
     });
+    await expect(
+      create({
+        adapter: vercel({
+          projectId: "project",
+          teamId: "team",
+          token: "token",
+        }),
+        ports: [3000, 3001, 3002, 3003, 3004],
+      })
+    ).rejects.toMatchObject({
+      code: "configuration",
+      message: "Vercel sandboxes can expose up to 4 ports",
+      provider: "vercel",
+    });
+    expect(called).toBe(false);
+  } finally {
+    VercelSandbox.create = original;
+  }
+});
+
+test("vercel rejects too many merged tags before provider calls", async () => {
+  const original = VercelSandbox.create;
+  let called = false;
+
+  VercelSandbox.create = (() => {
+    called = true;
+    return Promise.reject(new Error("provider called"));
+  }) as typeof VercelSandbox.create;
+
+  try {
+    await expect(
+      create({
+        adapter: vercel({
+          projectId: "project",
+          tags: {
+            fifth: "5",
+            first: "1",
+            fourth: "4",
+            second: "2",
+            third: "3",
+          },
+          teamId: "team",
+          token: "token",
+        }),
+        metadata: { sixth: "6" },
+      })
+    ).rejects.toMatchObject({
+      code: "configuration",
+      message: "Vercel sandboxes support up to 5 tags",
+      provider: "vercel",
+    });
+    expect(called).toBe(false);
+  } finally {
+    VercelSandbox.create = original;
+  }
+});
+
+test("vercel rejects invalid resource counts before provider calls", async () => {
+  const original = VercelSandbox.create;
+  let called = false;
+
+  VercelSandbox.create = (() => {
+    called = true;
+    return Promise.reject(new Error("provider called"));
+  }) as typeof VercelSandbox.create;
+
+  try {
+    await expect(
+      create({
+        adapter: vercel({
+          projectId: "project",
+          resources: { vcpus: 0 },
+          teamId: "team",
+          token: "token",
+        }),
+      })
+    ).rejects.toMatchObject({
+      code: "configuration",
+      message: "resources.vcpus must be a positive integer",
+      provider: "vercel",
+    });
+    await expect(
+      create({
+        adapter: vercel({
+          projectId: "project",
+          resources: { vcpus: 1.5 },
+          teamId: "team",
+          token: "token",
+        }),
+      })
+    ).rejects.toMatchObject({
+      code: "configuration",
+      message: "resources.vcpus must be a positive integer",
+      provider: "vercel",
+    });
     expect(called).toBe(false);
   } finally {
     VercelSandbox.create = original;
@@ -795,6 +893,7 @@ test("vercel maps create options and updates dynamic ports", async () => {
     const sandbox = await create({
       adapter: vercel({
         env: { A: "1" },
+        fetch: customFetch,
         keepLastSnapshots: {
           count: 3,
           deleteEvicted: false,
@@ -807,6 +906,7 @@ test("vercel maps create options and updates dynamic ports", async () => {
         runtime: "node24",
         snapshotExpiration: 86_400_000,
         source: { type: "tarball", url: "https://example.com/app.tgz" },
+        tags: { default: "true" },
         teamId: "team",
         timeout: 123,
         token: "token",
@@ -814,7 +914,7 @@ test("vercel maps create options and updates dynamic ports", async () => {
       cwd: "/work",
       env: { B: "2" },
       metadata: { feature: "test" },
-      ports: [8080],
+      ports: [8080, 8080],
       snapshot: "snapshot",
       timeout: 456,
     });
@@ -823,6 +923,7 @@ test("vercel maps create options and updates dynamic ports", async () => {
     expect(sandbox.cwd).toBe("/work");
     expect(createSeen).toMatchObject({
       env: { A: "1", B: "2" },
+      fetch: customFetch,
       keepLastSnapshots: {
         count: 3,
         deleteEvicted: false,
@@ -834,7 +935,7 @@ test("vercel maps create options and updates dynamic ports", async () => {
       resources: { vcpus: 2 },
       runtime: "node24",
       source: { snapshotId: "snapshot", type: "snapshot" },
-      tags: { feature: "test" },
+      tags: { default: "true", feature: "test" },
       teamId: "team",
       timeout: 456,
       token: "token",

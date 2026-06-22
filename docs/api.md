@@ -2537,6 +2537,19 @@ native Vercel Sandbox object exposed as `sandbox.raw` for provider-specific cont
 export type VercelRaw = VercelSandbox;
 ```
 
+#### `VercelFetch`
+
+minimal Fetch API contract accepted by Vercel Sandbox requests
+
+accepts standard fetch implementations and test doubles without requiring runtime-specific static members
+
+```ts
+export type VercelFetch = (
+  input: RequestInfo | URL,
+  init?: RequestInit
+) => Promise<Response>;
+```
+
 #### `Source`
 
 source used to seed a new Vercel sandbox
@@ -2583,7 +2596,7 @@ each requested vcpu includes 2048 MB of memory, subject to Vercel plan limits
 
 ```ts
 export type Resources = Readonly<{
-  /** requested virtual cpu count */
+  /** requested positive integer virtual cpu count, subject to Vercel plan limits */
   vcpus: number;
 }>;
 ```
@@ -2645,7 +2658,7 @@ export type Vercel = Readonly<{
   /** default process environment for create, fork, and get-or-create; rejects VERCEL_OIDC_TOKEN and VERCEL_TOKEN */
   env?: Readonly<Record<string, string>>;
   /** custom fetch implementation passed to `@vercel/sandbox` */
-  fetch?: typeof fetch;
+  fetch?: VercelFetch;
   /** fork every new sandbox from an existing named Vercel sandbox */
   fork?: Fork | string;
   /** reuse a named sandbox when present and create it when absent */
@@ -2656,7 +2669,7 @@ export type Vercel = Readonly<{
   name?: string;
   /** outbound network policy for the sandbox, including optional Vercel transformations */
   networkPolicy?: NetworkPolicy;
-  /** initial public ports, with a Vercel maximum of four ports per sandbox */
+  /** initial public ports, with create input values taking precedence and a Vercel maximum of four unique ports per sandbox */
   ports?: readonly number[];
   /**
    * control automatic filesystem restoration between Vercel sandbox sessions
@@ -2678,7 +2691,7 @@ export type Vercel = Readonly<{
   sudo?: boolean;
   /** default expiration in milliseconds for snapshots created through the normalized API */
   snapshotExpiration?: number;
-  /** metadata tags attached to the Vercel sandbox */
+  /** metadata tags attached to the Vercel sandbox, merged with create metadata and limited to five unique keys */
   tags?: Readonly<Record<string, string>>;
   /** Vercel team id; falls back to VERCEL_TEAM_ID when using access-token auth */
   teamId?: string;

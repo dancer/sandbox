@@ -57,6 +57,16 @@ export type {
 /** native Vercel Sandbox object exposed as `sandbox.raw` for provider-specific controls */
 export type VercelRaw = VercelSandbox;
 
+/**
+ * minimal Fetch API contract accepted by Vercel Sandbox requests
+ *
+ * accepts standard fetch implementations and test doubles without requiring runtime-specific static members
+ */
+export type VercelFetch = (
+  input: RequestInfo | URL,
+  init?: RequestInit
+) => Promise<Response>;
+
 /** source used to seed a new Vercel sandbox */
 export type Source =
   | Readonly<{
@@ -96,7 +106,7 @@ export type Source =
  * each requested vcpu includes 2048 MB of memory, subject to Vercel plan limits
  */
 export type Resources = Readonly<{
-  /** requested virtual cpu count */
+  /** requested positive integer virtual cpu count, subject to Vercel plan limits */
   vcpus: number;
 }>;
 
@@ -140,7 +150,7 @@ export type Vercel = Readonly<{
   /** default process environment for create, fork, and get-or-create; rejects VERCEL_OIDC_TOKEN and VERCEL_TOKEN */
   env?: Readonly<Record<string, string>>;
   /** custom fetch implementation passed to `@vercel/sandbox` */
-  fetch?: typeof fetch;
+  fetch?: VercelFetch;
   /** fork every new sandbox from an existing named Vercel sandbox */
   fork?: Fork | string;
   /** reuse a named sandbox when present and create it when absent */
@@ -151,7 +161,7 @@ export type Vercel = Readonly<{
   name?: string;
   /** outbound network policy for the sandbox, including optional Vercel transformations */
   networkPolicy?: NetworkPolicy;
-  /** initial public ports, with a Vercel maximum of four ports per sandbox */
+  /** initial public ports, with create input values taking precedence and a Vercel maximum of four unique ports per sandbox */
   ports?: readonly number[];
   /**
    * control automatic filesystem restoration between Vercel sandbox sessions
@@ -173,7 +183,7 @@ export type Vercel = Readonly<{
   sudo?: boolean;
   /** default expiration in milliseconds for snapshots created through the normalized API */
   snapshotExpiration?: number;
-  /** metadata tags attached to the Vercel sandbox */
+  /** metadata tags attached to the Vercel sandbox, merged with create metadata and limited to five unique keys */
   tags?: Readonly<Record<string, string>>;
   /** Vercel team id; falls back to VERCEL_TEAM_ID when using access-token auth */
   teamId?: string;
@@ -195,9 +205,20 @@ type VercelGet = Parameters<typeof VercelSandbox.get>[0];
 
 type VercelSignal = NonNullable<Parameters<NativeCommand["kill"]>[0]>;
 
+type Authentication = Readonly<{
+  fetch?: VercelFetch;
+  projectId?: string;
+  teamId?: string;
+  token?: string;
+}>;
+
 const provider = "vercel";
 
 const secrets = ["VERCEL_OIDC_TOKEN", "VERCEL_TOKEN"] as const;
+
+const maximumPorts = 4;
+
+const maximumTags = 5;
 
 const capabilities: Capabilities = {
   environment: true,
@@ -362,13 +383,7 @@ const validate = (options: Vercel): void => {
   );
 };
 
-const auth = (
-  options: Vercel
-): Pick<VercelCreate, "fetch"> & {
-  projectId?: string;
-  teamId?: string;
-  token?: string;
-} => ({
+const auth = (options: Vercel): Authentication => ({
   ...(options.fetch === undefined ? {} : { fetch: options.fetch }),
   ...credentials(options),
 });
@@ -405,6 +420,50 @@ const retention = (
   return output;
 };
 
+const declaredPorts = (value: readonly number[]): readonly number[] => {
+  const output = [...new Set(value.map((entry) => port(entry, provider)))];
+  if (output.length > maximumPorts) {
+    throw sandboxError(
+      provider,
+      `Vercel sandboxes can expose up to ${maximumPorts} ports`,
+      "configuration"
+    );
+  }
+  return output;
+};
+
+const requestedResources = (
+  value: Resources | undefined
+): Resources | undefined => {
+  if (value === undefined) {
+    return;
+  }
+  if (!Number.isInteger(value.vcpus) || value.vcpus < 1) {
+    throw sandboxError(
+      provider,
+      "resources.vcpus must be a positive integer",
+      "configuration"
+    );
+  }
+  return value;
+};
+
+const sandboxTags = (
+  defaults: Readonly<Record<string, string>> | undefined,
+  metadata: Readonly<Record<string, string>> | undefined
+): Record<string, string> | undefined => {
+  const output = { ...defaults, ...metadata };
+  const count = Object.keys(output).length;
+  if (count > maximumTags) {
+    throw sandboxError(
+      provider,
+      `Vercel sandboxes support up to ${maximumTags} tags`,
+      "configuration"
+    );
+  }
+  return count === 0 ? undefined : output;
+};
+
 const createInput = (
   options: Vercel,
   input: NonNullable<Parameters<Adapter<Raw>["create"]>[0]>,
@@ -418,6 +477,8 @@ const createInput = (
     provider,
     "snapshotExpiration"
   );
+  const tags = sandboxTags(options.tags, input.metadata);
+  const resources = requestedResources(options.resources);
   assertSandboxEnv(environment);
   return {
     ...auth(options),
@@ -428,7 +489,7 @@ const createInput = (
     onResume: options.onResume,
     persistent: options.persistent,
     ports: [...ports],
-    resources: options.resources,
+    resources,
     runtime: options.runtime,
     signal: options.signal,
     snapshotExpiration,
@@ -436,10 +497,7 @@ const createInput = (
       snapshot === undefined
         ? options.source
         : { snapshotId: snapshot, type: "snapshot" },
-    tags:
-      input.metadata === undefined && options.tags === undefined
-        ? undefined
-        : { ...options.tags, ...input.metadata },
+    tags,
     ...(lifetime === undefined ? {} : { timeout: lifetime }),
   } as VercelCreate;
 };
@@ -889,9 +947,7 @@ export const vercel = (options: Vercel = {}): Adapter<Raw> => ({
   async create(input = {}) {
     validate(options);
     const cwd = input.cwd ?? options.cwd ?? "/vercel/sandbox";
-    const ports = (input.ports ?? options.ports ?? []).map((value) =>
-      port(value, provider)
-    );
+    const ports = declaredPorts(input.ports ?? options.ports ?? []);
     const raw = await createRaw(options, input, ports);
 
     if (input.id === undefined) {
