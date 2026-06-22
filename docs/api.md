@@ -880,18 +880,28 @@ export type Schema<Input = unknown> = Readonly<{
   jsonSchema: JsonSchema;
   /** standard schema contract used by supported AI SDK versions */
   "~standard": Readonly<{
+    /** schema adapter used by standard schema consumers */
     jsonSchema: Readonly<{
+      /** return the json schema for accepted input */
       input(): JsonSchema;
+      /** return the json schema for produced output */
       output(): JsonSchema;
     }>;
+    /** compile-time input and output types for standard schema consumers */
     types?: Readonly<{
+      /** input type accepted by the schema */
       input: Input;
+      /** output type produced by the schema */
       output: Input;
     }>;
+    /** validate unknown input and return the parsed value */
     validate(value: unknown): Readonly<{
+      /** validated schema value */
       value: Input;
     }>;
+    /** standard schema vendor identifier */
     vendor: "sandbox-sdk";
+    /** standard schema protocol version */
     version: 1;
   }>;
 }>;
@@ -1119,9 +1129,12 @@ export type SandboxProcess = Readonly<{
   /** terminate the process, safely allowing repeated calls */
   kill(): PromiseLike<void>;
   /** resolve after the process exits with its exit code */
-  wait(): PromiseLike<{
-    exitCode: number;
-  }>;
+  wait(): PromiseLike<
+    Readonly<{
+      /** process exit code */
+      exitCode: number;
+    }>
+  >;
 }>;
 ```
 
@@ -1408,11 +1421,16 @@ MCP tool result returned by generated Claude sandbox handlers
 
 ```ts
 export type ClaudeResult = Readonly<{
+  /** MCP text content returned to Claude Agent SDK */
   content: readonly Readonly<{
+    /** serialized sandbox result or error message */
     text: string;
+    /** MCP content kind */
     type: "text";
   }>[];
+  /** true when the tool execution failed */
   isError?: true;
+  /** structured result preserved alongside the text content */
   structuredContent?: Record<string, unknown>;
 }>;
 ```
@@ -1423,10 +1441,15 @@ generated Claude MCP tool exposed for advanced composition and inspection
 
 ```ts
 export type ClaudeTool = Readonly<{
+  /** MCP tool annotations that describe safety and side-effect behavior */
   annotations?: ToolAnnotations;
+  /** model-facing tool description */
   description: string;
+  /** execute the generated handler with MCP input */
   handler(input: unknown, extra: unknown): Promise<ClaudeResult>;
+  /** MCP input schema supplied to Claude Agent SDK */
   inputSchema: unknown;
+  /** MCP tool name without the server prefix */
   name: string;
 }>;
 ```
@@ -1781,6 +1804,7 @@ export type CloudflareBridgeRaw = Readonly<{
   /** create a bridge-managed sandbox and return its id */
   create(): Promise<
     Readonly<{
+      /** bridge sandbox id */
       id: string;
     }>
   >;
@@ -1821,6 +1845,7 @@ export type CloudflareBridgeRaw = Readonly<{
       options?: CloudflareBridgeSession
     ): Promise<
       Readonly<{
+        /** bridge execution session id */
         id: string;
       }>
     >;
@@ -2030,8 +2055,11 @@ use raw for provider-specific lifecycle updates, browser sessions, preview token
 
 ```ts
 export type CodeSandboxRaw = Readonly<{
+  /** native CodeSandbox client used to manage sandbox records */
   client: NativeClient;
+  /** native sandbox instance connected through the active session */
   sandbox: NativeSandbox;
+  /** native SDK instance used for provider-wide operations */
   sdk: NativeSdk;
 }>;
 ```
@@ -2419,6 +2447,7 @@ export type Source =
       depth?: number;
       /** git branch, tag, or commit to check out */
       revision?: string;
+      /** git source discriminator */
       type: "git";
       /** public git repository url */
       url: string;
@@ -2430,6 +2459,7 @@ export type Source =
       password: string;
       /** git branch, tag, or commit to check out */
       revision?: string;
+      /** git source discriminator */
       type: "git";
       /** private git repository url */
       url: string;
@@ -2437,6 +2467,7 @@ export type Source =
       username: string;
     }>
   | Readonly<{
+      /** tarball source discriminator */
       type: "tarball";
       /** tarball url used as the sandbox source */
       url: string;

@@ -6,6 +6,7 @@ import * as ts from "typescript";
 type Entry = Readonly<{
   docs: Documentation;
   kind: "classes" | "functions" | "types";
+  members: readonly string[];
   name: string;
   signature: string;
 }>;
@@ -152,6 +153,7 @@ const variable = (
   statement.declarationList.declarations.map((item) => ({
     docs: docs(source, statement),
     kind: "functions",
+    members: [],
     name: ts.isIdentifier(item.name) ? item.name.text : "value",
     signature: code(source, statement),
   }));
@@ -217,6 +219,79 @@ const parseFile = async (
   return entries.flat();
 };
 
+const members = (source: ts.SourceFile, statement: ts.Statement): string[] => {
+  const owner = name(statement);
+  const missing: string[] = [];
+  const inspect = (node: ts.TypeNode): void => {
+    if (ts.isArrayTypeNode(node)) {
+      inspect(node.elementType);
+      return;
+    }
+    if (ts.isParenthesizedTypeNode(node) || ts.isTypeOperatorNode(node)) {
+      inspect(node.type);
+      return;
+    }
+    if (ts.isTypeReferenceNode(node)) {
+      for (const item of node.typeArguments ?? []) {
+        inspect(item);
+      }
+      return;
+    }
+    if (ts.isUnionTypeNode(node) || ts.isIntersectionTypeNode(node)) {
+      for (const item of node.types) {
+        inspect(item);
+      }
+      return;
+    }
+    if (!ts.isTypeLiteralNode(node)) {
+      return;
+    }
+    for (const item of node.members) {
+      if (!ts.isPropertySignature(item) && !ts.isMethodSignature(item)) {
+        continue;
+      }
+      const value = item.name?.getText(source);
+      if (
+        value !== undefined &&
+        !value.startsWith("__") &&
+        docs(source, item).description === ""
+      ) {
+        missing.push(`${owner}.${value}`);
+      }
+      if (item.type !== undefined) {
+        inspect(item.type);
+      }
+    }
+  };
+
+  if (ts.isTypeAliasDeclaration(statement)) {
+    inspect(statement.type);
+  }
+  if (ts.isInterfaceDeclaration(statement)) {
+    inspect(
+      ts.factory.createTypeLiteralNode(
+        statement.members.filter(
+          (item): item is ts.TypeElement =>
+            ts.isPropertySignature(item) || ts.isMethodSignature(item)
+        )
+      )
+    );
+  }
+  if (ts.isClassDeclaration(statement)) {
+    for (const item of statement.members) {
+      if (
+        (ts.isPropertyDeclaration(item) || ts.isMethodDeclaration(item)) &&
+        item.name !== undefined &&
+        !item.name.getText(source).startsWith("__") &&
+        docs(source, item).description === ""
+      ) {
+        missing.push(`${owner}.${item.name.getText(source)}`);
+      }
+    }
+  }
+  return missing;
+};
+
 const entry = async (
   source: ts.SourceFile,
   statement: ts.Statement
@@ -256,6 +331,7 @@ const entry = async (
       {
         docs: docs(source, statement),
         kind: "classes",
+        members: members(source, statement),
         name: name(statement),
         signature: code(source, statement),
       },
@@ -270,6 +346,7 @@ const entry = async (
       {
         docs: docs(source, statement),
         kind: ts.isFunctionDeclaration(statement) ? "functions" : "types",
+        members: members(source, statement),
         name: name(statement),
         signature: code(source, statement),
       },
@@ -292,9 +369,10 @@ const title = (value: Entry["kind"]): string => {
 };
 
 const validate = (packageName: string, entries: readonly Entry[]): void => {
-  const missing = entries
-    .filter((item) => item.docs.description === "")
-    .map((item) => item.name);
+  const missing = entries.flatMap((item) => [
+    ...(item.docs.description === "" ? [item.name] : []),
+    ...item.members,
+  ]);
   if (missing.length > 0) {
     throw new Error(
       `public API JSDoc missing from ${packageName}: ${missing.join(", ")}`

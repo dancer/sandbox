@@ -20,16 +20,28 @@ export type Schema<Input = unknown> = Readonly<{
   jsonSchema: JsonSchema;
   /** standard schema contract used by supported AI SDK versions */
   "~standard": Readonly<{
+    /** schema adapter used by standard schema consumers */
     jsonSchema: Readonly<{
+      /** return the json schema for accepted input */
       input(): JsonSchema;
+      /** return the json schema for produced output */
       output(): JsonSchema;
     }>;
+    /** compile-time input and output types for standard schema consumers */
     types?: Readonly<{
+      /** input type accepted by the schema */
       input: Input;
+      /** output type produced by the schema */
       output: Input;
     }>;
-    validate(value: unknown): Readonly<{ value: Input }>;
+    /** validate unknown input and return the parsed value */
+    validate(value: unknown): Readonly<{
+      /** validated schema value */
+      value: Input;
+    }>;
+    /** standard schema vendor identifier */
     vendor: "sandbox-sdk";
+    /** standard schema protocol version */
     version: 1;
   }>;
 }>;
@@ -209,7 +221,12 @@ export type SandboxProcess = Readonly<{
   /** terminate the process, safely allowing repeated calls */
   kill(): PromiseLike<void>;
   /** resolve after the process exits with its exit code */
-  wait(): PromiseLike<{ exitCode: number }>;
+  wait(): PromiseLike<
+    Readonly<{
+      /** process exit code */
+      exitCode: number;
+    }>
+  >;
 }>;
 
 type Draft = Partial<{

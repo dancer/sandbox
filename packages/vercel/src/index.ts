@@ -64,6 +64,7 @@ export type Source =
       depth?: number;
       /** git branch, tag, or commit to check out */
       revision?: string;
+      /** git source discriminator */
       type: "git";
       /** public git repository url */
       url: string;
@@ -75,6 +76,7 @@ export type Source =
       password: string;
       /** git branch, tag, or commit to check out */
       revision?: string;
+      /** git source discriminator */
       type: "git";
       /** private git repository url */
       url: string;
@@ -82,6 +84,7 @@ export type Source =
       username: string;
     }>
   | Readonly<{
+      /** tarball source discriminator */
       type: "tarball";
       /** tarball url used as the sandbox source */
       url: string;

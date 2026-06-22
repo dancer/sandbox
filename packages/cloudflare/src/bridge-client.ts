@@ -36,7 +36,12 @@ export type CloudflareBridgeJson = Readonly<Record<string, unknown>>;
  */
 export type CloudflareBridgeRaw = Readonly<{
   /** create a bridge-managed sandbox and return its id */
-  create(): Promise<Readonly<{ id: string }>>;
+  create(): Promise<
+    Readonly<{
+      /** bridge sandbox id */
+      id: string;
+    }>
+  >;
   /** permanently delete a bridge-managed sandbox */
   delete(id: string): Promise<void>;
   /** fetch implementation used for bridge requests */
@@ -72,7 +77,12 @@ export type CloudflareBridgeRaw = Readonly<{
     create(
       id: string,
       options?: CloudflareBridgeSession
-    ): Promise<Readonly<{ id: string }>>;
+    ): Promise<
+      Readonly<{
+        /** bridge execution session id */
+        id: string;
+      }>
+    >;
     /** delete one execution session */
     delete(id: string, session: string): Promise<void>;
   }>;

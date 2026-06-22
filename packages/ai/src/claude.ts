@@ -15,17 +15,30 @@ export type ToolAnnotations = NonNullable<SdkMcpToolDefinition["annotations"]>;
 
 /** MCP tool result returned by generated Claude sandbox handlers */
 export type ClaudeResult = Readonly<{
-  content: readonly Readonly<{ text: string; type: "text" }>[];
+  /** MCP text content returned to Claude Agent SDK */
+  content: readonly Readonly<{
+    /** serialized sandbox result or error message */
+    text: string;
+    /** MCP content kind */
+    type: "text";
+  }>[];
+  /** true when the tool execution failed */
   isError?: true;
+  /** structured result preserved alongside the text content */
   structuredContent?: Record<string, unknown>;
 }>;
 
 /** generated Claude MCP tool exposed for advanced composition and inspection */
 export type ClaudeTool = Readonly<{
+  /** MCP tool annotations that describe safety and side-effect behavior */
   annotations?: ToolAnnotations;
+  /** model-facing tool description */
   description: string;
+  /** execute the generated handler with MCP input */
   handler(input: unknown, extra: unknown): Promise<ClaudeResult>;
+  /** MCP input schema supplied to Claude Agent SDK */
   inputSchema: unknown;
+  /** MCP tool name without the server prefix */
   name: string;
 }>;
 
