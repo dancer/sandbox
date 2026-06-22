@@ -301,12 +301,6 @@ export const ApiReference = () => (
           Options
         </Heading>
         <Accordion className="rounded-md border-dotted" type="multiple">
-          <PropAccordionItem name="host" status="optional" value="host">
-            <p>
-              Custom preview host when the adapter supports it. Use{" "}
-              <code>sandbox.raw</code> for provider-specific preview controls.
-            </p>
-          </PropAccordionItem>
           <PropAccordionItem name="protocol" status="optional" value="protocol">
             <p>
               Wire protocol: <code>"http"</code>, <code>"https"</code>, or{" "}

@@ -620,9 +620,9 @@ test("port validates normalized preview ports", () => {
 });
 
 test("portOptions rejects unsupported preview settings", () => {
-  expect(() =>
-    portOptions("test", { host: "preview.example.com" }, "https")
-  ).toThrow(SandboxError);
+  const host = { host: "preview.example.com" };
+
+  expect(() => portOptions("test", host, "https")).toThrow(SandboxError);
   expect(() => portOptions("test", { token: "private" }, "https")).toThrow(
     SandboxError
   );

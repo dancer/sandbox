@@ -113,10 +113,9 @@ test("local rejects invalid preview ports", async () => {
 
 test("local rejects unsupported preview options", async () => {
   const sandbox = await create({ adapter: local() });
+  const host = { host: "preview.example.com" };
 
-  await expect(
-    sandbox.ports.expose(3000, { host: "preview.example.com" })
-  ).rejects.toMatchObject({
+  await expect(sandbox.ports.expose(3000, host)).rejects.toMatchObject({
     code: "unsupported",
     provider: "local",
   });

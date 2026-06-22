@@ -405,6 +405,15 @@ test("codesandbox maps create options and normalized operations", async () => {
   });
   expect(portSeen).toBe(3000);
   expect(hostSeen).toEqual({ port: 3000, protocol: undefined });
+  const host = { host: "preview.example.com" };
+  portSeen = undefined;
+  hostSeen = undefined;
+  await expect(current.ports.expose(3000, host)).rejects.toMatchObject({
+    code: "unsupported",
+    provider: "codesandbox",
+  });
+  expect(portSeen).toBeUndefined();
+  expect(hostSeen).toBeUndefined();
   client.ports.waitForPort = (port: number) => {
     portSeen = port;
     return Promise.resolve({ host: "preview.csb.app", port });

@@ -305,17 +305,15 @@ export type Spawn = Exec;
 
 #### `Port`
 
-preview URL options for adapters that support host, protocol, or URL-token selection
+preview URL options supported by one or more adapters
 
-adapters reject unsupported values instead of silently ignoring them. use `sandbox.raw` for provider-specific preview controls
+adapters reject unsupported values instead of silently ignoring them. custom domains and other provider-specific preview controls stay on adapter options or `sandbox.raw`
 
 ```ts
 export type Port = Readonly<{
-  /** custom preview host when the provider supports it */
-  host?: string;
   /** preview protocol preference when the provider supports it */
   protocol?: "http" | "https" | "tcp";
-  /** stable preview token when the provider supports custom preview URLs */
+  /** provider-issued preview URL token when the adapter supports it */
   token?: string;
 }>;
 ```
@@ -689,7 +687,7 @@ export declare const port: (value: number, provider?: string) => number;
 
 validate options against an adapter's provider-derived preview URL
 
-call this before provider work when custom hosts and URL tokens are unavailable. pass the derived protocol when it is known
+call this before provider work when URL tokens or a chosen protocol are unavailable. custom domains stay on adapter-specific configuration or `sandbox.raw`
 
 ```ts
 export declare const portOptions: (
@@ -2464,7 +2462,11 @@ export type Modal = Readonly<
     cpu?: CreateParams["cpu"];
     /** modal sandbox cpu hard limit */
     cpuLimit?: CreateParams["cpuLimit"];
-    /** custom domain for Modal sandbox connections */
+    /**
+     * custom domain for Modal sandbox connections
+     *
+     * use a Modal-provisioned domain. it applies when the sandbox is created, not per `ports.expose()` call
+     */
     customDomain?: CreateParams["customDomain"];
     /** default working directory for normalized file and process operations */
     cwd?: string;

@@ -530,7 +530,7 @@ const createSandbox = (
   ports: {
     expose: async (value, options = {}) => {
       const target = port(value, provider);
-      if (options.host !== undefined) {
+      if ("host" in options) {
         unsupported(provider, "custom preview hosts");
       }
       const preview = await wrap(

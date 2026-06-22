@@ -663,9 +663,8 @@ test("cloudflareBridge keeps unsupported bridge features capability gated", asyn
   });
 
   try {
-    await expect(
-      sandbox.ports.expose(3456, { host: "preview.example.com" })
-    ).rejects.toMatchObject({
+    const host = { host: "preview.example.com" };
+    await expect(sandbox.ports.expose(3456, host)).rejects.toMatchObject({
       code: "unsupported",
       provider: "cloudflare",
     });

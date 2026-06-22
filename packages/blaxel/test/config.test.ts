@@ -429,10 +429,9 @@ test("blaxel maps create options and normalized operations", async () => {
     });
     expect(safeSeen).toEqual({ safe: true });
     expect(mkdirSeen).toContain("/work");
+    const host = { host: "preview.example.com" };
 
-    await expect(
-      sandbox.ports.expose(15_500, { host: "preview.example.com" })
-    ).rejects.toMatchObject({
+    await expect(sandbox.ports.expose(15_500, host)).rejects.toMatchObject({
       code: "unsupported",
       provider: "blaxel",
     });

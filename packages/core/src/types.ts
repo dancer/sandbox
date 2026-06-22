@@ -222,16 +222,14 @@ export type Exec = Readonly<{
 export type Spawn = Exec;
 
 /**
- * preview URL options for adapters that support host, protocol, or URL-token selection
+ * preview URL options supported by one or more adapters
  *
- * adapters reject unsupported values instead of silently ignoring them. use `sandbox.raw` for provider-specific preview controls
+ * adapters reject unsupported values instead of silently ignoring them. custom domains and other provider-specific preview controls stay on adapter options or `sandbox.raw`
  */
 export type Port = Readonly<{
-  /** custom preview host when the provider supports it */
-  host?: string;
   /** preview protocol preference when the provider supports it */
   protocol?: "http" | "https" | "tcp";
-  /** stable preview token when the provider supports custom preview URLs */
+  /** provider-issued preview URL token when the adapter supports it */
   token?: string;
 }>;
 

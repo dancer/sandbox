@@ -173,7 +173,7 @@ export const cloudflareBridge = (
       ports: {
         expose: async (value, portOptions = {}) => {
           if (
-            portOptions.host !== undefined ||
+            "host" in portOptions ||
             portOptions.token !== undefined ||
             (portOptions.protocol !== undefined &&
               portOptions.protocol !== "https")

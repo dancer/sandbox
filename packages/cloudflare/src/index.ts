@@ -573,7 +573,7 @@ const createSandbox = <ProviderRaw extends CloudflareRaw>(
     expose: async (value, input) => {
       const target = validatePort(value);
       if (
-        input?.host !== undefined ||
+        (input !== undefined && "host" in input) ||
         input?.token !== undefined ||
         (input?.protocol !== undefined && input.protocol !== "https")
       ) {

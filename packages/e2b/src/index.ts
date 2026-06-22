@@ -226,7 +226,10 @@ const rejectUnsupported = (feature: string): Promise<never> => {
 };
 
 const previewOptions = (options?: Port): void => {
-  if (options?.host !== undefined || options?.token !== undefined) {
+  if (
+    (options !== undefined && "host" in options) ||
+    options?.token !== undefined
+  ) {
     throw sandboxError(
       provider,
       "E2B previews only support the URL derived from the sandbox port. Use sandbox.raw for traffic access and provider-specific networking.",

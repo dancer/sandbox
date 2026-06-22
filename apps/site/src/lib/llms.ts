@@ -220,7 +220,6 @@ console.log(preview.url);
 
 \`ports.expose(port, options?)\` returns \`{ url, port }\`. Options are provider-specific and unsupported values throw at \`expose()\` time:
 
-- \`host\`: custom preview host when the adapter supports it.
 - \`protocol\`: \`"http"\`, \`"https"\`, or \`"tcp"\`. Consult the adapter docs for supported protocols; \`capabilities.ports\` describes port exposure mode, not protocol support.
 - \`token\`: provider-issued preview URL token when the adapter supports it. Use \`sandbox.raw\` for provider-specific preview controls.`;
 

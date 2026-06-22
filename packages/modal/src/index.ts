@@ -48,7 +48,11 @@ export type Modal = Readonly<
     cpu?: CreateParams["cpu"];
     /** modal sandbox cpu hard limit */
     cpuLimit?: CreateParams["cpuLimit"];
-    /** custom domain for Modal sandbox connections */
+    /**
+     * custom domain for Modal sandbox connections
+     *
+     * use a Modal-provisioned domain. it applies when the sandbox is created, not per `ports.expose()` call
+     */
     customDomain?: CreateParams["customDomain"];
     /** default working directory for normalized file and process operations */
     cwd?: string;

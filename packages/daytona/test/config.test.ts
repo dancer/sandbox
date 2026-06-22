@@ -278,9 +278,8 @@ test("daytona maps create options without running a real provider", async () => 
       code: "configuration",
       provider: "daytona",
     });
-    await expect(
-      sandbox.ports.expose(3000, { host: "preview.example.com" })
-    ).rejects.toMatchObject({
+    const host = { host: "preview.example.com" };
+    await expect(sandbox.ports.expose(3000, host)).rejects.toMatchObject({
       code: "unsupported",
       provider: "daytona",
     });

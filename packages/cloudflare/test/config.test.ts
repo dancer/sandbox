@@ -455,8 +455,9 @@ test("cloudflare rejects unsupported normalized tunnel options", async () => {
   });
 
   try {
+    const host = { host: "example.com" };
     for (const options of [
-      { host: "example.com" },
+      host,
       { protocol: "http" as const },
       { protocol: "tcp" as const },
       { token: "verify" },

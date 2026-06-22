@@ -274,9 +274,8 @@ test("e2b maps create and command options without running a real provider", asyn
       code: "configuration",
       provider: "e2b",
     });
-    await expect(
-      sandbox.ports.expose(3000, { host: "preview.example.com" })
-    ).rejects.toMatchObject({
+    const host = { host: "preview.example.com" };
+    await expect(sandbox.ports.expose(3000, host)).rejects.toMatchObject({
       code: "unsupported",
       provider: "e2b",
     });
