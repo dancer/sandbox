@@ -49,7 +49,7 @@ export type E2B = Readonly<{
   debug?: boolean;
   /** custom e2b domain used for api and preview hosts */
   domain?: string;
-  /** default environment variables applied when creating a sandbox */
+  /** default environment variables for new sandboxes; rejects E2B_API_KEY and E2B_ACCESS_TOKEN to prevent credential forwarding */
   env?: Readonly<Record<string, string>>;
   /** extra headers sent to the e2b api */
   headers?: Readonly<Record<string, string>>;
@@ -80,6 +80,8 @@ export type E2B = Readonly<{
 type Raw = E2BRaw;
 
 const provider = "e2b";
+
+const secrets = ["E2B_ACCESS_TOKEN", "E2B_API_KEY"] as const;
 
 const capabilities: Capabilities = {
   environment: true,
@@ -119,6 +121,18 @@ const env = (name: string): string | undefined =>
     }
   ).process?.env?.[name];
 
+const assertSandboxEnv = (value: Readonly<Record<string, string>>): void => {
+  const leaked = secrets.filter((name) => value[name] !== undefined);
+  if (leaked.length === 0) {
+    return;
+  }
+  throw sandboxError(
+    provider,
+    `E2B provider credentials cannot be forwarded into sandbox env: ${leaked.join(", ")}`,
+    "configuration"
+  );
+};
+
 const validate = (options: E2B): void => {
   if (
     first(options.apiKey, env("E2B_API_KEY")) !== undefined ||
@@ -157,12 +171,14 @@ const createOptions = (
   input: Parameters<Adapter<Raw>["create"]>[0] = {}
 ): SandboxOpts => {
   const timeout = duration(input.timeout ?? options.timeout, provider);
+  const envs = { ...options.env, ...input.env };
+  assertSandboxEnv(envs);
   return {
     ...connection(options),
     ...(options.allowInternetAccess === undefined
       ? {}
       : { allowInternetAccess: options.allowInternetAccess }),
-    envs: { ...options.env, ...input.env },
+    envs,
     ...(options.lifecycle === undefined
       ? {}
       : { lifecycle: options.lifecycle }),

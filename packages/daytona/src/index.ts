@@ -54,7 +54,7 @@ export type Daytona = DaytonaConfig &
     cwd?: string;
     /** delete the Daytona sandbox instead of stopping it during cleanup */
     deleteOnStop?: boolean;
-    /** default environment variables applied when creating a sandbox */
+    /** default environment variables for new sandboxes; rejects DAYTONA_API_KEY and DAYTONA_JWT_TOKEN to prevent credential forwarding */
     env?: Readonly<Record<string, string>>;
     /** make the Daytona sandbox ephemeral so stopping it deletes it */
     ephemeral?: boolean;
@@ -95,6 +95,8 @@ export type Daytona = DaytonaConfig &
 type Raw = DaytonaSandbox;
 
 const provider = "daytona";
+
+const secrets = ["DAYTONA_API_KEY", "DAYTONA_JWT_TOKEN"] as const;
 
 const capabilities: Capabilities = {
   environment: true,
@@ -137,6 +139,18 @@ const env = (name: string): string | undefined =>
       process?: { env?: Record<string, string | undefined> };
     }
   ).process?.env?.[name];
+
+const assertSandboxEnv = (value: Readonly<Record<string, string>>): void => {
+  const leaked = secrets.filter((name) => value[name] !== undefined);
+  if (leaked.length === 0) {
+    return;
+  }
+  throw sandboxError(
+    provider,
+    `Daytona provider credentials cannot be forwarded into sandbox env: ${leaked.join(", ")}`,
+    "configuration"
+  );
+};
 
 type Channel = "output" | "stderr" | "stdout";
 
@@ -282,34 +296,40 @@ const config = (options: Daytona): DaytonaConfig => {
 const baseParams = (
   options: Daytona,
   input: Parameters<Adapter<Raw>["create"]>[0] = {}
-): CreateSandboxBaseParams => ({
-  ...(options.autoArchiveInterval === undefined
-    ? {}
-    : { autoArchiveInterval: options.autoArchiveInterval }),
-  ...(options.autoDeleteInterval === undefined
-    ? {}
-    : { autoDeleteInterval: options.autoDeleteInterval }),
-  ...(options.autoStopInterval === undefined
-    ? {}
-    : { autoStopInterval: options.autoStopInterval }),
-  envVars: { ...options.env, ...input.env },
-  ...(options.ephemeral === undefined ? {} : { ephemeral: options.ephemeral }),
-  labels: { ...options.labels, ...input.metadata },
-  ...(options.language === undefined ? {} : { language: options.language }),
-  ...(options.linkedSandbox === undefined
-    ? {}
-    : { linkedSandbox: options.linkedSandbox }),
-  ...((input.id ?? options.name) ? { name: input.id ?? options.name } : {}),
-  ...(options.networkAllowList === undefined
-    ? {}
-    : { networkAllowList: options.networkAllowList }),
-  ...(options.networkBlockAll === undefined
-    ? {}
-    : { networkBlockAll: options.networkBlockAll }),
-  ...(options.public === undefined ? {} : { public: options.public }),
-  ...(options.user === undefined ? {} : { user: options.user }),
-  ...(options.volumes === undefined ? {} : { volumes: [...options.volumes] }),
-});
+): CreateSandboxBaseParams => {
+  const envVars = { ...options.env, ...input.env };
+  assertSandboxEnv(envVars);
+  return {
+    ...(options.autoArchiveInterval === undefined
+      ? {}
+      : { autoArchiveInterval: options.autoArchiveInterval }),
+    ...(options.autoDeleteInterval === undefined
+      ? {}
+      : { autoDeleteInterval: options.autoDeleteInterval }),
+    ...(options.autoStopInterval === undefined
+      ? {}
+      : { autoStopInterval: options.autoStopInterval }),
+    envVars,
+    ...(options.ephemeral === undefined
+      ? {}
+      : { ephemeral: options.ephemeral }),
+    labels: { ...options.labels, ...input.metadata },
+    ...(options.language === undefined ? {} : { language: options.language }),
+    ...(options.linkedSandbox === undefined
+      ? {}
+      : { linkedSandbox: options.linkedSandbox }),
+    ...((input.id ?? options.name) ? { name: input.id ?? options.name } : {}),
+    ...(options.networkAllowList === undefined
+      ? {}
+      : { networkAllowList: options.networkAllowList }),
+    ...(options.networkBlockAll === undefined
+      ? {}
+      : { networkBlockAll: options.networkBlockAll }),
+    ...(options.public === undefined ? {} : { public: options.public }),
+    ...(options.user === undefined ? {} : { user: options.user }),
+    ...(options.volumes === undefined ? {} : { volumes: [...options.volumes] }),
+  };
+};
 
 const params = (
   options: Daytona,
@@ -695,10 +715,12 @@ export const daytona = (options: Daytona = {}): Adapter<Raw> => ({
   async create(input = {}) {
     validate(options);
     const client = new DaytonaClient(config(options));
-    const createParams = params(options, input);
     const raw =
       input.id === undefined
-        ? await client.create(createParams, createSettings(options, input))
+        ? await client.create(
+            params(options, input),
+            createSettings(options, input)
+          )
         : await client.get(input.id);
     const cwd =
       input.cwd ?? options.cwd ?? (await raw.getWorkDir()) ?? "/home/daytona";

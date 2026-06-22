@@ -45,6 +45,8 @@ type Raw = SandboxInstance;
 
 const provider = "blaxel";
 
+const secrets = ["BL_API_KEY", "BL_CLIENT_CREDENTIALS"] as const;
+
 const capabilities: Capabilities = {
   environment: true,
   files: true,
@@ -137,6 +139,27 @@ const env = (name: string): string | undefined =>
       process?: { env?: Record<string, string | undefined> };
     }
   ).process?.env?.[name];
+
+const assertSandboxEnv = (value: Readonly<Record<string, string>>): void => {
+  const leaked = secrets.filter((name) => value[name] !== undefined);
+  if (leaked.length === 0) {
+    return;
+  }
+  throw sandboxError(
+    provider,
+    `Blaxel provider credentials cannot be forwarded into sandbox env: ${leaked.join(", ")}`,
+    "configuration"
+  );
+};
+
+const sandboxEnv = (
+  options: Blaxel,
+  input: Options
+): Readonly<Record<string, string>> => {
+  const value = { ...options.env, ...input.env };
+  assertSandboxEnv(value);
+  return value;
+};
 
 const credentials = (
   value: BlaxelConfig["clientCredentials"] | undefined
@@ -571,11 +594,11 @@ const sandboxName = (value: string | undefined): string | undefined => {
 const createOptions = (
   options: Blaxel,
   input: Options,
-  ports: readonly number[]
+  ports: readonly number[],
+  envs: Readonly<Record<string, string>>
 ): SandboxCreateConfiguration => {
   const name = sandboxName(input.id ?? options.name);
   const image = input.template ?? options.image;
-  const envs = { ...options.env, ...input.env };
   const labels = { ...options.labels, ...input.metadata };
   const timeout =
     options.ttl === undefined ? seconds(input.timeout) : undefined;
@@ -672,19 +695,23 @@ export const blaxel = (options: Blaxel = {}): Adapter<Raw> => ({
   capabilities,
   async create(input = {}) {
     validate(options);
-    configure(options);
     if (input.snapshot) {
       unsupported(provider, "snapshot source");
     }
+    const envs = input.id === undefined ? sandboxEnv(options, input) : {};
+    configure(options);
     const cwd = input.cwd ?? options.cwd ?? "/app";
     const ports = (input.ports ?? options.ports ?? []).map((value) =>
       port(value, provider)
     );
     const raw =
       input.id === undefined
-        ? await SandboxInstance.create(createOptions(options, input, ports), {
-            safe: options.safe ?? false,
-          })
+        ? await SandboxInstance.create(
+            createOptions(options, input, ports, envs),
+            {
+              safe: options.safe ?? false,
+            }
+          )
         : await SandboxInstance.get(input.id);
 
     await wrap(() => mkdir(raw, cwd), "mkdir");

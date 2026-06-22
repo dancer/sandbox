@@ -57,6 +57,38 @@ test("vercel reports missing credentials before provider calls", async () => {
   }
 });
 
+test("vercel rejects provider credentials in sandbox env before provider calls", async () => {
+  const original = VercelSandbox.create;
+  let called = false;
+
+  VercelSandbox.create = (() => {
+    called = true;
+    return Promise.reject(new Error("provider called"));
+  }) as typeof VercelSandbox.create;
+
+  try {
+    await expect(
+      create({
+        adapter: vercel({
+          env: { VERCEL_OIDC_TOKEN: "oidc" },
+          projectId: "project",
+          teamId: "team",
+          token: "token",
+        }),
+        env: { VERCEL_TOKEN: "token" },
+      })
+    ).rejects.toMatchObject({
+      code: "configuration",
+      message:
+        "Vercel provider credentials cannot be forwarded into sandbox env: VERCEL_OIDC_TOKEN, VERCEL_TOKEN",
+      provider: "vercel",
+    });
+    expect(called).toBe(false);
+  } finally {
+    VercelSandbox.create = original;
+  }
+});
+
 test("vercel passes oidc credentials directly to provider", async () => {
   const oidc = process.env.VERCEL_OIDC_TOKEN;
   const access = process.env.VERCEL_TOKEN;

@@ -91,6 +91,40 @@ test("daytona accepts api key config without target", async () => {
   }
 });
 
+test("daytona rejects provider credentials in sandbox env before provider calls", async () => {
+  type Client = InstanceType<typeof DaytonaClient>;
+  type Create = Client["create"];
+
+  const client = DaytonaClient.prototype as Client;
+  const original = client.create;
+  let called = false;
+
+  client.create = (() => {
+    called = true;
+    return Promise.reject(new Error("provider called"));
+  }) as Create;
+
+  try {
+    await expect(
+      create({
+        adapter: daytona({
+          apiKey: "key",
+          env: { DAYTONA_API_KEY: "key" },
+        }),
+        env: { DAYTONA_JWT_TOKEN: "jwt" },
+      })
+    ).rejects.toMatchObject({
+      code: "configuration",
+      message:
+        "Daytona provider credentials cannot be forwarded into sandbox env: DAYTONA_API_KEY, DAYTONA_JWT_TOKEN",
+      provider: "daytona",
+    });
+    expect(called).toBe(false);
+  } finally {
+    client.create = original;
+  }
+});
+
 test("daytona ignores empty explicit credentials when env credentials exist", async () => {
   type Client = InstanceType<typeof DaytonaClient>;
   type Create = Client["create"];

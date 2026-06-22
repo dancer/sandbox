@@ -51,7 +51,7 @@ export type Modal = Readonly<
     customDomain?: CreateParams["customDomain"];
     /** default working directory for normalized file and process operations */
     cwd?: string;
-    /** default environment variables applied when creating a sandbox */
+    /** default environment variables for new sandboxes; rejects MODAL_TOKEN_ID and MODAL_TOKEN_SECRET to prevent credential forwarding */
     env?: Readonly<Record<string, string>>;
     /** experimental Modal sandbox create options forwarded to the native sdk */
     experimentalOptions?: CreateParams["experimentalOptions"];
@@ -315,10 +315,8 @@ const set = <Key extends keyof ModalSdk.SandboxCreateParams>(
   }
 };
 
-const assertSandboxEnv = (
-  value: Readonly<Record<string, string>> | undefined
-): void => {
-  const leaked = secrets.filter((name) => value?.[name] !== undefined);
+const assertSandboxEnv = (value: Readonly<Record<string, string>>): void => {
+  const leaked = secrets.filter((name) => value[name] !== undefined);
   if (leaked.length === 0) {
     return;
   }
@@ -329,18 +327,28 @@ const assertSandboxEnv = (
   );
 };
 
+const sandboxEnv = (
+  options: Modal,
+  input: Parameters<Adapter<Raw>["create"]>[0]
+): Readonly<Record<string, string>> => {
+  const value = { ...options.env, ...input?.env };
+  assertSandboxEnv(value);
+  return value;
+};
+
 const createOptions = (
   options: Modal,
   input: Parameters<Adapter<Raw>["create"]>[0],
   cwd: string,
-  ports: readonly number[]
+  ports: readonly number[],
+  environment: Readonly<Record<string, string>>
 ): ModalSdk.SandboxCreateParams => {
   const value = duration(input?.timeout ?? options.timeout);
   const idle = duration(options.idleTimeout);
   const output: ModalSdk.SandboxCreateParams = {
     ...options.options,
     encryptedPorts: [...ports],
-    env: { ...options.env, ...input?.env },
+    env: environment,
     workdir: cwd,
   };
   set(output, "blockNetwork", options.blockNetwork);
@@ -370,7 +378,6 @@ const createOptions = (
   set(output, "unencryptedPorts", options.unencryptedPorts);
   set(output, "verbose", options.verbose);
   set(output, "volumes", options.volumes);
-  assertSandboxEnv(output.env);
   return output;
 };
 
@@ -625,17 +632,20 @@ export const modal = (options: Modal = {}): Adapter<Raw> => ({
       port(value, provider)
     );
     const snapshot = snapshotOptions(options);
-    const raw =
-      input.id === undefined
-        ? await modalClient.sandboxes.create(
-            await modalClient.apps.fromName(
-              options.app ?? "sandbox-sdk",
-              appParams(options)
-            ),
-            await image(modalClient, options, input.snapshot ?? input.template),
-            createOptions(options, input, cwd, ports)
-          )
-        : await modalClient.sandboxes.fromId(input.id);
+    let raw: Raw;
+    if (input.id === undefined) {
+      const environment = sandboxEnv(options, input);
+      raw = await modalClient.sandboxes.create(
+        await modalClient.apps.fromName(
+          options.app ?? "sandbox-sdk",
+          appParams(options)
+        ),
+        await image(modalClient, options, input.snapshot ?? input.template),
+        createOptions(options, input, cwd, ports, environment)
+      );
+    } else {
+      raw = await modalClient.sandboxes.fromId(input.id);
+    }
 
     if (input.id === undefined) {
       await raw.filesystem.makeDirectory(cwd, { createParents: true });

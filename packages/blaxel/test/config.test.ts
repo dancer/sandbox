@@ -83,6 +83,37 @@ test("blaxel ignores empty explicit credentials when env credentials exist", asy
   }
 });
 
+test("blaxel rejects provider credentials in sandbox env before provider calls", async () => {
+  const original = SandboxInstance.create;
+  let called = false;
+
+  SandboxInstance.create = (() => {
+    called = true;
+    return Promise.reject(new Error("provider called"));
+  }) as typeof SandboxInstance.create;
+
+  try {
+    await expect(
+      create({
+        adapter: blaxel({
+          apiKey: "key",
+          env: { BL_API_KEY: "key" },
+          workspace: "workspace",
+        }),
+        env: { BL_CLIENT_CREDENTIALS: "credentials" },
+      })
+    ).rejects.toMatchObject({
+      code: "configuration",
+      message:
+        "Blaxel provider credentials cannot be forwarded into sandbox env: BL_API_KEY, BL_CLIENT_CREDENTIALS",
+      provider: "blaxel",
+    });
+    expect(called).toBe(false);
+  } finally {
+    SandboxInstance.create = original;
+  }
+});
+
 test("blaxel rejects invalid declared ports before provider calls", async () => {
   const original = SandboxInstance.create;
   let called = false;

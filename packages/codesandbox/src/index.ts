@@ -51,7 +51,7 @@ export type CodeSandbox = Readonly<{
   cwd?: string;
   /** sandbox description shown in codesandbox */
   description?: string;
-  /** default environment variables injected into the sdk session */
+  /** default environment variables injected into the sdk session; rejects CSB_API_KEY to prevent credential forwarding */
   env?: Readonly<Record<string, string>>;
   /** country hint forwarded when starting the vm */
   ipcountry?: CreateOptions["ipcountry"];
@@ -78,6 +78,8 @@ export type CodeSandbox = Readonly<{
 }>;
 
 const provider = "codesandbox";
+
+const secrets = ["CSB_API_KEY"] as const;
 
 const capabilities: Capabilities = {
   environment: true,
@@ -117,6 +119,27 @@ const env = (name: string): string | undefined =>
       process?: { env?: Record<string, string | undefined> };
     }
   ).process?.env?.[name];
+
+const assertSandboxEnv = (value: Readonly<Record<string, string>>): void => {
+  const leaked = secrets.filter((name) => value[name] !== undefined);
+  if (leaked.length === 0) {
+    return;
+  }
+  throw sandboxError(
+    provider,
+    `CodeSandbox provider credentials cannot be forwarded into sandbox env: ${leaked.join(", ")}`,
+    "configuration"
+  );
+};
+
+const sandboxEnv = (
+  options: CodeSandbox,
+  input: NonNullable<Parameters<Adapter<CodeSandboxRaw>["create"]>[0]>
+): Readonly<Record<string, string>> => {
+  const value = { ...options.env, ...input.env };
+  assertSandboxEnv(value);
+  return value;
+};
 
 const validate = (options: CodeSandbox): void => {
   if (options.client) {
@@ -179,14 +202,11 @@ const createOptions = (
 
 const session = (
   options: CodeSandbox,
-  input: NonNullable<Parameters<Adapter<CodeSandboxRaw>["create"]>[0]>
-): SessionOptions => {
-  const values = { ...options.env, ...input.env };
-  return {
-    ...options.session,
-    ...(Object.keys(values).length === 0 ? {} : { env: values }),
-  };
-};
+  environment: Readonly<Record<string, string>>
+): SessionOptions => ({
+  ...options.session,
+  ...(Object.keys(environment).length === 0 ? {} : { env: environment }),
+});
 
 const failure = (error: unknown): Result | undefined => {
   if (
@@ -553,12 +573,13 @@ export const codesandbox = (
   async create(input = {}) {
     validate(options);
     validateSession(options);
+    const environment = sandboxEnv(options, input);
     const current = sdk(options);
     const sandbox =
       input.id === undefined
         ? await current.sandboxes.create(createOptions(options, input))
         : await current.sandboxes.resume(input.id);
-    const client = await sandbox.connect(session(options, input));
+    const client = await sandbox.connect(session(options, environment));
     const cwd = input.cwd ?? options.cwd ?? client.workspacePath;
     await wrap(() => mkdir(client, cwd), "mkdir");
     return createSandbox(

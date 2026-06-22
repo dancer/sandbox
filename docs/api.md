@@ -1470,7 +1470,7 @@ export type Blaxel = Readonly<
   > & {
     /** default working directory for normalized file and process operations */
     cwd?: string;
-    /** default environment variables applied when creating a sandbox */
+    /** default environment variables for new sandboxes; rejects BL_API_KEY and BL_CLIENT_CREDENTIALS to prevent credential forwarding */
     env?: Readonly<Record<string, string>>;
     /** application-owned identifier stored with the new Blaxel sandbox and usable with `SandboxInstance.getByExternalId` */
     externalId?: string;
@@ -1777,7 +1777,7 @@ export type Cloudflare = Readonly<{
    * @default "/workspace"
    */
   cwd?: string;
-  /** default environment variables written to new sandboxes, excluding Worker secrets */
+  /** default environment variables written to the selected sandbox; values are not filtered, so never pass Worker secrets */
   env?: Readonly<Record<string, string>>;
   /** stable sandbox id used when create input omits id */
   id?: string;
@@ -1858,7 +1858,7 @@ export type CodeSandbox = Readonly<{
   cwd?: string;
   /** sandbox description shown in codesandbox */
   description?: string;
-  /** default environment variables injected into the sdk session */
+  /** default environment variables injected into the sdk session; rejects CSB_API_KEY to prevent credential forwarding */
   env?: Readonly<Record<string, string>>;
   /** country hint forwarded when starting the vm */
   ipcountry?: CreateOptions["ipcountry"];
@@ -1928,7 +1928,7 @@ export type Daytona = DaytonaConfig &
     cwd?: string;
     /** delete the Daytona sandbox instead of stopping it during cleanup */
     deleteOnStop?: boolean;
-    /** default environment variables applied when creating a sandbox */
+    /** default environment variables for new sandboxes; rejects DAYTONA_API_KEY and DAYTONA_JWT_TOKEN to prevent credential forwarding */
     env?: Readonly<Record<string, string>>;
     /** make the Daytona sandbox ephemeral so stopping it deletes it */
     ephemeral?: boolean;
@@ -2011,7 +2011,7 @@ export type E2B = Readonly<{
   debug?: boolean;
   /** custom e2b domain used for api and preview hosts */
   domain?: string;
-  /** default environment variables applied when creating a sandbox */
+  /** default environment variables for new sandboxes; rejects E2B_API_KEY and E2B_ACCESS_TOKEN to prevent credential forwarding */
   env?: Readonly<Record<string, string>>;
   /** extra headers sent to the e2b api */
   headers?: Readonly<Record<string, string>>;
@@ -2093,7 +2093,7 @@ export type Modal = Readonly<
     customDomain?: CreateParams["customDomain"];
     /** default working directory for normalized file and process operations */
     cwd?: string;
-    /** default environment variables applied when creating a sandbox */
+    /** default environment variables for new sandboxes; rejects MODAL_TOKEN_ID and MODAL_TOKEN_SECRET to prevent credential forwarding */
     env?: Readonly<Record<string, string>>;
     /** experimental Modal sandbox create options forwarded to the native sdk */
     experimentalOptions?: CreateParams["experimentalOptions"];
@@ -2284,7 +2284,7 @@ authentication uses `VERCEL_OIDC_TOKEN` when present or `token`, `teamId`, and
 export type Vercel = Readonly<{
   /** default working directory for normalized file and process operations */
   cwd?: string;
-  /** default process environment for new sandboxes, excluding Vercel credentials */
+  /** default process environment for create, fork, and get-or-create; rejects VERCEL_OIDC_TOKEN and VERCEL_TOKEN */
   env?: Readonly<Record<string, string>>;
   /** custom fetch implementation passed to `@vercel/sandbox` */
   fetch?: typeof fetch;

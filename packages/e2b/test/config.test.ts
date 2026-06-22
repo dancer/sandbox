@@ -70,6 +70,36 @@ test("e2b ignores empty explicit credentials when env credentials exist", async 
   }
 });
 
+test("e2b rejects provider credentials in sandbox env before provider calls", async () => {
+  const original = E2BSandbox.create;
+  let called = false;
+
+  E2BSandbox.create = (() => {
+    called = true;
+    return Promise.reject(new Error("provider called"));
+  }) as typeof E2BSandbox.create;
+
+  try {
+    await expect(
+      create({
+        adapter: e2b({
+          apiKey: "key",
+          env: { E2B_ACCESS_TOKEN: "access" },
+        }),
+        env: { E2B_API_KEY: "key" },
+      })
+    ).rejects.toMatchObject({
+      code: "configuration",
+      message:
+        "E2B provider credentials cannot be forwarded into sandbox env: E2B_ACCESS_TOKEN, E2B_API_KEY",
+      provider: "e2b",
+    });
+    expect(called).toBe(false);
+  } finally {
+    E2BSandbox.create = original;
+  }
+});
+
 test("e2b rejects invalid request timeouts before provider calls", async () => {
   const original = E2BSandbox.create;
   let called = false;

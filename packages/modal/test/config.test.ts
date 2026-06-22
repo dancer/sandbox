@@ -109,7 +109,10 @@ test("modal rejects provider credentials in sandbox env before provider calls", 
   let called = false;
   const client = {
     apps: {
-      fromName: () => Promise.resolve({}),
+      fromName: () => {
+        called = true;
+        return Promise.resolve({});
+      },
     },
     images: {
       fromRegistry: () => ({}),
@@ -130,9 +133,14 @@ test("modal rejects provider credentials in sandbox env before provider calls", 
           MODAL_TOKEN_SECRET: "secret",
         },
       }),
+      env: {
+        MODAL_TOKEN_ID: "id",
+      },
     })
   ).rejects.toMatchObject({
     code: "configuration",
+    message:
+      "Modal provider credentials cannot be forwarded into sandbox env: MODAL_TOKEN_ID, MODAL_TOKEN_SECRET",
     provider: "modal",
   });
   expect(called).toBe(false);

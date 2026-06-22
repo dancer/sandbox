@@ -65,7 +65,7 @@ export type Cloudflare = Readonly<{
    * @default "/workspace"
    */
   cwd?: string;
-  /** default environment variables written to new sandboxes, excluding Worker secrets */
+  /** default environment variables written to the selected sandbox; values are not filtered, so never pass Worker secrets */
   env?: Readonly<Record<string, string>>;
   /** stable sandbox id used when create input omits id */
   id?: string;

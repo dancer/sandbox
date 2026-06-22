@@ -20,7 +20,7 @@ export type Blaxel = Readonly<
   > & {
     /** default working directory for normalized file and process operations */
     cwd?: string;
-    /** default environment variables applied when creating a sandbox */
+    /** default environment variables for new sandboxes; rejects BL_API_KEY and BL_CLIENT_CREDENTIALS to prevent credential forwarding */
     env?: Readonly<Record<string, string>>;
     /** application-owned identifier stored with the new Blaxel sandbox and usable with `SandboxInstance.getByExternalId` */
     externalId?: string;

@@ -134,7 +134,7 @@ export type Fork = Readonly<{
 export type Vercel = Readonly<{
   /** default working directory for normalized file and process operations */
   cwd?: string;
-  /** default process environment for new sandboxes, excluding Vercel credentials */
+  /** default process environment for create, fork, and get-or-create; rejects VERCEL_OIDC_TOKEN and VERCEL_TOKEN */
   env?: Readonly<Record<string, string>>;
   /** custom fetch implementation passed to `@vercel/sandbox` */
   fetch?: typeof fetch;
@@ -190,6 +190,8 @@ type VercelSignal = NonNullable<Parameters<NativeCommand["kill"]>[0]>;
 
 const provider = "vercel";
 
+const secrets = ["VERCEL_OIDC_TOKEN", "VERCEL_TOKEN"] as const;
+
 const capabilities: Capabilities = {
   environment: true,
   files: true,
@@ -226,6 +228,18 @@ const env = (name: string): string | undefined =>
       process?: { env?: Record<string, string | undefined> };
     }
   ).process?.env?.[name];
+
+const assertSandboxEnv = (value: Readonly<Record<string, string>>): void => {
+  const leaked = secrets.filter((name) => value[name] !== undefined);
+  if (leaked.length === 0) {
+    return;
+  }
+  throw sandboxError(
+    provider,
+    `Vercel provider credentials cannot be forwarded into sandbox env: ${leaked.join(", ")}`,
+    "configuration"
+  );
+};
 
 const decode = (value: string): unknown => {
   const base64 = value.replaceAll("-", "+").replaceAll("_", "/");
@@ -390,15 +404,17 @@ const createInput = (
   ports: readonly number[]
 ): VercelCreate => {
   const snapshot = input.snapshot ?? input.template;
+  const environment = { ...options.env, ...input.env };
   const lifetime = duration(input.timeout ?? options.timeout, provider);
   const snapshotExpiration = duration(
     options.snapshotExpiration,
     provider,
     "snapshotExpiration"
   );
+  assertSandboxEnv(environment);
   return {
     ...auth(options),
-    env: { ...options.env, ...input.env },
+    env: environment,
     keepLastSnapshots: retention(options.keepLastSnapshots),
     name: input.id ?? options.name,
     networkPolicy: options.networkPolicy,

@@ -57,6 +57,41 @@ test("codesandbox accepts csb api key fallback", async () => {
   }
 });
 
+test("codesandbox rejects provider credentials in sandbox env before provider calls", async () => {
+  let called = false;
+  const sdk = {
+    sandboxes: {
+      create: () => {
+        called = true;
+        return Promise.reject(new Error("provider called"));
+      },
+    },
+  };
+
+  const error = {
+    code: "configuration",
+    message:
+      "CodeSandbox provider credentials cannot be forwarded into sandbox env: CSB_API_KEY",
+    provider: "codesandbox",
+  };
+
+  await expect(
+    create({
+      adapter: codesandbox({
+        client: sdk,
+        env: { CSB_API_KEY: "key" },
+      }),
+    })
+  ).rejects.toMatchObject(error);
+  await expect(
+    create({
+      adapter: codesandbox({ client: sdk }),
+      env: { CSB_API_KEY: "key" },
+    })
+  ).rejects.toMatchObject(error);
+  expect(called).toBe(false);
+});
+
 test("codesandbox rejects invalid create timeouts before provider calls", async () => {
   let called = false;
   const sdk = {
