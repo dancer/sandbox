@@ -5,6 +5,8 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 
 import { create } from "@sandbox-sdk/core";
+import type { Snapshot } from "@sandbox-sdk/core";
+import * as ModalSdk from "modal";
 
 import { record, sourceFixture, workflowFixture } from "../../../test/fixture";
 import type { Source } from "../../../test/fixture";
@@ -21,9 +23,16 @@ const enabled = Boolean(
 );
 const live = enabled ? test : test.skip;
 
-const adapter = () =>
+const client = () =>
+  new ModalSdk.ModalClient({
+    tokenId: process.env.MODAL_TOKEN_ID,
+    tokenSecret: process.env.MODAL_TOKEN_SECRET,
+  });
+
+const adapter = (modalClient?: ModalSdk.ModalClient) =>
   modal({
     app: "sandbox-sdk-live",
+    client: modalClient,
     image: "alpine:3.21",
     ports: [3000],
     snapshotTimeout: 120_000,
@@ -61,20 +70,22 @@ live("modal runs a live sandbox workflow", async () => {
 live("modal creates and starts from a live snapshot", async () => {
   const cwd = "/app";
   const file = `${cwd}/sandbox-sdk-${randomUUID()}.txt`;
+  const modalClient = client();
   const sandbox = await create({
-    adapter: adapter(),
+    adapter: adapter(modalClient),
     cwd,
   });
   let derived: typeof sandbox | undefined;
+  let snapshot: Snapshot | undefined;
 
   try {
     await sandbox.files.write(file, "ready");
 
-    const snapshot = await sandbox.snapshots.create();
+    snapshot = await sandbox.snapshots.create();
     expect(snapshot.id).toBeTruthy();
 
     derived = await create({
-      adapter: adapter(),
+      adapter: adapter(modalClient),
       cwd,
       snapshot: snapshot.id,
     });
@@ -103,6 +114,9 @@ live("modal creates and starts from a live snapshot", async () => {
     );
   } finally {
     await Promise.all([derived?.stop(), sandbox.stop()]);
+    if (snapshot !== undefined) {
+      await modalClient.images.delete(snapshot.id);
+    }
   }
 });
 
