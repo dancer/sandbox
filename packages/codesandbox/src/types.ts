@@ -241,6 +241,8 @@ export type Raw = Readonly<{
  * native CodeSandbox sdk, sandbox, and connected session exposed as `sandbox.raw`
  *
  * use raw for provider-specific lifecycle updates, browser sessions, preview token management, terminals, interpreters, tasks, setup state, and file watching
+ *
+ * use `clientOptions` to customize transport without losing native raw types
  */
 export type CodeSandboxRaw = Readonly<{
   /** native CodeSandbox client used to manage sandbox records */

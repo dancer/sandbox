@@ -31,20 +31,22 @@ import type {
   CodeSandboxRaw,
   CreateOptions,
   LocalCreate,
-  Raw,
   SandboxClient,
-  Sdk,
   SessionOptions,
 } from "./types.js";
 
 export type { CodeSandboxRaw } from "./types.js";
 
-/** codesandbox adapter configuration */
+/**
+ * CodeSandbox adapter configuration
+ *
+ * pass a native CodeSandbox client when reusing an existing client or custom fetch transport
+ */
 export type CodeSandbox = Readonly<{
   /** wakeup behavior for hibernated CodeSandbox VMs */
   automaticWakeupConfig?: CreateOptions["automaticWakeupConfig"];
-  /** existing codesandbox sdk client for tests or custom transport */
-  client?: Sdk;
+  /** existing native CodeSandbox sdk client for dependency injection or custom fetch transport */
+  client?: CodeSandboxRaw["sdk"];
   /** options forwarded to the codesandbox sdk constructor */
   clientOptions?: ClientOptions;
   /** default working directory for normalized file and process operations */
@@ -174,9 +176,9 @@ const validateSession = (options: CodeSandbox): void => {
   }
 };
 
-const sdk = (options: CodeSandbox): Sdk =>
+const sdk = (options: CodeSandbox): CodeSandboxRaw["sdk"] =>
   options.client ??
-  (new CodeSandboxClient(options.token, options.clientOptions ?? {}) as Sdk);
+  new CodeSandboxClient(options.token, options.clientOptions ?? {});
 
 const createOptions = (
   options: CodeSandbox,
@@ -266,7 +268,7 @@ const url = (host: string): string =>
     : `https://${host}`;
 
 const previewUrl = (
-  raw: Raw,
+  raw: CodeSandboxRaw,
   value: number,
   protocol: NonNullable<Port["protocol"]> | undefined,
   token: string | undefined,
@@ -495,7 +497,7 @@ const wrap = async <Value>(
 };
 
 const createSandbox = (
-  raw: Raw,
+  raw: CodeSandboxRaw,
   cwd: string,
   stop: CodeSandbox["stop"]
 ): Sandbox<CodeSandboxRaw> => ({
@@ -557,7 +559,7 @@ const createSandbox = (
       spawn(raw.client, cwd, script, options),
   },
   provider,
-  raw: raw as unknown as CodeSandboxRaw,
+  raw,
   snapshots: {
     create: async (name) => {
       await raw.sdk.sandboxes.hibernate(raw.sandbox.id);

@@ -2057,6 +2057,8 @@ native CodeSandbox sdk, sandbox, and connected session exposed as `sandbox.raw`
 
 use raw for provider-specific lifecycle updates, browser sessions, preview token management, terminals, interpreters, tasks, setup state, and file watching
 
+use `clientOptions` to customize transport without losing native raw types
+
 ```ts
 export type CodeSandboxRaw = Readonly<{
   /** native CodeSandbox client used to manage sandbox records */
@@ -2070,14 +2072,16 @@ export type CodeSandboxRaw = Readonly<{
 
 #### `CodeSandbox`
 
-codesandbox adapter configuration
+CodeSandbox adapter configuration
+
+pass a native CodeSandbox client when reusing an existing client or custom fetch transport
 
 ```ts
 export type CodeSandbox = Readonly<{
   /** wakeup behavior for hibernated CodeSandbox VMs */
   automaticWakeupConfig?: CreateOptions["automaticWakeupConfig"];
-  /** existing codesandbox sdk client for tests or custom transport */
-  client?: Sdk;
+  /** existing native CodeSandbox sdk client for dependency injection or custom fetch transport */
+  client?: CodeSandboxRaw["sdk"];
   /** options forwarded to the codesandbox sdk constructor */
   clientOptions?: ClientOptions;
   /** default working directory for normalized file and process operations */
