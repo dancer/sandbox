@@ -197,6 +197,37 @@ test("modal rejects invalid snapshot retention before provider calls", async () 
   expect(called).toBe(false);
 });
 
+test("modal cleans up a created sandbox when workspace setup fails", async () => {
+  let terminated = false;
+  const raw = {
+    filesystem: {
+      makeDirectory: () => Promise.reject(new Error("mkdir failed")),
+    },
+    terminate: () => {
+      terminated = true;
+      return Promise.reject(new Error("cleanup failed"));
+    },
+  } as unknown as ModalSdk.Sandbox;
+  const client = {
+    apps: {
+      fromName: () => Promise.resolve({}),
+    },
+    images: {
+      fromRegistry: () => ({}),
+    },
+    sandboxes: {
+      create: () => Promise.resolve(raw),
+    },
+  } as unknown as ModalSdk.ModalClient;
+
+  await expect(
+    create({
+      adapter: modal({ client }),
+    })
+  ).rejects.toThrow("mkdir failed");
+  expect(terminated).toBe(true);
+});
+
 test("modal resolves named images explicitly", async () => {
   let namedSeen: unknown;
   const raw = {

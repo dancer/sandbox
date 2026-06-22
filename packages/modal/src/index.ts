@@ -678,10 +678,15 @@ export const modal = (options: Modal = {}): Adapter<Raw> => ({
     }
 
     if (input.id === undefined) {
-      await raw.filesystem.makeDirectory(cwd, { createParents: true });
-      const tags = { ...options.tags, ...input.metadata };
-      if (Object.keys(tags).length > 0) {
-        await raw.setTags(tags);
+      try {
+        await raw.filesystem.makeDirectory(cwd, { createParents: true });
+        const tags = { ...options.tags, ...input.metadata };
+        if (Object.keys(tags).length > 0) {
+          await raw.setTags(tags);
+        }
+      } catch (error) {
+        await raw.terminate().catch(() => null);
+        throw error;
       }
     }
 
