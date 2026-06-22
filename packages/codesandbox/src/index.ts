@@ -57,17 +57,25 @@ export type CodeSandbox = Readonly<{
   ipcountry?: CreateOptions["ipcountry"];
   /** custom sandbox path inside the codesandbox workspace */
   path?: string;
-  /** sandbox preview privacy */
+  /** sandbox preview privacy for newly created sandboxes */
   privacy?: CreateOptions["privacy"];
   /** sdk session options forwarded to `sandbox.connect`; custom ids must be 20 characters or less */
   session?: Omit<SessionOptions, "env">;
-  /** stop behavior used by `sandbox.stop` */
+  /**
+   * lifecycle action used by `sandbox.stop`
+   *
+   * hibernate keeps a memory snapshot for resume. shutdown starts from a clean boot on the next resume, while delete permanently removes the sandbox
+   */
   stop?: "delete" | "disconnect" | "hibernate" | "shutdown";
   /** codesandbox tags added when creating a sandbox */
   tags?: readonly string[];
-  /** template sandbox id used for new sandboxes */
+  /**
+   * template sandbox id used for new sandboxes
+   *
+   * create input template or snapshot overrides this default and creates a new sandbox instead of resuming one
+   */
   template?: string;
-  /** default hibernation timeout in milliseconds for new sandboxes */
+  /** default idle hibernation timeout in milliseconds for new sandboxes, rounded up to a whole second */
   timeout?: number;
   /** sandbox title shown in codesandbox */
   title?: string;
@@ -245,6 +253,12 @@ const rejectUnsupported = (feature: string): Promise<never> => {
 
 const inactive = (error: unknown): boolean =>
   error instanceof Error && error.message.includes("is not active");
+
+const missingPathError =
+  /^(?:(?:ENOENT|null): (?:file|path) not found|\d+: Os \{ code: 2, kind: NotFound, message: "No such file or directory" \})$/iu;
+
+const missing = (error: unknown): boolean =>
+  error instanceof Error && missingPathError.test(error.message);
 
 const url = (host: string): string =>
   host.startsWith("http://") || host.startsWith("https://")
@@ -444,8 +458,11 @@ const exists = async (
   try {
     await client.fs.stat(path);
     return true;
-  } catch {
-    return false;
+  } catch (error) {
+    if (missing(error)) {
+      return false;
+    }
+    throw error;
   }
 };
 
@@ -565,7 +582,11 @@ const createSandbox = (
   },
 });
 
-/** create a codesandbox adapter with normalized sandbox operations */
+/**
+ * create a CodeSandbox adapter with normalized sandbox operations
+ *
+ * create with id resumes an existing sandbox. create with template or snapshot starts a new sandbox from an existing sandbox id. normalized snapshot creation hibernates the source and returns its id for a later create
+ */
 export const codesandbox = (
   options: CodeSandbox = {}
 ): Adapter<CodeSandboxRaw> => ({

@@ -237,7 +237,11 @@ export type Raw = Readonly<{
   sdk: Sdk;
 }>;
 
-/** native CodeSandbox sdk, sandbox, and connected session exposed as `sandbox.raw` */
+/**
+ * native CodeSandbox sdk, sandbox, and connected session exposed as `sandbox.raw`
+ *
+ * use raw for provider-specific lifecycle updates, browser sessions, preview token management, terminals, interpreters, tasks, setup state, and file watching
+ */
 export type CodeSandboxRaw = Readonly<{
   client: NativeClient;
   sandbox: NativeSandbox;

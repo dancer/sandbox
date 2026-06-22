@@ -3,6 +3,7 @@ import { expect, test } from "bun:test";
 import { create } from "@sandbox-sdk/core";
 
 import { codesandbox } from "../src/index";
+import type { SandboxClient, Sdk } from "../src/types";
 
 const commandError = (exitCode: number, output: string): Error =>
   Object.assign(new Error("command failed"), { exitCode, output });
@@ -140,6 +141,42 @@ test("codesandbox rejects invalid session ids before provider calls", async () =
     provider: "codesandbox",
   });
   expect(called).toBe(false);
+});
+
+test("codesandbox only treats documented missing paths as absent", async () => {
+  const errors = new Map([
+    ["/project/sandbox/missing.txt", "null: File not found"],
+    [
+      "/project/sandbox/missing-os.txt",
+      '2: Os { code: 2, kind: NotFound, message: "No such file or directory" }',
+    ],
+  ]);
+  const client = {
+    fs: {
+      mkdir: () => Promise.resolve(),
+      stat: (path: string) =>
+        Promise.reject(new Error(errors.get(path) ?? "session unavailable")),
+    },
+    workspacePath: "/project/sandbox",
+  } as unknown as SandboxClient;
+  const sandbox = {
+    connect: () => Promise.resolve(client),
+    id: "sandbox",
+  };
+  const sdk = {
+    sandboxes: {
+      create: () => Promise.resolve(sandbox),
+    },
+  } as unknown as Sdk;
+
+  const current = await create({ adapter: codesandbox({ client: sdk }) });
+
+  await expect(current.files.exists("missing.txt")).resolves.toBe(false);
+  await expect(current.files.exists("missing-os.txt")).resolves.toBe(false);
+  await expect(current.files.exists("unavailable.txt")).rejects.toMatchObject({
+    code: "provider",
+    provider: "codesandbox",
+  });
 });
 
 test("codesandbox maps create options and normalized operations", async () => {
