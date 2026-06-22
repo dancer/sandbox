@@ -9,6 +9,7 @@ import {
   command,
   duration,
   port,
+  preview,
   sandboxError,
   sandboxPath,
   result,
@@ -591,10 +592,7 @@ const createSandbox = <ProviderRaw extends CloudflareRaw>(
           ),
         "port exposure"
       );
-      return {
-        port: target,
-        url: output.url,
-      };
+      return preview(output.url, target, { provider });
     },
   },
   process: {

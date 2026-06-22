@@ -6,6 +6,7 @@ import { create } from "@sandbox-sdk/core";
 
 import { record, sourceFixture, workflowFixture } from "../../../test/fixture";
 import type { Source } from "../../../test/fixture";
+import { requestPreview } from "../../../test/preview";
 import { workflow } from "../../../test/workflow";
 import { e2b } from "../src/index";
 
@@ -156,6 +157,38 @@ live("e2b exposes advertised raw capabilities", async () => {
     await sandbox.stop();
   }
 });
+
+live(
+  "e2b requests restricted live previews through the normalized api",
+  async () => {
+    const cwd = `/tmp/sandbox-sdk-preview-${randomUUID()}`;
+    const sandbox = await create({
+      adapter: e2b({
+        network: { allowPublicTraffic: false },
+        timeout: 300_000,
+      }),
+      cwd,
+    });
+    let server:
+      | Awaited<ReturnType<typeof sandbox.process.spawnShell>>
+      | undefined;
+
+    try {
+      server = await sandbox.process.spawnShell(
+        "node -e \"require('node:http').createServer((_request,response)=>response.end('e2b-preview')).listen(3000,'0.0.0.0')\"",
+        { cwd }
+      );
+      const preview = await sandbox.ports.expose(3000);
+
+      const response = await requestPreview(preview, "/health");
+      expect(await response.text()).toBe("e2b-preview");
+      expect(Object.keys(preview)).toEqual(["port", "url"]);
+    } finally {
+      await server?.kill().catch(() => {});
+      await sandbox.stop();
+    }
+  }
+);
 
 live("e2b preserves process state in a live snapshot", async () => {
   const cwd = `/tmp/sandbox-sdk-${randomUUID()}`;

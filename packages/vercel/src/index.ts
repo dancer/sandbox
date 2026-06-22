@@ -8,6 +8,7 @@ import {
   duration,
   port,
   portOptions,
+  preview,
   result,
   sandboxError,
   sandboxPath,
@@ -888,14 +889,14 @@ const createSandbox = (
           await wrap(() => raw.update({ ports: next }), "port update");
           exposed.add(target);
         }
-        const preview = await wrap(
+        const endpoint = await wrap(
           () => ({
             port: target,
             url: raw.domain(target),
           }),
           "port exposure"
         );
-        return preview;
+        return preview(endpoint.url, endpoint.port, { provider });
       },
     },
     process: {

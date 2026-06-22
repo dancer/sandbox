@@ -13,6 +13,7 @@ import {
   isSandboxError,
   port,
   portOptions,
+  preview,
   rawCapabilityMode,
   requireRawCapability,
   requireCapability,
@@ -53,7 +54,7 @@ const sandbox = (capabilities: Sandbox["capabilities"]): Sandbox => ({
   id: "test",
   ports: {
     expose: (value) =>
-      Promise.resolve({ port: value, url: `http://localhost:${value}` }),
+      Promise.resolve(preview(`http://localhost:${value}`, value)),
   },
   process: {
     exec: () =>
@@ -500,10 +501,12 @@ test("fromSandboxRuntime preserves ports snapshots raw and stop", async () => {
   } satisfies SandboxRuntime<typeof raw>);
 
   expect(current.raw).toBe(raw);
-  expect(await current.ports.expose(3000)).toEqual({
+  const endpoint = await current.ports.expose(3000);
+  expect(endpoint).toMatchObject({
     port: 3000,
     url: "https://port-3000.test",
   });
+  expect(typeof endpoint.request).toBe("function");
   expect(await current.snapshots.create("checkpoint")).toEqual({
     id: "snapshot",
     name: "checkpoint",
@@ -513,6 +516,69 @@ test("fromSandboxRuntime preserves ports snapshots raw and stop", async () => {
   await current.stop();
 
   expect(stopped).toBe(1);
+});
+
+test("preview requests same-origin paths without serializing provider access", async () => {
+  const server = Bun.serve({
+    fetch: (request) => {
+      if (request.headers.get("x-preview-token") !== "provider-token") {
+        return new Response("unauthorized", { status: 401 });
+      }
+      const url = new URL(request.url);
+      return Response.json({
+        client: request.headers.get("x-client"),
+        source: url.searchParams.get("source"),
+        token: request.headers.get("x-preview-token"),
+      });
+    },
+    hostname: "127.0.0.1",
+    port: 0,
+  });
+
+  try {
+    const endpoint = preview(
+      `http://127.0.0.1:${server.port}/?source=provider`,
+      server.port,
+      {
+        headers: { "x-preview-token": "provider-token" },
+        provider: "test",
+      }
+    );
+
+    await expect(fetch(endpoint.url)).resolves.toMatchObject({ status: 401 });
+
+    const response = await endpoint.request("/health?source=caller", {
+      headers: {
+        "x-client": "client",
+        "x-preview-token": "caller-token",
+      },
+    });
+    expect(await response.json()).toEqual({
+      client: "client",
+      source: "provider",
+      token: "provider-token",
+    });
+    expect(Object.keys(endpoint)).toEqual(["port", "url"]);
+    expect(JSON.stringify(endpoint)).not.toContain("provider-token");
+    await expect(
+      endpoint.request("https://example.com/health")
+    ).rejects.toMatchObject({
+      code: "configuration",
+      provider: "test",
+    });
+    await expect(endpoint.request("http://[")).rejects.toMatchObject({
+      code: "configuration",
+      provider: "test",
+    });
+  } finally {
+    server.stop(true);
+  }
+});
+
+test("preview rejects non-http URLs", () => {
+  expect(() =>
+    preview("file:///tmp/preview", 3000, { provider: "test" })
+  ).toThrow("Preview URL must use HTTP or HTTPS");
 });
 
 test("capability helpers handle boolean and mode capabilities", () => {

@@ -8,6 +8,8 @@ import type {
   Mode,
   Options,
   Port,
+  Preview,
+  PreviewOptions,
   RawCapability,
   Result,
   Running,
@@ -30,6 +32,8 @@ export type {
   Options,
   Port,
   Ports,
+  Preview,
+  PreviewOptions,
   Process,
   RawCapability,
   Result,
@@ -37,6 +41,7 @@ export type {
   Sandbox,
   SandboxRuntimeFiles,
   SandboxRuntimeProcess,
+  SandboxRuntimePorts,
   SandboxRuntime,
   Snapshot,
   Snapshots,
@@ -211,6 +216,82 @@ export const port = (value: number, provider = "sandbox"): number => {
     code: "configuration",
     provider,
   });
+};
+
+/**
+ * create a provider-aware preview with access headers kept out of serializable data
+ *
+ * adapter authors pass provider-required request headers here instead of placing credentials in the returned url. requests are limited to the preview origin
+ */
+export const preview = (
+  url: string,
+  value: number,
+  options: PreviewOptions = {}
+): Preview => {
+  const provider = options.provider ?? "sandbox";
+  const targetPort = port(value, provider);
+  let base: URL;
+
+  try {
+    base = new URL(url);
+  } catch (error) {
+    throw new SandboxError("Preview URL is invalid", {
+      cause: error,
+      code: "provider",
+      provider,
+    });
+  }
+  if (base.protocol !== "http:" && base.protocol !== "https:") {
+    throw new SandboxError("Preview URL must use HTTP or HTTPS", {
+      code: "provider",
+      provider,
+    });
+  }
+
+  const configured = new Headers(options.headers);
+  const request = (path?: string, init?: RequestInit): Promise<Response> => {
+    let target: URL;
+
+    try {
+      target = path === undefined ? new URL(base) : new URL(path, base);
+    } catch (error) {
+      return Promise.reject(
+        new SandboxError("Preview request URL is invalid", {
+          cause: error,
+          code: "configuration",
+          provider,
+        })
+      );
+    }
+    if (target.origin !== base.origin) {
+      return Promise.reject(
+        new SandboxError("Preview requests must stay on the preview origin", {
+          code: "configuration",
+          provider,
+        })
+      );
+    }
+
+    for (const [name] of base.searchParams) {
+      target.searchParams.delete(name);
+    }
+    for (const [name, entry] of base.searchParams) {
+      target.searchParams.append(name, entry);
+    }
+
+    const headers = new Headers(init?.headers);
+    for (const [name, entry] of configured) {
+      headers.set(name, entry);
+    }
+    return fetch(target, { ...init, headers });
+  };
+  const output = { port: targetPort, request, url } satisfies Preview;
+
+  Object.defineProperty(output, "request", {
+    enumerable: false,
+    value: request,
+  });
+  return Object.freeze(output);
 };
 
 /**
@@ -421,10 +502,12 @@ export const fromSandboxRuntime = <Raw = unknown>(
   },
   id: input.id,
   ports: {
-    expose: (value, options) =>
-      guarded(input, "ports", "ports.expose", () =>
+    expose: async (value, options) => {
+      const exposed = await guarded(input, "ports", "ports.expose", () =>
         input.ports.expose(port(value, input.provider), options)
-      ),
+      );
+      return preview(exposed.url, exposed.port, { provider: input.provider });
+    },
   },
   process: {
     exec: (executable, args, options) =>

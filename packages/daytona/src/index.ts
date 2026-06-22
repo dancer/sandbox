@@ -21,6 +21,7 @@ import {
   duration,
   port,
   portOptions,
+  preview,
   quote,
   result,
   sandboxError,
@@ -82,13 +83,13 @@ export type Daytona = DaytonaConfig &
     networkAllowList?: string;
     /** block outbound network access at sandbox creation when supported by Daytona */
     networkBlockAll?: boolean;
-    /** signed preview URL expiration in seconds */
+    /** signed preview URL expiration in seconds; set explicitly because Daytona defaults to 60 seconds */
     previewExpires?: number;
     /** make the Daytona sandbox public when supported */
     public?: boolean;
     /** resource request for new sandboxes */
     resources?: Resources;
-    /** use self-contained signed preview URLs instead of standard links that can require the native preview-token header */
+    /** use a self-contained signed preview URL for external clients; `preview.request()` handles standard private preview headers */
     signedPreview?: boolean;
     /** Daytona snapshot id used when create input omits snapshot */
     snapshot?: string;
@@ -483,6 +484,7 @@ const spawnLine = async (
       timeout
     );
     const id = started.cmdId;
+    let stopped = false;
     const output = (async (): Promise<void> => {
       try {
         await raw.process.getSessionCommandLogs(
@@ -491,45 +493,68 @@ const spawnLine = async (
           (chunk) => logs.append("stdout", chunk),
           (chunk) => logs.append("stderr", chunk)
         );
+      } catch (error) {
+        if (!stopped || !missing(error)) {
+          throw error;
+        }
       } finally {
         logs.close();
       }
     })();
     const final = (async (): Promise<Result> => {
       await output;
-      const [state, value] = await Promise.all([
-        raw.process.getSessionCommand(session, id),
-        raw.process.getSessionCommandLogs(session, id),
-      ]);
-      return result(
-        state.exitCode ?? 0,
-        value.stdout ?? value.output ?? "",
-        value.stderr ?? ""
-      );
-    })();
-
-    const cancel = (): void => {
-      void (async () => {
-        try {
-          await raw.process.deleteSession(session);
-        } finally {
-          logs.close();
+      if (stopped) {
+        return result(143, "", "", "SIGTERM");
+      }
+      try {
+        const [state, value] = await Promise.all([
+          raw.process.getSessionCommand(session, id),
+          raw.process.getSessionCommandLogs(session, id),
+        ]);
+        return result(
+          state.exitCode ?? 0,
+          value.stdout ?? value.output ?? "",
+          value.stderr ?? ""
+        );
+      } catch (error) {
+        if (stopped && missing(error)) {
+          return result(143, "", "", "SIGTERM");
         }
-      })();
+        throw error;
+      }
+    })();
+    const stop = async (): Promise<void> => {
+      if (stopped) {
+        return;
+      }
+      stopped = true;
+      try {
+        await raw.process.deleteSession(session);
+      } catch (error) {
+        if (!missing(error)) {
+          throw error;
+        }
+      } finally {
+        logs.close();
+      }
+    };
+
+    const cancel = async (): Promise<void> => {
+      try {
+        await stop();
+      } catch {
+        logs.close();
+      }
     };
     if (options.signal?.aborted) {
-      cancel();
+      void cancel();
     } else {
       options.signal?.addEventListener("abort", cancel, { once: true });
     }
 
     return {
       id,
-      kill: async () => {
-        options.signal?.removeEventListener("abort", cancel);
-        await raw.process.deleteSession(session);
-        logs.close();
-      },
+      kill: stop,
       output: logs.output,
       result: (async () => {
         try {
@@ -685,16 +710,18 @@ const createSandbox = (
     expose: async (value, input) => {
       const target = port(value, provider);
       portOptions(provider, input, "https");
-      const preview = options.signedPreview
+      const link = options.signedPreview
         ? await wrap(
             () => raw.getSignedPreviewUrl(target, options.previewExpires),
             "port exposure"
           )
         : await wrap(() => raw.getPreviewLink(target), "port exposure");
-      return {
-        port: target,
-        url: preview.url,
-      };
+      return preview(link.url, target, {
+        ...(options.signedPreview
+          ? {}
+          : { headers: { "x-daytona-preview-token": link.token } }),
+        provider,
+      });
     },
   },
   process: {
@@ -723,7 +750,7 @@ const createSandbox = (
 /**
  * create a Daytona adapter with normalized sandbox operations
  *
- * standard private preview URLs require the token returned by `sandbox.raw.getPreviewLink()` in the `x-daytona-preview-token` request header. set `signedPreview` for a self-contained preview URL
+ * standard private previews work through `preview.request()`, which retains Daytona's preview token. standard tokens reset when a sandbox restarts, so expose the port again after restart. set `signedPreview` only when an external client needs a self-contained URL
  */
 export const daytona = (options: Daytona = {}): Adapter<Raw> => ({
   capabilities,

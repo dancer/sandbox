@@ -7,6 +7,7 @@ import {
   command,
   duration,
   port,
+  preview,
   result,
   sandboxError,
   sandboxPath,
@@ -533,20 +534,15 @@ const createSandbox = (
       if ("host" in options) {
         unsupported(provider, "custom preview hosts");
       }
-      const preview = await wrap(
+      const endpoint = await wrap(
         () => raw.client.ports.waitForPort(target),
         "port exposure"
       );
-      return {
-        port: target,
-        url: previewUrl(
-          raw,
-          target,
-          options.protocol,
-          options.token,
-          preview.host
-        ),
-      };
+      return preview(
+        previewUrl(raw, target, options.protocol, options.token, endpoint.host),
+        target,
+        { provider }
+      );
     },
   },
   process: {

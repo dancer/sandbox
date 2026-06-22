@@ -5,6 +5,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import { create } from "@sandbox-sdk/core";
 
 import { record, workflowFixture } from "../../../test/fixture";
+import { requestPreview } from "../../../test/preview";
 import { workflow } from "../../../test/workflow";
 import { daytona } from "../src/index";
 
@@ -210,6 +211,39 @@ live("daytona exposes advertised raw capabilities", async () => {
     await sandbox.stop();
   }
 });
+
+live(
+  "daytona requests private live previews through the normalized api",
+  async () => {
+    const cwd = `/tmp/sandbox-sdk-preview-${randomUUID()}`;
+    const sandbox = await create({
+      adapter: daytona({
+        deleteOnStop: true,
+        public: false,
+        timeout: 300_000,
+      }),
+      cwd,
+    });
+    let server:
+      | Awaited<ReturnType<typeof sandbox.process.spawnShell>>
+      | undefined;
+
+    try {
+      server = await sandbox.process.spawnShell(
+        "node -e \"require('node:http').createServer((_request,response)=>response.end('daytona-preview')).listen(3000,'0.0.0.0')\"",
+        { cwd }
+      );
+      const preview = await sandbox.ports.expose(3000);
+
+      const response = await requestPreview(preview, "/health");
+      expect(await response.text()).toBe("daytona-preview");
+      expect(Object.keys(preview)).toEqual(["port", "url"]);
+    } finally {
+      await server?.kill().catch(() => {});
+      await sandbox.stop();
+    }
+  }
+);
 
 live("daytona updates live raw network settings", async () => {
   const sandbox = await create({

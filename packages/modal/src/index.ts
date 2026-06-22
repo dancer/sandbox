@@ -7,6 +7,7 @@ import {
   sandboxError,
   port,
   portOptions,
+  preview,
   result,
   sandboxPath,
   unsupported,
@@ -600,7 +601,7 @@ const createSandbox = (
       const tunnels = await wrap(() => raw.tunnels(), "port exposure");
       const tunnel = tunnels[target];
       if (tunnel) {
-        return { port: target, url: tunnel.url };
+        return preview(tunnel.url, target, { provider });
       }
       if (!declared) {
         throw sandboxError(

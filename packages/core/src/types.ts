@@ -169,8 +169,8 @@ export type Files = Readonly<{
 
 /** normalized preview URL namespace */
 export type Ports = Readonly<{
-  /** expose a sandbox port and return its provider-derived URL; adapters reject options they cannot honor */
-  expose(port: number, options?: Port): Promise<Url>;
+  /** expose a sandbox port and return a provider-aware preview; adapters reject options they cannot honor */
+  expose(port: number, options?: Port): Promise<Preview>;
 }>;
 
 /**
@@ -186,13 +186,37 @@ export type Snapshots = Readonly<{
   restore(id: string): Promise<void>;
 }>;
 
-/** preview URL returned by `ports.expose` */
+/** serializable preview endpoint returned by a low-level adapter */
 export type Url = Readonly<{
   /** public or local URL for the exposed port */
   url: string;
   /** exposed sandbox port */
   port: number;
 }>;
+
+/** private provider options used by the `preview()` helper */
+export type PreviewOptions = Readonly<{
+  /** provider headers applied only when `Preview.request` runs and override caller-supplied values */
+  headers?: Readonly<Record<string, string>>;
+  /** provider name used when preview request validation fails */
+  provider?: string;
+}>;
+
+/**
+ * provider-aware preview returned by `ports.expose`
+ *
+ * `request` adds provider-required access headers without exposing them in returned data. it preserves provider URL query parameters, so treat provider-issued signed or tokenized urls as credentials
+ *
+ * @example
+ * const preview = await sandbox.ports.expose(3000)
+ * const response = await preview.request("/health")
+ */
+export type Preview = Readonly<
+  Url & {
+    /** request a same-origin preview path with provider-required access headers and query parameters */
+    request(path?: string, init?: RequestInit): Promise<Response>;
+  }
+>;
 
 /** snapshot identifier returned by `snapshots.create` */
 export type Snapshot = Readonly<{
@@ -229,7 +253,7 @@ export type Spawn = Exec;
 export type Port = Readonly<{
   /** preview protocol preference when the provider supports it */
   protocol?: "http" | "https" | "tcp";
-  /** provider-issued preview URL token when the adapter supports it */
+  /** provider-issued preview URL token when the adapter supports it; treat it as a bearer credential */
   token?: string;
 }>;
 
@@ -294,6 +318,12 @@ export type SandboxRuntimeProcess = Readonly<{
   spawnShell(command: string, options?: Spawn): Promise<Running>;
 }>;
 
+/** preview url contract for low-level provider adapters */
+export type SandboxRuntimePorts = Readonly<{
+  /** expose a sandbox port and return a serializable provider url */
+  expose(port: number, options?: Port): Promise<Url>;
+}>;
+
 /**
  * low-level vendor contract that keeps large I/O stream-first
  *
@@ -310,7 +340,7 @@ export type SandboxRuntime<Raw = unknown> = Readonly<{
   /** provider sandbox id */
   id: string;
   /** preview URL operations */
-  ports: Ports;
+  ports: SandboxRuntimePorts;
   /** process operations scoped to the sandbox */
   process: SandboxRuntimeProcess;
   /** provider name */

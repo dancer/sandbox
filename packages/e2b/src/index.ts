@@ -4,6 +4,7 @@ import {
   command,
   duration,
   port,
+  preview,
   result,
   sandboxError,
   sandboxPath,
@@ -34,7 +35,7 @@ import type {
 /**
  * native E2B sandbox object exposed as `sandbox.raw`
  *
- * use `trafficAccessToken` with the `e2b-traffic-access-token` header when `network.allowPublicTraffic` restricts a preview URL
+ * `preview.request()` adds `trafficAccessToken` when E2B restricts preview traffic
  */
 export type E2BRaw = E2BSandbox;
 
@@ -64,7 +65,7 @@ export type E2B = Readonly<{
   metadata?: Readonly<Record<string, string>>;
   /** e2b mcp gateway configuration enabled for new sandboxes */
   mcp?: McpServer;
-  /** E2B network policy for outbound traffic and previews; restricted preview URLs require `sandbox.raw.trafficAccessToken` as an `e2b-traffic-access-token` header */
+  /** E2B network policy for outbound traffic and previews; `preview.request()` retains traffic access credentials for restricted previews */
   network?: SandboxNetworkOpts;
   /** request timeout in milliseconds for e2b api calls */
   requestTimeout?: number;
@@ -232,7 +233,7 @@ const previewOptions = (options?: Port): void => {
   ) {
     throw sandboxError(
       provider,
-      "E2B previews only support the URL derived from the sandbox port. Use sandbox.raw for traffic access and provider-specific networking.",
+      "E2B previews only support the URL derived from the sandbox port. Use preview.request() for restricted traffic and sandbox.raw for provider-specific networking.",
       "unsupported"
     );
   }
@@ -596,10 +597,16 @@ const createSandbox = (
       previewOptions(options);
       const host = await Promise.resolve(raw.getHost(target));
       const protocol = previewProtocol(host, options?.protocol);
-      return {
-        port: target,
-        url: `${protocol}://${host}`,
-      };
+      return preview(`${protocol}://${host}`, target, {
+        ...(raw.trafficAccessToken === undefined
+          ? {}
+          : {
+              headers: {
+                "e2b-traffic-access-token": raw.trafficAccessToken,
+              },
+            }),
+        provider,
+      });
     },
   },
   process: {
@@ -636,7 +643,7 @@ const createSandbox = (
  *
  * E2B snapshots capture filesystem and memory state. creation briefly pauses the source sandbox and drops active command, pty, and WebSocket connections. create a fresh sandbox with `create({ snapshot })`; in-place restore is not normalized
  *
- * `ports.expose` returns E2B's derived HTTP or HTTPS URL. when `network.allowPublicTraffic` is false, send `sandbox.raw.trafficAccessToken` in the `e2b-traffic-access-token` request header
+ * `ports.expose()` returns E2B's derived HTTP or HTTPS URL. when `network.allowPublicTraffic` is false, `preview.request()` adds E2B's traffic access header without exposing it in serializable data
  */
 export const e2b = (options: E2B = {}): Adapter<Raw> => ({
   capabilities,

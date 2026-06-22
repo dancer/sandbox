@@ -16,6 +16,9 @@ const restore = (name: string, value: string | undefined): void => {
 
 const snapshotLogs = () => void 0;
 
+const notFound = (): Error & { statusCode: number } =>
+  Object.assign(new Error("session not found"), { statusCode: 404 });
+
 test("daytona reports missing credentials before provider calls", async () => {
   const apiKey = process.env.DAYTONA_API_KEY;
   const jwtToken = process.env.DAYTONA_JWT_TOKEN;
@@ -288,6 +291,70 @@ test("daytona maps create options without running a real provider", async () => 
   }
 });
 
+test("daytona preview requests retain private preview tokens without serializing them", async () => {
+  type Client = InstanceType<typeof DaytonaClient>;
+  type Create = Client["create"];
+
+  const client = DaytonaClient.prototype as Client;
+  const original = client.create;
+  const server = Bun.serve({
+    fetch: (request) => {
+      if (request.headers.get("x-daytona-preview-token") !== "preview-secret") {
+        return new Response("unauthorized", { status: 401 });
+      }
+      const url = new URL(request.url);
+      return Response.json({
+        client: request.headers.get("x-client"),
+        source: url.searchParams.get("source"),
+        token: request.headers.get("x-daytona-preview-token"),
+      });
+    },
+    hostname: "127.0.0.1",
+    port: 0,
+  });
+  const raw = {
+    fs: {
+      createFolder: () => Promise.resolve(),
+    },
+    getPreviewLink: () =>
+      Promise.resolve({
+        token: "preview-secret",
+        url: `http://127.0.0.1:${server.port}/?source=provider`,
+      }),
+    getWorkDir: () => Promise.resolve("/workspace"),
+    id: "sandbox",
+    stop: () => Promise.resolve(),
+  };
+
+  client.create = (() => Promise.resolve(raw)) as Create;
+
+  try {
+    const sandbox = await create({
+      adapter: daytona({ apiKey: "key" }),
+    });
+    const endpoint = await sandbox.ports.expose(server.port);
+
+    await expect(fetch(endpoint.url)).resolves.toMatchObject({ status: 401 });
+    const response = await endpoint.request("/health?source=caller", {
+      headers: {
+        "x-client": "client",
+        "x-daytona-preview-token": "caller-token",
+      },
+    });
+
+    expect(await response.json()).toEqual({
+      client: "client",
+      source: "provider",
+      token: "preview-secret",
+    });
+    expect(Object.keys(endpoint)).toEqual(["port", "url"]);
+    expect(JSON.stringify(endpoint)).not.toContain("preview-secret");
+  } finally {
+    client.create = original;
+    server.stop(true);
+  }
+});
+
 test("daytona rejects invalid command timeouts before provider calls", async () => {
   type Client = InstanceType<typeof DaytonaClient>;
   type Create = Client["create"];
@@ -395,6 +462,65 @@ test("daytona maps background process APIs", async () => {
     });
     await running.kill();
     expect(sessionDeleted).toBe(true);
+  } finally {
+    client.create = original;
+  }
+});
+
+test("daytona resolves killed background processes without session errors", async () => {
+  type Client = InstanceType<typeof DaytonaClient>;
+  type Create = Client["create"];
+
+  const client = DaytonaClient.prototype as Client;
+  const original = client.create;
+  let deleted = false;
+  let deletes = 0;
+  const raw = {
+    fs: {
+      createFolder: () => Promise.resolve(),
+    },
+    getWorkDir: () => Promise.resolve("/workspace"),
+    id: "sandbox",
+    process: {
+      createSession: () => Promise.resolve(),
+      deleteSession: () => {
+        deleted = true;
+        deletes += 1;
+        return Promise.resolve();
+      },
+      executeSessionCommand: () => Promise.resolve({ cmdId: "command" }),
+      getSessionCommand: () => Promise.reject(notFound()),
+      getSessionCommandLogs: async () => {
+        for (;;) {
+          if (deleted) {
+            break;
+          }
+          await Bun.sleep(1);
+        }
+        throw notFound();
+      },
+    },
+    stop: () => Promise.resolve(),
+  };
+
+  client.create = (() => Promise.resolve(raw)) as Create;
+
+  try {
+    const sandbox = await create({
+      adapter: daytona({
+        apiKey: "key",
+      }),
+    });
+    const running = await sandbox.process.spawnShell("sleep 60");
+
+    await running.kill();
+    await running.kill();
+    await expect(running.result).resolves.toMatchObject({
+      code: 143,
+      ok: false,
+      signal: "SIGTERM",
+    });
+    expect(deletes).toBe(1);
   } finally {
     client.create = original;
   }

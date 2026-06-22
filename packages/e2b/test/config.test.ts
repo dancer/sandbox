@@ -437,6 +437,63 @@ test("e2b derives local preview URLs from the provider host", async () => {
   }
 });
 
+test("e2b preview requests retain private traffic auth without serializing it", async () => {
+  const original = E2BSandbox.create;
+  const server = Bun.serve({
+    fetch: (request) => {
+      if (
+        request.headers.get("e2b-traffic-access-token") !== "traffic-secret"
+      ) {
+        return new Response("unauthorized", { status: 401 });
+      }
+      return Response.json({
+        client: request.headers.get("x-client"),
+        token: request.headers.get("e2b-traffic-access-token"),
+      });
+    },
+    hostname: "127.0.0.1",
+    port: 0,
+  });
+  const raw = {
+    files: {
+      makeDir: () => Promise.resolve(),
+    },
+    getHost: () => `localhost:${server.port}`,
+    kill: () => Promise.resolve(),
+    sandboxId: "sandbox",
+    trafficAccessToken: "traffic-secret",
+  } as unknown as E2BSandbox;
+
+  E2BSandbox.create = (() => Promise.resolve(raw)) as typeof E2BSandbox.create;
+
+  try {
+    const sandbox = await create({
+      adapter: e2b({ apiKey: "key", debug: true }),
+    });
+    const endpoint = await sandbox.ports.expose(server.port, {
+      protocol: "http",
+    });
+
+    await expect(fetch(endpoint.url)).resolves.toMatchObject({ status: 401 });
+    const response = await endpoint.request("/health", {
+      headers: {
+        "e2b-traffic-access-token": "caller-token",
+        "x-client": "client",
+      },
+    });
+
+    expect(await response.json()).toEqual({
+      client: "client",
+      token: "traffic-secret",
+    });
+    expect(Object.keys(endpoint)).toEqual(["port", "url"]);
+    expect(JSON.stringify(endpoint)).not.toContain("traffic-secret");
+  } finally {
+    E2BSandbox.create = original;
+    server.stop(true);
+  }
+});
+
 test("e2b kills spawned processes on abort", async () => {
   const original = E2BSandbox.create;
   let killed = false;

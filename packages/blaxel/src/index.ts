@@ -18,6 +18,7 @@ import {
   duration,
   port,
   portOptions,
+  preview,
   result,
   sandboxError,
   sandboxPath,
@@ -683,7 +684,7 @@ const createSandbox = (raw: Raw, cwd: string): Sandbox<Raw> => ({
     expose: async (value, options) => {
       const target = port(value, provider);
       portOptions(provider, options, "https");
-      const preview = await wrap(
+      const endpoint = await wrap(
         () =>
           raw.previews.createIfNotExists({
             metadata: { name: `sandbox-sdk-${target}` },
@@ -691,7 +692,7 @@ const createSandbox = (raw: Raw, cwd: string): Sandbox<Raw> => ({
           }),
         "port exposure"
       );
-      const { url } = preview.spec;
+      const { url } = endpoint.spec;
       if (!url) {
         throw sandboxError(
           provider,
@@ -699,7 +700,7 @@ const createSandbox = (raw: Raw, cwd: string): Sandbox<Raw> => ({
           "not_found"
         );
       }
-      return { port: target, url };
+      return preview(url, target, { provider });
     },
   },
   process: {
