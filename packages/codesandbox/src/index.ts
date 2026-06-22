@@ -598,18 +598,30 @@ export const codesandbox = (
     validateSession(options);
     const environment = sandboxEnv(options, input);
     const current = sdk(options);
-    const sandbox =
-      input.id === undefined
-        ? await current.sandboxes.create(createOptions(options, input))
-        : await current.sandboxes.resume(input.id);
-    const client = await sandbox.connect(session(options, environment));
-    const cwd = input.cwd ?? options.cwd ?? client.workspacePath;
-    await wrap(() => mkdir(client, cwd), "mkdir");
-    return createSandbox(
-      { client, sandbox, sdk: current },
-      cwd,
-      options.stop ?? "shutdown"
-    );
+    const owned = input.id === undefined;
+    const sandbox = owned
+      ? await current.sandboxes.create(createOptions(options, input))
+      : await current.sandboxes.resume(input.id);
+    let client: SandboxClient | undefined;
+    try {
+      const connected = await sandbox.connect(session(options, environment));
+      client = connected;
+      const cwd = input.cwd ?? options.cwd ?? connected.workspacePath;
+      await wrap(() => mkdir(connected, cwd), "mkdir");
+      return createSandbox(
+        { client: connected, sandbox, sdk: current },
+        cwd,
+        options.stop ?? "shutdown"
+      );
+    } catch (error) {
+      if (client !== undefined) {
+        await client.disconnect().catch(() => null);
+      }
+      if (owned) {
+        await current.sandboxes.delete(sandbox.id).catch(() => null);
+      }
+      throw error;
+    }
   },
   provider,
 });

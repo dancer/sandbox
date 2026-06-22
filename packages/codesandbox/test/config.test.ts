@@ -143,6 +143,88 @@ test("codesandbox rejects invalid session ids before provider calls", async () =
   expect(called).toBe(false);
 });
 
+test("codesandbox cleans up a created sandbox when workspace setup fails", async () => {
+  let deleted: string | undefined;
+  let disconnected = false;
+  const client = {
+    disconnect: () => {
+      disconnected = true;
+      return Promise.reject(new Error("disconnect failed"));
+    },
+    fs: {
+      mkdir: () => Promise.reject(new Error("mkdir failed")),
+    },
+    workspacePath: "/project/sandbox",
+  } as unknown as SandboxClient;
+  const sandbox = {
+    connect: () => Promise.resolve(client),
+    id: "sandbox",
+  };
+  const sdk = {
+    sandboxes: {
+      create: () => Promise.resolve(sandbox),
+      delete: (id: string) => {
+        deleted = id;
+        return Promise.reject(new Error("cleanup failed"));
+      },
+    },
+  };
+
+  await expect(
+    create({
+      adapter: codesandbox({ client: sdk }),
+    })
+  ).rejects.toMatchObject({
+    code: "provider",
+    message: "mkdir failed",
+    provider: "codesandbox",
+  });
+  expect(disconnected).toBe(true);
+  expect(deleted).toBe("sandbox");
+});
+
+test("codesandbox preserves resumed sandboxes when workspace setup fails", async () => {
+  let deleted = false;
+  let disconnected = false;
+  const client = {
+    disconnect: () => {
+      disconnected = true;
+      return Promise.resolve();
+    },
+    fs: {
+      mkdir: () => Promise.reject(new Error("mkdir failed")),
+    },
+    workspacePath: "/project/sandbox",
+  } as unknown as SandboxClient;
+  const sandbox = {
+    connect: () => Promise.resolve(client),
+    id: "sandbox",
+  };
+  const sdk = {
+    sandboxes: {
+      create: () => Promise.resolve(sandbox),
+      delete: () => {
+        deleted = true;
+        return Promise.resolve();
+      },
+      resume: () => Promise.resolve(sandbox),
+    },
+  };
+
+  await expect(
+    create({
+      adapter: codesandbox({ client: sdk }),
+      id: "sandbox",
+    })
+  ).rejects.toMatchObject({
+    code: "provider",
+    message: "mkdir failed",
+    provider: "codesandbox",
+  });
+  expect(disconnected).toBe(true);
+  expect(deleted).toBe(false);
+});
+
 test("codesandbox only treats documented missing paths as absent", async () => {
   const errors = new Map([
     ["/project/sandbox/missing.txt", "null: File not found"],
