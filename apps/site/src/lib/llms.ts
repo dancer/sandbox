@@ -305,6 +305,8 @@ const aiTools = `# AI tools
 
 \`@sandbox-sdk/ai\` wraps a configured sandbox into ready-made tools for agent frameworks. The kit includes prompt context plus file, command, directory, and preview tools, and an AI SDK-compatible sandbox object with JSON-schema inputs. Each tool is a thin shim around \`files\`, \`process\`, and \`ports\` on the underlying sandbox.
 
+Requested model-facing tools unavailable on the selected adapter are omitted. The AI SDK session rejects \`spawn()\` before provider work when the provider only exposes combined output, because AI SDK requires separate stdout and stderr streams.
+
 \`\`\`bash
 bun add @sandbox-sdk/ai
 \`\`\`

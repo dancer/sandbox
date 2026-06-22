@@ -124,6 +124,12 @@ export const AiTools = () => (
       tool is just a thin shim around <code>files</code>, <code>process</code>,
       and <code>ports</code> on the underlying sandbox.
     </p>
+    <p>
+      Requested operations the adapter cannot perform are omitted from the
+      model-facing tool set. The AI SDK session only starts background commands
+      when the provider exposes separate stdout and stderr streams, so it never
+      presents combined output as standard output.
+    </p>
 
     <section>
       <Heading as="h3" id="ai-tools-installation">

@@ -173,6 +173,11 @@ and file watchers.
 
 `@sandbox-sdk/ai` wraps a configured sandbox as ready-made tools plus prompt context for agents that need to read files, write files, list directories, run commands, and open previews when ports are supported.
 
+`tools()` omits requested model-facing operations that the selected adapter cannot
+perform. The AI SDK session preserves its separate stdout and stderr process
+contract, so `kit.sandbox.spawn()` rejects with a typed unsupported error when a
+provider only exposes combined command output.
+
 ```ts
 import { aisdk, tools } from "@sandbox-sdk/ai";
 

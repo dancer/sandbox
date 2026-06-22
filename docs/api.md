@@ -1055,6 +1055,8 @@ export type Options = Readonly<{
   /**
    * generated tools exposed to the model
    *
+   * requested tools unavailable on the selected sandbox are omitted rather than exposed as calls that fail at runtime
+   *
    * @default ["read", "list"]
    */
   allow?: readonly Name[];
@@ -1128,8 +1130,9 @@ export type AisdkOptions = Readonly<{
 agent-facing sandbox session compatible with the AI SDK sandbox contract
 
 this restricted session omits host-only lifecycle, networking, and raw
-provider controls from `Sandbox`. the generated tool allowlist does not
-constrain direct session methods, so custom tools must enforce their own policy
+provider controls from `Sandbox`. session methods reject capabilities the
+adapter does not advertise before provider work. the generated tool allowlist
+does not constrain direct session methods, so custom tools must enforce their own policy
 
 ```ts
 export type SandboxSession = Readonly<{
@@ -1195,7 +1198,8 @@ export type AgentSandbox = SandboxSession;
 streaming process handle compatible with the current AI SDK sandbox contract
 
 consume `stdout` and `stderr` as web streams, then call `wait()` to observe
-the exit code. `kill()` is idempotent
+the exit code. `kill()` is idempotent. `spawn()` rejects when the provider
+cannot expose separate stdout and stderr streams
 
 ```ts
 export type SandboxProcess = Readonly<{
