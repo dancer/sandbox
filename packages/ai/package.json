@@ -57,7 +57,7 @@
     "@openai/agents": "^0.11.4",
     "@sandbox-sdk/local": "workspace:*",
     "ai": "^6.0.208",
-    "ai-v7": "npm:ai@7.0.0-canary.174",
+    "ai-v7": "npm:ai@7.0.0-canary.176",
     "typescript": "^6.0.3",
     "zod": "^4.3.6"
   },

@@ -32,8 +32,8 @@ export type ClaudeTool = Readonly<{
 /**
  * generated Claude Agent SDK integration for one sandbox tool kit
  *
- * pass `mcpServers`, `allowedTools`, `canUseTool`, and `instructions` directly
- * to a Claude Agent SDK query configuration
+ * pass `mcpServers`, `allowedTools`, `canUseTool`, and `instructions` to a
+ * Claude Agent SDK query configuration
  */
 export type ClaudeTools = Readonly<{
   /** all MCP tool names exposed by the sandbox server */
@@ -65,9 +65,9 @@ export type ClaudeOptions = Readonly<{
    */
   annotations?: Readonly<Partial<Record<Name, ToolAnnotations>>>;
   /**
-   * approval policy for side-effect tools
+   * approval policy for generated side-effect tools
    *
-   * @default true for exec, preview, and write
+   * @default true for exec, preview, and write, false for read and list
    */
   requireApproval?: Approval;
   /**
@@ -152,7 +152,20 @@ const failure = (error: unknown) => ({
 const prefixed = (server: string, value: Name): string =>
   `mcp__${server}__${value}`;
 
-/** create Claude Agent SDK in-process MCP tools from a sandbox tool kit */
+/**
+ * create Claude Agent SDK in-process MCP tools from a sandbox tool kit
+ *
+ * @example
+ * const integration = claude(tools(sandbox, { allow: ["read", "write", "exec"] }))
+ * const stream = query({
+ *   prompt: "inspect the workspace",
+ *   options: {
+ *     allowedTools: integration.allowedTools,
+ *     canUseTool: integration.canUseTool,
+ *     mcpServers: integration.mcpServers,
+ *   },
+ * })
+ */
 export const claude = (
   kit: Kit,
   {

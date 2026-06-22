@@ -52,7 +52,7 @@ export type Tool<Input, Output> = Readonly<{
 /** built-in sandbox tool name */
 export type Name = "exec" | "list" | "preview" | "read" | "write";
 
-/** context passed to policy hooks before a sandbox side effect */
+/** context passed to a generated tool policy hook before its sandbox operation */
 export type Context<ToolName extends Name = Name> = Readonly<{
   /** default sandbox working directory */
   cwd: string;
@@ -68,23 +68,28 @@ export type Policy<Input, ToolName extends Name = Name> = (
   context: Context<ToolName>
 ) => Promise<void> | void;
 
-/** options for creating agent-ready sandbox tools and prompt context */
+/**
+ * options for creating model-facing sandbox tools and AI SDK prompt context
+ *
+ * the allowlist and file policies apply to generated tools, custom AI SDK tools
+ * that use `kit.sandbox` own their own authorization boundary
+ */
 export type Options = Readonly<{
   /**
-   * tools exposed to the model
+   * generated tools exposed to the model
    *
    * @default ["read", "list"]
    */
   allow?: readonly Name[];
-  /** policy hook called before command execution */
+  /** policy hook called before generated and session command execution */
   beforeExec?: Policy<Exec, "exec">;
-  /** policy hook called before directory listing */
+  /** policy hook called before the generated directory listing tool */
   beforeList?: Policy<Partial<Path>, "list">;
-  /** policy hook called before preview URL exposure */
+  /** policy hook called before the generated preview tool */
   beforePreview?: Policy<Preview, "preview">;
-  /** policy hook called before file reads */
+  /** policy hook called before the generated file read tool */
   beforeRead?: Policy<Path, "read">;
-  /** policy hook called before file writes */
+  /** policy hook called before the generated file write tool */
   beforeWrite?: Policy<Write, "write">;
   /** working directory described to the agent and used by commands */
   cwd?: string;
@@ -103,14 +108,15 @@ export type Options = Readonly<{
 }>;
 
 /**
- * agent-ready sandbox tools, prompt context, and a restricted sandbox session
+ * agent-ready sandbox tools, prompt context, and an AI SDK session
  *
- * pass this to `aisdk()` for AI SDK v6 and v7 generation calls
+ * pass this to `aisdk()` for AI SDK v6 and v7 generation calls, `tools` is the
+ * model-facing allowlist, while `sandbox` is passed to trusted tool callbacks
  */
 export type Kit = Readonly<{
   /** agent-facing context describing the workspace, capabilities, and limits */
   description: string;
-  /** restricted sandbox session for agent integrations */
+  /** sandbox session for AI SDK tool execution */
   sandbox: SandboxSession;
   /** AI SDK-compatible tools keyed by enabled tool name */
   tools: Tools;
@@ -119,7 +125,8 @@ export type Kit = Readonly<{
 /**
  * options ready to spread into AI SDK v6 or v7 generation calls
  *
- * v6 receives tools and prompt context, while v7 also receives `experimental_sandbox`
+ * AI SDK v6 can use `tools` and the system prompt context, AI SDK v7 also
+ * forwards `experimental_sandbox` to tool execution
  */
 export type AisdkOptions = Readonly<{
   /** sandbox session forwarded to AI SDK tool execution */
@@ -133,10 +140,11 @@ export type AisdkOptions = Readonly<{
 }>;
 
 /**
- * restricted agent-facing sandbox session compatible with the AI SDK v7 sandbox contract
+ * agent-facing sandbox session compatible with the AI SDK sandbox contract
  *
- * tools and prompt context work with v6 and v7, while host-only lifecycle,
- * networking, and provider-specific controls remain on `Sandbox`
+ * it intentionally omits host-only lifecycle, networking, and raw provider
+ * controls from `Sandbox`, it does not apply the generated tool allowlist to
+ * its file or process methods, so custom tool code must enforce its own policy
  */
 export type SandboxSession = Readonly<{
   /** normalized capabilities advertised by the underlying sandbox */
@@ -173,7 +181,11 @@ export type SandboxSession = Readonly<{
   runCommand(input: Command): PromiseLike<CommandResult>;
 }>;
 
-/** host-owned sandbox session with infra capabilities kept away from agent tools */
+/**
+ * host-owned sandbox with infrastructure capabilities kept away from AI SDK tools
+ *
+ * call `restricted()` to pass only the AI SDK session contract to tool execution
+ */
 export type NetworkSandboxSession = Sandbox &
   Readonly<{
     /** return the restricted session safe to pass into agent tool execution */
@@ -186,7 +198,8 @@ export type AgentSandbox = SandboxSession;
 /**
  * streaming process handle compatible with the current AI SDK sandbox contract
  *
- * call `kill()` to stop the process, then `wait()` to observe its exit code
+ * consume `stdout` and `stderr` as web streams, then call `wait()` to observe
+ * the exit code. `kill()` is idempotent
  */
 export type SandboxProcess = Readonly<{
   /** bytes written by the process to standard error */
@@ -244,7 +257,7 @@ export type Command = Readonly<{
 
 /** file read input used by the AI SDK sandbox shape */
 export type File = Readonly<{
-  /** signal forwarded when the underlying adapter supports cancellation */
+  /** abort signal checked before and after the filesystem operation */
   abortSignal?: AbortSignal;
   /** absolute or sandbox-relative file path */
   path: string;
@@ -280,7 +293,7 @@ export type TextFileWrite = File &
   Readonly<{
     /** text to write */
     content: string;
-    /** text encoding used to encode the file */
+    /** utf-8 text encoding accepted by the normalized filesystem contract */
     encoding?: string;
   }>;
 
@@ -352,7 +365,14 @@ export type PreviewResult = Readonly<{
   url: string;
 }>;
 
-/** create aisdk v6/v7 call options from a sandbox tool kit */
+/**
+ * create AI SDK v6/v7 call options from a sandbox tool kit
+ *
+ * @example
+ * const sandbox = await create({ adapter: local() })
+ * const kit = tools(sandbox, { allow: ["read", "write", "exec"] })
+ * const result = await generateText({ model, ...aisdk(kit), prompt: "inspect the workspace" })
+ */
 export const aisdk = (kit: Kit): AisdkOptions => ({
   experimental_sandbox: kit.sandbox,
   instructions: kit.description,
@@ -420,7 +440,8 @@ const assertActive = (signal: AbortSignal | undefined): void => {
   signal?.throwIfAborted();
 };
 
-const missing = <Value>(error: unknown): Value | null => {
+const missing = <Value>(error: unknown, signal?: AbortSignal): Value | null => {
+  assertActive(signal);
   if (isSandboxError(error) && error.code === "not_found") {
     return null;
   }
@@ -444,12 +465,17 @@ const write = async (
   }
 ): Promise<void> => {
   assertActive(input.abortSignal);
-  const directory = parent(input.path);
-  if (directory !== undefined) {
-    await sandbox.files.mkdir(directory);
+  try {
+    const directory = parent(input.path);
+    if (directory !== undefined) {
+      await sandbox.files.mkdir(directory);
+    }
+    assertActive(input.abortSignal);
+    await sandbox.files.write(input.path, input.content);
+  } catch (error) {
+    assertActive(input.abortSignal);
+    throw error;
   }
-  assertActive(input.abortSignal);
-  await sandbox.files.write(input.path, input.content);
   assertActive(input.abortSignal);
 };
 
@@ -485,7 +511,7 @@ const readText = async (
     const end = Math.min(lines.length, input.endLine ?? lines.length);
     return lines.slice(start, end).join(lineEnding);
   } catch (error) {
-    return missing<string>(error);
+    return missing<string>(error, input.abortSignal);
   }
 };
 
@@ -690,7 +716,7 @@ const agent = (
         assertActive(input.abortSignal);
         return output;
       } catch (error) {
-        return missing<Uint8Array>(error);
+        return missing<Uint8Array>(error, input.abortSignal);
       }
     },
     readFile: async (input: File) => {
@@ -700,7 +726,7 @@ const agent = (
         assertActive(input.abortSignal);
         return output;
       } catch (error) {
-        return missing<ReadableStream<Uint8Array>>(error);
+        return missing<ReadableStream<Uint8Array>>(error, input.abortSignal);
       }
     },
     readTextFile: (input: TextFile) => readText(sandbox, input),
@@ -728,7 +754,17 @@ const agent = (
   };
 };
 
-/** create aisdk compatible tools and prompt context for a sandbox */
+/**
+ * create model-facing sandbox tools, prompt context, and an AI SDK session
+ *
+ * @example
+ * const kit = tools(sandbox, {
+ *   allow: ["read", "write", "exec"],
+ *   beforeExec: input => {
+ *     if (input.command.includes("rm -rf")) throw new Error("command blocked")
+ *   },
+ * })
+ */
 export const tools = (sandbox: Sandbox, options: Options = {}): Kit => {
   const cwd = options.cwd ?? sandbox.cwd;
   const timeout = options.timeout ?? 30_000;

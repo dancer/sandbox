@@ -229,6 +229,61 @@ test("ai sdk sandbox shape preserves abort reasons", async () => {
   await sandbox.stop();
 });
 
+test("ai sdk filesystem reads preserve abort reasons over provider errors", async () => {
+  const sandbox = await create({ adapter: local(), cwd: "/workspace" });
+  const controller = new AbortController();
+  const reason = new Error("cancelled");
+  const agent = tools({
+    ...sandbox,
+    files: {
+      ...sandbox.files,
+      read: () => {
+        controller.abort(reason);
+        return Promise.reject(new Error("provider failed"));
+      },
+    },
+  }).sandbox;
+
+  try {
+    await expect(
+      agent.readBinaryFile({
+        abortSignal: controller.signal,
+        path: "/workspace/file.txt",
+      })
+    ).rejects.toBe(reason);
+  } finally {
+    await sandbox.stop();
+  }
+});
+
+test("ai sdk filesystem writes preserve abort reasons over provider errors", async () => {
+  const sandbox = await create({ adapter: local(), cwd: "/workspace" });
+  const controller = new AbortController();
+  const reason = new Error("cancelled");
+  const agent = tools({
+    ...sandbox,
+    files: {
+      ...sandbox.files,
+      write: () => {
+        controller.abort(reason);
+        return Promise.reject(new Error("provider failed"));
+      },
+    },
+  }).sandbox;
+
+  try {
+    await expect(
+      agent.writeTextFile({
+        abortSignal: controller.signal,
+        content: "value",
+        path: "/workspace/file.txt",
+      })
+    ).rejects.toBe(reason);
+  } finally {
+    await sandbox.stop();
+  }
+});
+
 test("ai sdk sandbox process kill is idempotent", async () => {
   const sandbox = await create({ adapter: local(), cwd: "/workspace" });
   const agent: SandboxSession = tools(sandbox, {

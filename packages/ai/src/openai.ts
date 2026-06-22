@@ -8,7 +8,11 @@ import type { Approval } from "./shared.js";
 /** generated OpenAI Agents SDK function tools keyed by sandbox tool name */
 export type OpenAITools = Readonly<Partial<Record<Name, FunctionTool>>>;
 
-/** OpenAI Agents SDK integration for one sandbox tool kit */
+/**
+ * OpenAI Agents SDK configuration derived from one sandbox tool kit
+ *
+ * pass `instructions` to `new Agent()` and `Object.values(tools)` as its tools
+ */
 export type OpenAI = Readonly<{
   /** instructions ready for new Agent({ instructions }) */
   instructions: string;
@@ -25,9 +29,9 @@ export type OpenAIOptions = Readonly<{
    */
   prefix?: string;
   /**
-   * approval policy for side-effect tools
+   * approval policy for generated side-effect tools
    *
-   * @default true for exec, preview, and write
+   * @default true for exec, preview, and write, false for read and list
    */
   requireApproval?: Approval;
 }>;
@@ -49,7 +53,16 @@ const parameters = (schema: JsonSchema): OpenAIParameters => ({
   type: "object",
 });
 
-/** create OpenAI Agents SDK tools from a sandbox tool kit */
+/**
+ * create OpenAI Agents SDK tools from a sandbox tool kit
+ *
+ * @example
+ * const integration = openai(tools(sandbox, { allow: ["read", "write", "exec"] }))
+ * const agent = new Agent({
+ *   instructions: integration.instructions,
+ *   tools: Object.values(integration.tools),
+ * })
+ */
 export const openai = (
   kit: Kit,
   { prefix = "sandbox", requireApproval }: OpenAIOptions = {}

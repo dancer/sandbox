@@ -4,13 +4,14 @@ import { create } from "@sandbox-sdk/core";
 import { local } from "@sandbox-sdk/local";
 import { generateText as generateV6 } from "ai";
 import type { ToolSet as ToolsV6 } from "ai";
-import { generateText as generateV7 } from "ai-v7";
+import { generateText as generateV7, tool as toolV7 } from "ai-v7";
 import type {
   Experimental_SandboxSession as SandboxV7,
   ToolSet as ToolsV7,
 } from "ai-v7";
 import { MockLanguageModelV4 } from "ai-v7/test";
 import { MockLanguageModelV3 } from "ai/test";
+import { z } from "zod/v4";
 
 import { aisdk, tools } from "../src/index";
 
@@ -99,6 +100,57 @@ test("ai sdk v7 executes sandbox tools", async () => {
     });
 
     expect(await sandbox.files.text("/workspace/v7.txt")).toBe("v7");
+  } finally {
+    await sandbox.stop();
+  }
+});
+
+test("ai sdk v7 passes sandbox sessions to custom tools", async () => {
+  const sandbox = await create({ adapter: local(), cwd: "/workspace" });
+
+  try {
+    const kit = tools(sandbox);
+    let received: SandboxV7 | undefined;
+
+    await generateV7({
+      model: new MockLanguageModelV4({
+        doGenerate: {
+          content: [
+            {
+              input: JSON.stringify({}),
+              toolCallId: "call-session",
+              toolName: "session",
+              type: "tool-call",
+            },
+          ],
+          finishReason: { raw: undefined, unified: "tool-calls" },
+          usage,
+          warnings: [],
+        },
+      }),
+      ...aisdk(kit),
+      prompt: "use the sandbox session",
+      tools: {
+        session: toolV7({
+          description: "write a file through the sandbox session",
+          execute: async (_, { experimental_sandbox: session }) => {
+            received = session;
+            if (session === undefined) {
+              throw new Error("missing sandbox session");
+            }
+            await session.writeTextFile({
+              content: "context",
+              path: "/workspace/context.txt",
+            });
+            return "written";
+          },
+          inputSchema: z.object({}),
+        }),
+      },
+    });
+
+    expect(received).toBe(kit.sandbox);
+    expect(await sandbox.files.text("/workspace/context.txt")).toBe("context");
   } finally {
     await sandbox.stop();
   }

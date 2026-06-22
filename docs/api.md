@@ -932,7 +932,7 @@ export type Name = "exec" | "list" | "preview" | "read" | "write";
 
 #### `Context`
 
-context passed to policy hooks before a sandbox side effect
+context passed to a generated tool policy hook before its sandbox operation
 
 ```ts
 export type Context<ToolName extends Name = Name> = Readonly<{
@@ -958,25 +958,28 @@ export type Policy<Input, ToolName extends Name = Name> = (
 
 #### `Options`
 
-options for creating agent-ready sandbox tools and prompt context
+options for creating model-facing sandbox tools and AI SDK prompt context
+
+the allowlist and file policies apply to generated tools, custom AI SDK tools
+that use `kit.sandbox` own their own authorization boundary
 
 ```ts
 export type Options = Readonly<{
   /**
-   * tools exposed to the model
+   * generated tools exposed to the model
    *
    * @default ["read", "list"]
    */
   allow?: readonly Name[];
-  /** policy hook called before command execution */
+  /** policy hook called before generated and session command execution */
   beforeExec?: Policy<Exec, "exec">;
-  /** policy hook called before directory listing */
+  /** policy hook called before the generated directory listing tool */
   beforeList?: Policy<Partial<Path>, "list">;
-  /** policy hook called before preview URL exposure */
+  /** policy hook called before the generated preview tool */
   beforePreview?: Policy<Preview, "preview">;
-  /** policy hook called before file reads */
+  /** policy hook called before the generated file read tool */
   beforeRead?: Policy<Path, "read">;
-  /** policy hook called before file writes */
+  /** policy hook called before the generated file write tool */
   beforeWrite?: Policy<Write, "write">;
   /** working directory described to the agent and used by commands */
   cwd?: string;
@@ -997,15 +1000,16 @@ export type Options = Readonly<{
 
 #### `Kit`
 
-agent-ready sandbox tools, prompt context, and a restricted sandbox session
+agent-ready sandbox tools, prompt context, and an AI SDK session
 
-pass this to `aisdk()` for AI SDK v6 and v7 generation calls
+pass this to `aisdk()` for AI SDK v6 and v7 generation calls, `tools` is the
+model-facing allowlist, while `sandbox` is passed to trusted tool callbacks
 
 ```ts
 export type Kit = Readonly<{
   /** agent-facing context describing the workspace, capabilities, and limits */
   description: string;
-  /** restricted sandbox session for agent integrations */
+  /** sandbox session for AI SDK tool execution */
   sandbox: SandboxSession;
   /** AI SDK-compatible tools keyed by enabled tool name */
   tools: Tools;
@@ -1016,7 +1020,8 @@ export type Kit = Readonly<{
 
 options ready to spread into AI SDK v6 or v7 generation calls
 
-v6 receives tools and prompt context, while v7 also receives `experimental_sandbox`
+AI SDK v6 can use `tools` and the system prompt context, AI SDK v7 also
+forwards `experimental_sandbox` to tool execution
 
 ```ts
 export type AisdkOptions = Readonly<{
@@ -1033,10 +1038,11 @@ export type AisdkOptions = Readonly<{
 
 #### `SandboxSession`
 
-restricted agent-facing sandbox session compatible with the AI SDK v7 sandbox contract
+agent-facing sandbox session compatible with the AI SDK sandbox contract
 
-tools and prompt context work with v6 and v7, while host-only lifecycle,
-networking, and provider-specific controls remain on `Sandbox`
+it intentionally omits host-only lifecycle, networking, and raw provider
+controls from `Sandbox`, it does not apply the generated tool allowlist to
+its file or process methods, so custom tool code must enforce its own policy
 
 ```ts
 export type SandboxSession = Readonly<{
@@ -1077,7 +1083,9 @@ export type SandboxSession = Readonly<{
 
 #### `NetworkSandboxSession`
 
-host-owned sandbox session with infra capabilities kept away from agent tools
+host-owned sandbox with infrastructure capabilities kept away from AI SDK tools
+
+call `restricted()` to pass only the AI SDK session contract to tool execution
 
 ```ts
 export type NetworkSandboxSession = Sandbox &
@@ -1099,7 +1107,8 @@ export type AgentSandbox = SandboxSession;
 
 streaming process handle compatible with the current AI SDK sandbox contract
 
-call `kill()` to stop the process, then `wait()` to observe its exit code
+consume `stdout` and `stderr` as web streams, then call `wait()` to observe
+the exit code. `kill()` is idempotent
 
 ```ts
 export type SandboxProcess = Readonly<{
@@ -1164,7 +1173,7 @@ file read input used by the AI SDK sandbox shape
 
 ```ts
 export type File = Readonly<{
-  /** signal forwarded when the underlying adapter supports cancellation */
+  /** abort signal checked before and after the filesystem operation */
   abortSignal?: AbortSignal;
   /** absolute or sandbox-relative file path */
   path: string;
@@ -1220,7 +1229,7 @@ export type TextFileWrite = File &
   Readonly<{
     /** text to write */
     content: string;
-    /** text encoding used to encode the file */
+    /** utf-8 text encoding accepted by the normalized filesystem contract */
     encoding?: string;
   }>;
 ```
@@ -1342,7 +1351,19 @@ export type PreviewResult = Readonly<{
 
 #### `aisdk`
 
-create aisdk v6/v7 call options from a sandbox tool kit
+create AI SDK v6/v7 call options from a sandbox tool kit
+
+**example**
+
+```ts
+const sandbox = await create({ adapter: local() });
+const kit = tools(sandbox, { allow: ["read", "write", "exec"] });
+const result = await generateText({
+  model,
+  ...aisdk(kit),
+  prompt: "inspect the workspace",
+});
+```
 
 ```ts
 export declare const aisdk: (kit: Kit) => AisdkOptions;
@@ -1350,7 +1371,18 @@ export declare const aisdk: (kit: Kit) => AisdkOptions;
 
 #### `tools`
 
-create aisdk compatible tools and prompt context for a sandbox
+create model-facing sandbox tools, prompt context, and an AI SDK session
+
+**example**
+
+```ts
+const kit = tools(sandbox, {
+  allow: ["read", "write", "exec"],
+  beforeExec: (input) => {
+    if (input.command.includes("rm -rf")) throw new Error("command blocked");
+  },
+});
+```
 
 ```ts
 export declare const tools: (sandbox: Sandbox, options?: Options) => Kit;
@@ -1403,8 +1435,8 @@ export type ClaudeTool = Readonly<{
 
 generated Claude Agent SDK integration for one sandbox tool kit
 
-pass `mcpServers`, `allowedTools`, `canUseTool`, and `instructions` directly
-to a Claude Agent SDK query configuration
+pass `mcpServers`, `allowedTools`, `canUseTool`, and `instructions` to a
+Claude Agent SDK query configuration
 
 ```ts
 export type ClaudeTools = Readonly<{
@@ -1442,9 +1474,9 @@ export type ClaudeOptions = Readonly<{
    */
   annotations?: Readonly<Partial<Record<Name, ToolAnnotations>>>;
   /**
-   * approval policy for side-effect tools
+   * approval policy for generated side-effect tools
    *
-   * @default true for exec, preview, and write
+   * @default true for exec, preview, and write, false for read and list
    */
   requireApproval?: Approval;
   /**
@@ -1467,6 +1499,22 @@ export type ClaudeOptions = Readonly<{
 #### `claude`
 
 create Claude Agent SDK in-process MCP tools from a sandbox tool kit
+
+**example**
+
+```ts
+const integration = claude(
+  tools(sandbox, { allow: ["read", "write", "exec"] })
+);
+const stream = query({
+  prompt: "inspect the workspace",
+  options: {
+    allowedTools: integration.allowedTools,
+    canUseTool: integration.canUseTool,
+    mcpServers: integration.mcpServers,
+  },
+});
+```
 
 ```ts
 export declare const claude: (
@@ -1491,7 +1539,9 @@ export type OpenAITools = Readonly<Partial<Record<Name, FunctionTool>>>;
 
 #### `OpenAI`
 
-OpenAI Agents SDK integration for one sandbox tool kit
+OpenAI Agents SDK configuration derived from one sandbox tool kit
+
+pass `instructions` to `new Agent()` and `Object.values(tools)` as its tools
 
 ```ts
 export type OpenAI = Readonly<{
@@ -1515,9 +1565,9 @@ export type OpenAIOptions = Readonly<{
    */
   prefix?: string;
   /**
-   * approval policy for side-effect tools
+   * approval policy for generated side-effect tools
    *
-   * @default true for exec, preview, and write
+   * @default true for exec, preview, and write, false for read and list
    */
   requireApproval?: Approval;
 }>;
@@ -1528,6 +1578,18 @@ export type OpenAIOptions = Readonly<{
 #### `openai`
 
 create OpenAI Agents SDK tools from a sandbox tool kit
+
+**example**
+
+```ts
+const integration = openai(
+  tools(sandbox, { allow: ["read", "write", "exec"] })
+);
+const agent = new Agent({
+  instructions: integration.instructions,
+  tools: Object.values(integration.tools),
+});
+```
 
 ```ts
 export declare const openai: (
