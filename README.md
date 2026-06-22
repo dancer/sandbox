@@ -320,9 +320,9 @@ const sandbox = await create({
 
 The bridge adapter supports normalized files, command execution, and HTTPS port
 exposure over HTTP. `ports.expose()` creates a zero-config ephemeral quick
-tunnel by default. Set the adapter `tunnel` option to request a stable named
-tunnel when the bridge Worker has the required Cloudflare account and zone
-credentials. Bridge lifecycle, sessions, persist, hydrate, bucket mounts,
+tunnel by default. Set `tunnel` for one stable named port, or use `tunnels` to
+map each exposed port to a distinct named label when the bridge Worker has the
+required Cloudflare account and zone credentials. Bridge lifecycle, sessions, persist, hydrate, bucket mounts,
 warm-pool controls, health, OpenAPI schema access, raw tunnel controls, and PTY
 connection descriptors are available through `sandbox.raw`. Normalized working
 directories stay below `/workspace`: relative values resolve there and custom
@@ -345,7 +345,10 @@ the remote sandbox.
 `apps/cloudflare` is a deployable Worker fixture for the Cloudflare live test.
 It exports the Sandbox Durable Object class, binds it in `wrangler.jsonc`, and
 validates file operations, command execution, shell execution, background
-process spawning, and reachable quick tunnels through the shared adapter.
+process spawning, and reachable quick tunnels through the shared adapter. Named
+tunnel mapping is contract-tested. A provider-backed named tunnel check also
+requires a `CLOUDFLARE_API_TOKEN` with account and zone access on the deployed
+Worker, so it remains intentionally separate from the default live verifier.
 
 `apps/cloudflare-bridge` is a separate deployable fixture for the official HTTP
 bridge. It has a zero-sized warm pool and allows one lite container at a time.
@@ -357,11 +360,13 @@ native `bun run verify:cloudflare` workflow.
 `@sandbox-sdk/cloudflare` enforces Cloudflare's RPC transport so stream writes,
 stream reads, sessions, and tunnels work without app-specific transport
 configuration. `ports.expose()` returns a zero-config HTTPS quick tunnel by
-default. Set the adapter `tunnel` option to request a stable named tunnel when
-the Worker has the upstream Cloudflare account and zone credentials configured.
-Quick tunnels are public and ephemeral, so do not treat the generated URL as
-authentication. Add authentication inside the exposed service when its content
-is sensitive. Ports must be in 1024-65535, excluding reserved port 3000.
+default. Set `tunnel` for one stable named port, or use `tunnels` to map each
+exposed port to a distinct named label when the Worker has the upstream
+Cloudflare account and zone credentials configured. Named labels create
+Cloudflare-side tunnel and DNS resources, so keep labels unique within one
+sandbox. Quick tunnels are public and ephemeral, so do not treat the generated
+URL as authentication. Add authentication inside the exposed service when its
+content is sensitive. Ports must be in 1024-65535, excluding reserved port 3000.
 
 ## API Reference
 

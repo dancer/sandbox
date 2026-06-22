@@ -664,6 +664,90 @@ test("cloudflareBridge exposes normalized and raw tunnels", async () => {
   ]);
 });
 
+test("cloudflareBridge maps named tunnels by port", async () => {
+  const seen: Seen[] = [];
+  const sandbox = await create({
+    adapter: cloudflareBridge({
+      fetch: bridgeFetch((request) => {
+        if (
+          request.method === "POST" &&
+          request.path === "/v1/sandbox/box-1/tunnel/3456"
+        ) {
+          expect(request.body).toBe('{"name":"api"}');
+          return json({
+            createdAt: "2026-06-22T00:00:00.000Z",
+            hostname: "api.example.com",
+            id: "api",
+            name: "api",
+            port: 3456,
+            url: "https://api.example.com",
+          });
+        }
+        if (
+          request.method === "POST" &&
+          request.path === "/v1/sandbox/box-1/tunnel/4567"
+        ) {
+          expect(request.body).toBe('{"name":"web"}');
+          return json({
+            createdAt: "2026-06-22T00:00:00.000Z",
+            hostname: "web.example.com",
+            id: "web",
+            name: "web",
+            port: 4567,
+            url: "https://web.example.com",
+          });
+        }
+        if (
+          request.method === "POST" &&
+          request.path === "/v1/sandbox/box-1/tunnel/5678"
+        ) {
+          expect(request.body).toBe('{"name":"fallback"}');
+          return json({
+            createdAt: "2026-06-22T00:00:00.000Z",
+            hostname: "fallback.example.com",
+            id: "fallback",
+            name: "fallback",
+            port: 5678,
+            url: "https://fallback.example.com",
+          });
+        }
+        if (request.method === "DELETE") {
+          return new Response(null, { status: 204 });
+        }
+        return missing();
+      }, seen),
+      id: "box-1",
+      tunnel: "fallback",
+      tunnels: {
+        3456: "api",
+        4567: "web",
+      },
+      url: "https://bridge.example.com",
+    }),
+  });
+
+  try {
+    await expect(sandbox.ports.expose(3456)).resolves.toMatchObject({
+      url: "https://api.example.com",
+    });
+    await expect(sandbox.ports.expose(4567)).resolves.toMatchObject({
+      url: "https://web.example.com",
+    });
+    await expect(sandbox.ports.expose(5678)).resolves.toMatchObject({
+      url: "https://fallback.example.com",
+    });
+  } finally {
+    await sandbox.stop();
+  }
+
+  expect(seen.map((request) => `${request.method} ${request.path}`)).toEqual([
+    "POST /v1/sandbox/box-1/tunnel/3456",
+    "POST /v1/sandbox/box-1/tunnel/4567",
+    "POST /v1/sandbox/box-1/tunnel/5678",
+    "DELETE /v1/sandbox/box-1",
+  ]);
+});
+
 test("cloudflareBridge validates tunnel configuration before bridge calls", async () => {
   let calls = 0;
   const fetch = bridgeFetch(() => {
@@ -677,6 +761,21 @@ test("cloudflareBridge validates tunnel configuration before bridge calls", asyn
         fetch,
         id: "box-1",
         tunnel: "not_valid",
+        url: "https://bridge.example.com",
+      }),
+    })
+  ).rejects.toMatchObject({
+    code: "configuration",
+    provider: "cloudflare",
+  });
+  expect(calls).toBe(0);
+
+  await expect(
+    create({
+      adapter: cloudflareBridge({
+        fetch,
+        id: "box-1",
+        tunnels: { 8080: "app", 9090: "app" },
         url: "https://bridge.example.com",
       }),
     })

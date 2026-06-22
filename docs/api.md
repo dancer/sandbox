@@ -2141,9 +2141,11 @@ export type CloudflareBridge = Readonly<{
   /**
    * optional DNS label for normalized named tunnel previews
    *
-   * omit it for a zero-config ephemeral `trycloudflare.com` tunnel. named tunnels require the bridge Worker to have Cloudflare account and zone credentials
+   * use it for one named tunnel or as the fallback for one port not listed in `tunnels`. named tunnels require the bridge Worker to have Cloudflare account and zone credentials
    */
   tunnel?: string;
+  /** named tunnel labels keyed by port. entries override `tunnel` and labels must be unique within one sandbox */
+  tunnels?: CloudflareTunnelNames;
 }>;
 ```
 
@@ -2218,6 +2220,14 @@ export type CloudflareBridgePty = Readonly<{
 }>;
 ```
 
+#### `CloudflareTunnelNames`
+
+named Cloudflare tunnel labels keyed by sandbox port. labels must be unique within one sandbox
+
+```ts
+export type CloudflareTunnelNames = Readonly<Record<number, string>>;
+```
+
 #### `CloudflareRaw`
 
 native Cloudflare Sandbox object exposed as `sandbox.raw` for Worker-only features
@@ -2268,9 +2278,11 @@ export type Cloudflare<ProviderRaw extends CloudflareRaw = CloudflareRaw> =
     /**
      * optional named tunnel label with lowercase letters, digits, and internal hyphens
      *
-     * omit it for a zero-config quick tunnel; named tunnels require Worker-side API token, account, and zone configuration
+     * use it for one named tunnel or as the fallback for one port not listed in `tunnels`. named tunnels require Worker-side API token, account, and zone configuration
      */
     tunnel?: string;
+    /** named tunnel labels keyed by port. entries override `tunnel` and labels must be unique within one sandbox */
+    tunnels?: CloudflareTunnelNames;
     /**
      * low-level options forwarded to `getSandbox`, with the current RPC transport enforced
      *
@@ -2286,7 +2298,7 @@ export type Cloudflare<ProviderRaw extends CloudflareRaw = CloudflareRaw> =
 
 create a Cloudflare Sandbox adapter that talks to the official HTTP bridge
 
-`ports.expose()` creates an ephemeral HTTPS quick tunnel by default. configure `tunnel` for a named tunnel when the bridge Worker has the required Cloudflare credentials
+`ports.expose()` creates an ephemeral HTTPS quick tunnel by default. configure `tunnel` for one named port or `tunnels` for per-port labels when the bridge Worker has the required Cloudflare credentials
 
 ```ts
 export declare const cloudflareBridge: (

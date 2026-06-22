@@ -12,6 +12,7 @@ import {
 } from "./bridge-client.js";
 import type { CloudflareBridge, CloudflareBridgeRaw } from "./bridge-client.js";
 import { list, mustOk, rejectUnsupported, run } from "./bridge-exec.js";
+import { namedTunnel, tunnelPort } from "./tunnels.js";
 
 const secrets = ["SANDBOX_API_KEY"] as const;
 
@@ -58,7 +59,7 @@ const workspace = (cwd: string): string => absolute("/workspace", cwd);
 /**
  * create a Cloudflare Sandbox adapter that talks to the official HTTP bridge
  *
- * `ports.expose()` creates an ephemeral HTTPS quick tunnel by default. configure `tunnel` for a named tunnel when the bridge Worker has the required Cloudflare credentials
+ * `ports.expose()` creates an ephemeral HTTPS quick tunnel by default. configure `tunnel` for one named port or `tunnels` for per-port labels when the bridge Worker has the required Cloudflare credentials
  */
 export const cloudflareBridge = (
   options: CloudflareBridge = {}
@@ -95,6 +96,7 @@ export const cloudflareBridge = (
       throw error;
     }
     const headers = session === undefined ? {} : { "session-id": session };
+    const labels = new Map<string, number>();
 
     return fromSandboxRuntime({
       capabilities: bridgeCapabilities,
@@ -175,10 +177,11 @@ export const cloudflareBridge = (
               "unsupported"
             );
           }
+          const target = tunnelPort(value);
           const tunnel = await raw.tunnels.get(
             id,
-            value,
-            options.tunnel === undefined ? undefined : { name: options.tunnel }
+            target,
+            namedTunnel(options.tunnel, options.tunnels, target, labels)
           );
           return { port: tunnel.port, url: tunnel.url };
         },

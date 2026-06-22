@@ -407,6 +407,86 @@ test("cloudflare forwards configured named tunnels", async () => {
   }
 });
 
+test("cloudflare maps named tunnels by port", async () => {
+  tunnelCalls = 0;
+  tunnelSeen = undefined;
+  const sandbox = await create({
+    adapter: cloudflare({
+      binding,
+      tunnel: "fallback",
+      tunnels: {
+        8080: "api",
+        9090: "web",
+      },
+    }),
+  });
+
+  try {
+    await sandbox.ports.expose(8080);
+    expect(tunnelSeen).toEqual({
+      options: { name: "api" },
+      port: 8080,
+    });
+    await sandbox.ports.expose(9090);
+    expect(tunnelSeen).toEqual({
+      options: { name: "web" },
+      port: 9090,
+    });
+    await sandbox.ports.expose(4567);
+    expect(tunnelSeen).toEqual({
+      options: { name: "fallback" },
+      port: 4567,
+    });
+    expect(tunnelCalls).toBe(3);
+  } finally {
+    await sandbox.stop();
+  }
+});
+
+test("cloudflare rejects duplicate named tunnel labels before provider calls", async () => {
+  for (const tunnels of [{ 8080: "API" }, { 8080: "app", 9090: "app" }]) {
+    getSeen = undefined;
+    await expect(
+      create({
+        adapter: cloudflare({ binding, tunnels }),
+      })
+    ).rejects.toMatchObject({
+      code: "configuration",
+      provider: "cloudflare",
+    });
+    expect(getSeen).toBeUndefined();
+  }
+
+  getSeen = undefined;
+  await expect(
+    create({
+      adapter: cloudflare({ binding, tunnels: { 3000: "app" } }),
+    })
+  ).rejects.toMatchObject({
+    code: "unsupported",
+    provider: "cloudflare",
+  });
+  expect(getSeen).toBeUndefined();
+});
+
+test("cloudflare rejects a named tunnel fallback reused for another port", async () => {
+  tunnelCalls = 0;
+  const sandbox = await create({
+    adapter: cloudflare({ binding, tunnel: "app" }),
+  });
+
+  try {
+    await sandbox.ports.expose(8080);
+    await expect(sandbox.ports.expose(9090)).rejects.toMatchObject({
+      code: "configuration",
+      provider: "cloudflare",
+    });
+    expect(tunnelCalls).toBe(1);
+  } finally {
+    await sandbox.stop();
+  }
+});
+
 test("cloudflare accepts 63 character named tunnel labels", async () => {
   tunnelCalls = 0;
   tunnelSeen = undefined;

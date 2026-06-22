@@ -72,3 +72,11 @@ The adapter uses Cloudflare's RPC transport and quick tunnels, so the live port
 verification only needs the Worker URL and bearer token. No wildcard route or
 custom preview hostname is required. Cloudflare accepts ports 1024-65535 and
 reserves port `3000` for the Sandbox runtime.
+
+## named tunnels
+
+The default live verifier intentionally covers quick tunnels only. Named tunnel
+mapping is covered by adapter contract tests. A provider-backed named tunnel
+check requires a `CLOUDFLARE_API_TOKEN` with access to one Cloudflare account
+and zone to be configured as a Worker secret. That token stays on the Worker
+and must never be passed through sandbox environment configuration.

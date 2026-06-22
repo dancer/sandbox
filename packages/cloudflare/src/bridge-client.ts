@@ -1,5 +1,8 @@
-import { bytes, port, sandboxError } from "@sandbox-sdk/core";
+import { bytes, sandboxError } from "@sandbox-sdk/core";
 import type { Capabilities, Input } from "@sandbox-sdk/core";
+
+import { tunnelName, tunnelPort, validateTunnels } from "./tunnels.js";
+import type { CloudflareTunnelNames } from "./tunnels.js";
 
 /** minimal Fetch API contract accepted by Cloudflare bridge requests */
 export type CloudflareBridgeFetch = (
@@ -187,9 +190,11 @@ export type CloudflareBridge = Readonly<{
   /**
    * optional DNS label for normalized named tunnel previews
    *
-   * omit it for a zero-config ephemeral `trycloudflare.com` tunnel. named tunnels require the bridge Worker to have Cloudflare account and zone credentials
+   * use it for one named tunnel or as the fallback for one port not listed in `tunnels`. named tunnels require the bridge Worker to have Cloudflare account and zone credentials
    */
   tunnel?: string;
+  /** named tunnel labels keyed by port. entries override `tunnel` and labels must be unique within one sandbox */
+  tunnels?: CloudflareTunnelNames;
 }>;
 
 /** connection details for the bridge PTY WebSocket route */
@@ -304,31 +309,6 @@ const env = (name: string): string | undefined =>
 
 const trim = (value: string): string => value.replace(/\/+$/u, "");
 
-const tunnelPattern = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/u;
-
-const tunnelName = (value: string): string => {
-  if (tunnelPattern.test(value)) {
-    return value;
-  }
-  throw sandboxError(
-    provider,
-    "Cloudflare named tunnel labels must use 1 to 63 lowercase letters, digits, and internal hyphens",
-    "configuration"
-  );
-};
-
-const tunnelPort = (value: number): number => {
-  const target = port(value, provider);
-  if (target >= 1024 && target !== 3000) {
-    return target;
-  }
-  throw sandboxError(
-    provider,
-    "Cloudflare tunnel ports must be integers from 1024 to 65535, excluding 3000",
-    target === 3000 ? "unsupported" : "configuration"
-  );
-};
-
 export const bridgeBody = (input: Uint8Array | string): ArrayBuffer | string =>
   typeof input === "string" ? input : Uint8Array.from(input).buffer;
 
@@ -383,9 +363,7 @@ const validate = (
   }
 
   const token = options.token?.trim() || env("SANDBOX_API_KEY");
-  if (options.tunnel !== undefined) {
-    tunnelName(options.tunnel);
-  }
+  validateTunnels(options.tunnel, options.tunnels);
   const value = bridgeUrl(url);
   return token === undefined ? { url: value } : { token, url: value };
 };

@@ -60,7 +60,8 @@ export const Cloudflare = () => (
       <code>@cloudflare/sandbox</code> and bind that Durable Object in{" "}
       <code>wrangler.jsonc</code>. The adapter uses Cloudflare's RPC transport
       and exposes ports through zero-config HTTPS tunnels. Set{" "}
-      <code>tunnel</code> when you need a stable named tunnel backed by your
+      <code>tunnel</code> when one port needs a stable named tunnel, or use{" "}
+      <code>tunnels</code> to map multiple ports to distinct labels in your
       Cloudflare zone.
     </p>
     <CodeBlock code={CLOUDFLARE_EXAMPLE} lang="ts" />
@@ -69,18 +70,18 @@ export const Cloudflare = () => (
       bridge and use <code>cloudflareBridge()</code>. It keeps normalized files,
       command execution, and HTTPS tunnel previews available over HTTP.
       <code>ports.expose()</code> creates a zero-config quick tunnel by default;
-      set <code>tunnel</code> to request a named tunnel when the bridge Worker
-      has the required Cloudflare account and zone credentials. Bridge working
-      directories stay below <code>/workspace</code>, so relative values resolve
-      there, custom directories are created, and external paths fail before a
-      bridge request. Bridge lifecycle, sessions, persist, hydrate, bucket
-      mounts, warm-pool controls, health, OpenAPI schema access, and raw tunnel
-      controls stay typed on <code>sandbox.raw</code>. PTY support returns a
-      typed WebSocket connection descriptor so your app can own the terminal
-      client and start a long-running service before calling{" "}
-      <code>ports.expose()</code>. The bridge HTTP API does not expose a
-      lifecycle-safe background process endpoint, so{" "}
-      <code>process.spawn()</code> stays unavailable.{" "}
+      set <code>tunnel</code> for one named port or <code>tunnels</code> for
+      per-port labels when the bridge Worker has the required Cloudflare account
+      and zone credentials. Bridge working directories stay below{" "}
+      <code>/workspace</code>, so relative values resolve there, custom
+      directories are created, and external paths fail before a bridge request.
+      Bridge lifecycle, sessions, persist, hydrate, bucket mounts, warm-pool
+      controls, health, OpenAPI schema access, and raw tunnel controls stay
+      typed on <code>sandbox.raw</code>. PTY support returns a typed WebSocket
+      connection descriptor so your app can own the terminal client and start a
+      long-running service before calling <code>ports.expose()</code>. The
+      bridge HTTP API does not expose a lifecycle-safe background process
+      endpoint, so <code>process.spawn()</code> stays unavailable.{" "}
       <code>SANDBOX_API_KEY</code> authenticates the bridge and is rejected from
       sandbox environment configuration.
     </p>
@@ -108,9 +109,21 @@ export const Cloudflare = () => (
         </PropAccordionItem>
         <PropAccordionItem name="tunnel" status="optional" value="string">
           <p>
-            DNS label used for named tunnels created by{" "}
-            <code>ports.expose()</code>. Omit it for a zero-config{" "}
+            DNS label used for one named tunnel created by{" "}
+            <code>ports.expose()</code>. With <code>tunnels</code>, it is a
+            fallback for one unmapped port. Omit it for a zero-config{" "}
             <code>trycloudflare.com</code> quick tunnel.
+          </p>
+        </PropAccordionItem>
+        <PropAccordionItem
+          name="tunnels"
+          status="optional"
+          value="Record<number, string>"
+        >
+          <p>
+            Named tunnel labels keyed by port. Use a distinct DNS label for each
+            exposed port, for example{" "}
+            <code>{'{ 3001: "api", 3002: "web" }'}</code>.
           </p>
         </PropAccordionItem>
         <PropAccordionItem name="id" status="optional" value="id">
