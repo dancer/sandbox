@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 
-import { create } from "@sandbox-sdk/core";
+import { create, SandboxError } from "@sandbox-sdk/core";
 import type { Preview } from "@sandbox-sdk/core";
 
 import { cloudflareBridge } from "../src/index";
@@ -111,6 +111,12 @@ const waitForPreview = async (
   });
 };
 
+const busy = (error: unknown): error is SandboxError =>
+  error instanceof SandboxError &&
+  error.provider === "cloudflare" &&
+  error.code === "provider" &&
+  error.message.includes("instance limit reached");
+
 live("cloudflare bridge runs a live normalized workflow", async () => {
   if (url === undefined || token === undefined) {
     throw new Error(
@@ -118,11 +124,36 @@ live("cloudflare bridge runs a live normalized workflow", async () => {
     );
   }
 
-  const sandbox = await create({
-    adapter: cloudflareBridge({ token, url }),
-    cwd: "/workspace/sandbox-sdk-bridge",
-    env: { SANDBOX_SDK_BRIDGE: "bridge-env" },
-  });
+  const start = async () => {
+    let failure: SandboxError | undefined;
+
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      try {
+        return await create({
+          adapter: cloudflareBridge({ token, url }),
+          cwd: "/workspace/sandbox-sdk-bridge",
+          env: { SANDBOX_SDK_BRIDGE: "bridge-env" },
+        });
+      } catch (error) {
+        if (!busy(error)) {
+          throw error;
+        }
+        failure = error;
+        if (attempt < 5) {
+          await Bun.sleep(10_000);
+        }
+      }
+    }
+
+    if (failure !== undefined) {
+      throw new Error(failure.message, { cause: failure });
+    }
+    throw new Error(
+      "cloudflare bridge retry exhausted without a provider error"
+    );
+  };
+
+  const sandbox = await start();
   let preview: Awaited<ReturnType<typeof sandbox.ports.expose>> | undefined;
   let socket: WebSocket | undefined;
 
