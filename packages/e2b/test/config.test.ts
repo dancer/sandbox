@@ -132,6 +132,7 @@ test("e2b maps create and command options without running a real provider", asyn
   let commandSeen: unknown;
   let createSeen: unknown;
   let mkdirSeen: unknown;
+  let portSeen: number | undefined;
   let readSeen: unknown;
   let snapshotSeen: unknown;
   let snapshotted = false;
@@ -191,6 +192,10 @@ test("e2b maps create and command options without running a real provider", asyn
         writeSeen = { input, options, path };
         return Promise.resolve();
       },
+    },
+    getHost: (value: number) => {
+      portSeen = value;
+      return `${value}-sandbox.e2b.app`;
     },
     kill: () => Promise.resolve(),
     sandboxId: "sandbox",
@@ -269,6 +274,33 @@ test("e2b maps create and command options without running a real provider", asyn
       code: "configuration",
       provider: "e2b",
     });
+    await expect(
+      sandbox.ports.expose(3000, { host: "preview.example.com" })
+    ).rejects.toMatchObject({
+      code: "unsupported",
+      provider: "e2b",
+    });
+    expect(portSeen).toBeUndefined();
+    await expect(
+      sandbox.ports.expose(3000, { token: "private" })
+    ).rejects.toMatchObject({
+      code: "unsupported",
+      provider: "e2b",
+    });
+    expect(portSeen).toBeUndefined();
+    await expect(
+      sandbox.ports.expose(3000, { protocol: "http" })
+    ).rejects.toMatchObject({
+      code: "unsupported",
+      provider: "e2b",
+    });
+    await expect(
+      sandbox.ports.expose(3000, { protocol: "https" })
+    ).resolves.toEqual({
+      port: 3000,
+      url: "https://3000-sandbox.e2b.app",
+    });
+    expect(portSeen).toBe(3000);
     await expect(
       sandbox.process.exec("echo", ["hello world"], {
         timeout: -1,
@@ -362,6 +394,41 @@ test("e2b maps create and command options without running a real provider", asyn
     expect(snapshotted).toBe(true);
     await expect(
       sandbox.snapshots.restore("snapshot-id")
+    ).rejects.toMatchObject({
+      code: "unsupported",
+      provider: "e2b",
+    });
+  } finally {
+    E2BSandbox.create = original;
+  }
+});
+
+test("e2b derives local preview URLs from the provider host", async () => {
+  const original = E2BSandbox.create;
+  const raw = {
+    files: {
+      makeDir: () => Promise.resolve(),
+    },
+    getHost: (value: number) => `localhost:${value}`,
+    kill: () => Promise.resolve(),
+    sandboxId: "sandbox",
+  } as unknown as E2BSandbox;
+
+  E2BSandbox.create = (() => Promise.resolve(raw)) as typeof E2BSandbox.create;
+
+  try {
+    const sandbox = await create({
+      adapter: e2b({ apiKey: "key", debug: true }),
+    });
+
+    await expect(
+      sandbox.ports.expose(3000, { protocol: "http" })
+    ).resolves.toEqual({
+      port: 3000,
+      url: "http://localhost:3000",
+    });
+    await expect(
+      sandbox.ports.expose(3000, { protocol: "https" })
     ).rejects.toMatchObject({
       code: "unsupported",
       provider: "e2b",

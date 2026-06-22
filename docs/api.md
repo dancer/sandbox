@@ -2328,7 +2328,9 @@ E2B adapter for Sandbox SDK
 
 #### `E2BRaw`
 
-native e2b sandbox object exposed as `sandbox.raw`
+native E2B sandbox object exposed as `sandbox.raw`
+
+use `trafficAccessToken` with the `e2b-traffic-access-token` header when `network.allowPublicTraffic` restricts a preview URL
 
 ```ts
 export type E2BRaw = E2BSandbox;
@@ -2364,7 +2366,7 @@ export type E2B = Readonly<{
   metadata?: Readonly<Record<string, string>>;
   /** e2b mcp gateway configuration enabled for new sandboxes */
   mcp?: McpServer;
-  /** e2b network policy for outbound traffic and public preview access */
+  /** E2B network policy for outbound traffic and previews; restricted preview URLs require `sandbox.raw.trafficAccessToken` as an `e2b-traffic-access-token` header */
   network?: SandboxNetworkOpts;
   /** request timeout in milliseconds for e2b api calls */
   requestTimeout?: number;
@@ -2394,6 +2396,8 @@ export type E2B = Readonly<{
 create an E2B adapter with normalized sandbox operations
 
 E2B snapshots capture filesystem and memory state. creation briefly pauses the source sandbox and drops active command, pty, and WebSocket connections. create a fresh sandbox with `create({ snapshot })`; in-place restore is not normalized
+
+`ports.expose` returns E2B's derived HTTP or HTTPS URL. when `network.allowPublicTraffic` is false, send `sandbox.raw.trafficAccessToken` in the `e2b-traffic-access-token` request header
 
 ```ts
 export declare const e2b: (options?: E2B) => Adapter<Raw>;
