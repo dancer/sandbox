@@ -289,10 +289,10 @@ export const ApiReference = () => (
         ports.expose(port, options?)
       </Heading>
       <p>
-        Returns a URL routed to <code>port</code> inside the sandbox. Local
-        sandboxes return derived localhost URLs; provider adapters may return
-        public tunnels, create-time port URLs, or reject unsupported exposure
-        with <code>SandboxError</code>. Branch on{" "}
+        Returns the provider-derived URL for <code>port</code>. Local sandboxes
+        return derived localhost URLs; provider adapters may return public
+        tunnels, create-time port URLs, or reject unsupported exposure with{" "}
+        <code>SandboxError</code>. Branch on{" "}
         <code>sandbox.capabilities.ports</code> first.
       </p>
       <CodeBlock code={PORTS_EXAMPLE} lang="ts" />
@@ -303,16 +303,24 @@ export const ApiReference = () => (
         <Accordion className="rounded-md border-dotted" type="multiple">
           <PropAccordionItem name="host" status="optional" value="host">
             <p>
-              Host inside the sandbox the public URL forwards to. Defaults to{" "}
-              <code>"127.0.0.1"</code>.
+              Custom preview host when the adapter supports it. Use{" "}
+              <code>sandbox.raw</code> for provider-specific preview controls.
             </p>
           </PropAccordionItem>
           <PropAccordionItem name="protocol" status="optional" value="protocol">
             <p>
               Wire protocol: <code>"http"</code>, <code>"https"</code>, or{" "}
-              <code>"tcp"</code>. Each adapter advertises which protocols it
-              supports through <code>capabilities</code>; an unsupported choice
-              throws at <code>expose()</code> time.
+              <code>"tcp"</code>. Protocol support is adapter-specific;{" "}
+              <code>capabilities.ports</code> describes exposure mode, not
+              protocol support. Unsupported choices throw at{" "}
+              <code>expose()</code> time.
+            </p>
+          </PropAccordionItem>
+          <PropAccordionItem name="token" status="optional" value="token">
+            <p>
+              Provider-issued preview URL token when the adapter supports it.
+              Use <code>sandbox.raw</code> for provider-specific preview
+              credentials.
             </p>
           </PropAccordionItem>
         </Accordion>

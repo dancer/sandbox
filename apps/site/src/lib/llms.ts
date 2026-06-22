@@ -202,7 +202,7 @@ Options shared by all four: \`cwd\`, \`env\` (a \`Record<string, string>\`), \`t
 
 const ports = `# Ports
 
-Expose a port running inside the sandbox and get a reachable URL. Local sandboxes return derived localhost URLs; provider adapters may return public tunnels or create-time port URLs, or reject unsupported exposure. Branch on \`sandbox.capabilities.ports\` first.
+Expose a port running inside the sandbox and get its provider-derived URL. Local sandboxes return derived localhost URLs; provider adapters may return public tunnels or create-time port URLs, or reject unsupported exposure. Branch on \`sandbox.capabilities.ports\` first.
 
 \`\`\`ts
 const result = await sandbox.process.shell("bun dev --host 0.0.0.0", {
@@ -218,11 +218,11 @@ const preview = await sandbox.ports.expose(3000);
 console.log(preview.url);
 \`\`\`
 
-\`ports.expose(port, options?)\` returns \`{ url, port }\`. Options:
+\`ports.expose(port, options?)\` returns \`{ url, port }\`. Options are provider-specific and unsupported values throw at \`expose()\` time:
 
-- \`host\`: host inside the sandbox the public URL forwards to. Defaults to \`"127.0.0.1"\`.
-- \`protocol\`: \`"http"\`, \`"https"\`, or \`"tcp"\`. Each adapter advertises which protocols it supports through \`capabilities\`; an unsupported choice throws at \`expose()\` time.
-- \`token\`: stable preview token when the provider supports custom preview URLs.`;
+- \`host\`: custom preview host when the adapter supports it.
+- \`protocol\`: \`"http"\`, \`"https"\`, or \`"tcp"\`. Consult the adapter docs for supported protocols; \`capabilities.ports\` describes port exposure mode, not protocol support.
+- \`token\`: provider-issued preview URL token when the adapter supports it. Use \`sandbox.raw\` for provider-specific preview controls.`;
 
 const snapshots = `# Snapshots
 
