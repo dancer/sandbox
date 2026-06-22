@@ -168,6 +168,42 @@ test("blaxel rejects invalid create timeouts before provider calls", async () =>
   }
 });
 
+test("blaxel cleans up a created sandbox when workspace setup fails", async () => {
+  const original = SandboxInstance.create;
+  let deleted = false;
+  const raw = {
+    delete: () => {
+      deleted = true;
+      return Promise.reject(new Error("cleanup failed"));
+    },
+    fs: {
+      mkdir: () => Promise.reject(new Error("mkdir failed")),
+    },
+    metadata: { name: "sandbox" },
+  } as unknown as SandboxInstance;
+
+  SandboxInstance.create = (() =>
+    Promise.resolve(raw)) as typeof SandboxInstance.create;
+
+  try {
+    await expect(
+      create({
+        adapter: blaxel({
+          apiKey: "key",
+          workspace: "workspace",
+        }),
+      })
+    ).rejects.toMatchObject({
+      code: "provider",
+      message: "mkdir failed",
+      provider: "blaxel",
+    });
+    expect(deleted).toBe(true);
+  } finally {
+    SandboxInstance.create = original;
+  }
+});
+
 test("blaxel rejects long sandbox names before provider calls", async () => {
   const original = SandboxInstance.create;
   let called = false;

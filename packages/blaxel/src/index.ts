@@ -741,18 +741,25 @@ export const blaxel = (options: Blaxel = {}): Adapter<Raw> => ({
     const ports = (input.ports ?? options.ports ?? []).map((value) =>
       port(value, provider)
     );
-    const raw =
-      input.id === undefined
-        ? await SandboxInstance.create(
-            createOptions(options, input, ports, envs),
-            {
-              safe: options.safe ?? false,
-            }
-          )
-        : await SandboxInstance.get(input.id);
+    const owned = input.id === undefined;
+    const raw = owned
+      ? await SandboxInstance.create(
+          createOptions(options, input, ports, envs),
+          {
+            safe: options.safe ?? false,
+          }
+        )
+      : await SandboxInstance.get(input.id);
 
-    await wrap(() => mkdir(raw, cwd), "mkdir");
-    return createSandbox(raw, cwd);
+    try {
+      await wrap(() => mkdir(raw, cwd), "mkdir");
+      return createSandbox(raw, cwd);
+    } catch (error) {
+      if (owned) {
+        await raw.delete().catch(() => null);
+      }
+      throw error;
+    }
   },
   provider,
 });
