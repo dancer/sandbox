@@ -3,7 +3,12 @@ import { expect, test } from "bun:test";
 import { SandboxInstance } from "@blaxel/core";
 import { create } from "@sandbox-sdk/core";
 
-import { blaxel, updateNetwork } from "../src/index";
+import {
+  blaxel,
+  updateLifecycle,
+  updateNetwork,
+  updateTtl,
+} from "../src/index";
 
 const response = (exitCode = 0, stdout = "ok", stderr = "") => ({
   command: "command",
@@ -196,6 +201,42 @@ test("blaxel replaces network configuration for a native sandbox", async () => {
   }
 });
 
+test("blaxel updates native sandbox lifecycle settings", async () => {
+  const originalTtl = SandboxInstance.updateTtl;
+  const originalLifecycle = SandboxInstance.updateLifecycle;
+  const raw = {
+    metadata: { name: "sandbox" },
+  } as SandboxInstance;
+  let ttlSeen: unknown;
+  let lifecycleSeen: unknown;
+
+  SandboxInstance.updateTtl = ((name: string, ttl: string | null) => {
+    ttlSeen = { name, ttl };
+    return Promise.resolve(raw);
+  }) as typeof SandboxInstance.updateTtl;
+  SandboxInstance.updateLifecycle = ((name: string, lifecycle: unknown) => {
+    lifecycleSeen = { lifecycle, name };
+    return Promise.resolve(raw);
+  }) as typeof SandboxInstance.updateLifecycle;
+
+  try {
+    await expect(updateTtl(raw, null)).resolves.toBe(raw);
+    await expect(
+      updateLifecycle("sandbox", {
+        autoStop: { maxDuration: "1h" },
+      })
+    ).resolves.toBe(raw);
+    expect(ttlSeen).toEqual({ name: "sandbox", ttl: null });
+    expect(lifecycleSeen).toEqual({
+      lifecycle: { autoStop: { maxDuration: "1h" } },
+      name: "sandbox",
+    });
+  } finally {
+    SandboxInstance.updateTtl = originalTtl;
+    SandboxInstance.updateLifecycle = originalLifecycle;
+  }
+});
+
 test("blaxel maps create options and normalized operations", async () => {
   const original = SandboxInstance.create;
   let createSeen: unknown;
@@ -301,6 +342,7 @@ test("blaxel maps create options and normalized operations", async () => {
       adapter: blaxel({
         apiKey: "key",
         env: { A: "1" },
+        externalId: "task-123",
         image: "blaxel/base-image:latest",
         labels: { owner: "sdk" },
         memory: 4096,
@@ -332,6 +374,7 @@ test("blaxel maps create options and normalized operations", async () => {
         { name: "A", value: "1" },
         { name: "B", value: "2" },
       ],
+      externalId: "task-123",
       image: "blaxel/py-app:latest",
       labels: { owner: "sdk", task: "test" },
       memory: 4096,

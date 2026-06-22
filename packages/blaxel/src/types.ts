@@ -22,6 +22,8 @@ export type Blaxel = Readonly<
     cwd?: string;
     /** default environment variables applied when creating a sandbox */
     env?: Readonly<Record<string, string>>;
+    /** application-owned identifier stored with the new Blaxel sandbox and usable with `SandboxInstance.getByExternalId` */
+    externalId?: string;
     /** sandbox expiration time forwarded to blaxel */
     expires?: Date;
     /** default blaxel image for new sandboxes */
@@ -40,6 +42,7 @@ export type Blaxel = Readonly<
     options?: Omit<
       SandboxCreateConfiguration,
       | "envs"
+      | "externalId"
       | "expires"
       | "image"
       | "labels"

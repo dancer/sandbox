@@ -8,6 +8,7 @@ import type {
   Config as BlaxelConfig,
   ProcessResponse,
   SandboxCreateConfiguration,
+  SandboxLifecycle,
   SandboxUpdateNetwork,
 } from "@blaxel/core";
 import {
@@ -38,7 +39,7 @@ import { rejectUnsupported } from "./errors.js";
 import type { Blaxel } from "./types.js";
 
 export type { Blaxel, BlaxelRaw } from "./types.js";
-export type { SandboxUpdateNetwork } from "@blaxel/core";
+export type { SandboxLifecycle, SandboxUpdateNetwork } from "@blaxel/core";
 
 type Raw = SandboxInstance;
 
@@ -70,17 +71,53 @@ const capabilities: Capabilities = {
   streaming: "separate",
 };
 
-/** replace the network configuration for a running Blaxel sandbox and return a refreshed native instance */
+const rawName = (sandbox: Raw | string): string => {
+  const name = typeof sandbox === "string" ? sandbox : sandbox.metadata.name;
+  if (name !== undefined && name.length > 0) {
+    return name;
+  }
+  throw sandboxError(
+    provider,
+    "Blaxel sandbox name missing. Pass a native sandbox with metadata.name or a sandbox name.",
+    "configuration"
+  );
+};
+
+/**
+ * replace the network configuration for a running Blaxel sandbox and return its refreshed native instance
+ *
+ * @example
+ * await updateNetwork(sandbox.raw, { proxy: { allowedDomains: ["api.example.com"], routing: [] } })
+ */
 export const updateNetwork = (
   sandbox: Raw | string,
   network: SandboxUpdateNetwork["network"]
 ): Promise<Raw> => {
   const update: SandboxUpdateNetwork = network === undefined ? {} : { network };
-  return SandboxInstance.updateNetwork(
-    typeof sandbox === "string" ? sandbox : sandbox.metadata.name,
-    update
-  );
+  return SandboxInstance.updateNetwork(rawName(sandbox), update);
 };
+
+/**
+ * replace or clear the ttl for a running Blaxel sandbox and return its refreshed native instance
+ *
+ * @example
+ * await updateTtl(sandbox.raw, "1h")
+ */
+export const updateTtl = (
+  sandbox: Raw | string,
+  ttl: string | null
+): Promise<Raw> => SandboxInstance.updateTtl(rawName(sandbox), ttl);
+
+/**
+ * replace or clear the lifecycle configuration for a running Blaxel sandbox and return its refreshed native instance
+ *
+ * @example
+ * await updateLifecycle(sandbox.raw, { autoStop: { maxDuration: "1h" } })
+ */
+export const updateLifecycle = (
+  sandbox: Raw | string,
+  lifecycle: SandboxLifecycle | null
+): Promise<Raw> => SandboxInstance.updateLifecycle(rawName(sandbox), lifecycle);
 
 const noop = (): void => void 0;
 
@@ -545,6 +582,9 @@ const createOptions = (
 
   return {
     ...options.options,
+    ...(options.externalId === undefined
+      ? {}
+      : { externalId: options.externalId }),
     ...(name === undefined ? {} : { name }),
     ...(image === undefined ? {} : { image }),
     ...(options.memory === undefined ? {} : { memory: options.memory }),
