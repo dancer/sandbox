@@ -1998,7 +1998,11 @@ export type Cloudflare<ProviderRaw extends CloudflareRaw = CloudflareRaw> =
      * @default "/workspace"
      */
     cwd?: string;
-    /** default environment variables written to the selected sandbox; values are not filtered, so never pass Worker secrets */
+    /**
+     * default environment variables written to the selected sandbox
+     *
+     * values cross the Worker-to-sandbox trust boundary. pass only secrets the sandbox may use, and keep host-only credentials behind a Worker proxy
+     */
     env?: Readonly<Record<string, string>>;
     /** stable sandbox id used when create input omits id */
     id?: string;
