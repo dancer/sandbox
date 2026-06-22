@@ -245,6 +245,7 @@ test("modal maps create options, tags, commands, and ports", async () => {
   let snapshotSeen: unknown;
   let tagsSeen: unknown;
   let terminated = false;
+  let tunnelCalls = 0;
   const bucket = {} as ModalSdk.CloudBucketMount;
   const probe = {} as ModalSdk.Probe;
   const proxy = {} as ModalSdk.Proxy;
@@ -278,12 +279,14 @@ test("modal maps create options, tags, commands, and ports", async () => {
       terminated = true;
       return Promise.resolve();
     },
-    tunnels: () =>
-      Promise.resolve({
+    tunnels: () => {
+      tunnelCalls += 1;
+      return Promise.resolve({
         8080: {
           url: "https://preview.example.com",
         },
-      }),
+      });
+    },
   } as unknown as ModalSdk.Sandbox;
   const client = {
     apps: {
@@ -409,6 +412,7 @@ test("modal maps create options, tags, commands, and ports", async () => {
     code: "unsupported",
     provider: "modal",
   });
+  expect(tunnelCalls).toBe(0);
   await expect(sandbox.ports.expose(0)).rejects.toMatchObject({
     code: "configuration",
     provider: "modal",
@@ -475,6 +479,38 @@ test("modal maps create options, tags, commands, and ports", async () => {
   await sandbox.stop();
   expect(detached).toBe(true);
   expect(terminated).toBe(false);
+});
+
+test("modal discovers existing tunnels when reconnecting by id", async () => {
+  const raw = {
+    sandboxId: "sb-reconnected",
+    tunnels: () =>
+      Promise.resolve({
+        8080: { url: "https://reconnected.example.com" },
+      }),
+  } as unknown as ModalSdk.Sandbox;
+  const client = {
+    sandboxes: {
+      fromId: (id: string) => {
+        expect(id).toBe("sb-reconnected");
+        return Promise.resolve(raw);
+      },
+    },
+  } as unknown as ModalSdk.ModalClient;
+
+  const sandbox = await create({
+    adapter: modal({ client }),
+    id: "sb-reconnected",
+  });
+
+  await expect(sandbox.ports.expose(8080)).resolves.toEqual({
+    port: 8080,
+    url: "https://reconnected.example.com",
+  });
+  await expect(sandbox.ports.expose(3000)).rejects.toMatchObject({
+    code: "unsupported",
+    provider: "modal",
+  });
 });
 
 test("modal writes readable streams in chunks", async () => {

@@ -84,7 +84,11 @@ export type Modal = Readonly<
     outboundCidrAllowlist?: CreateParams["outboundCidrAllowlist"];
     /** outbound domain allowlist with optional wildcard prefixes such as *.example.com */
     outboundDomainAllowlist?: CreateParams["outboundDomainAllowlist"];
-    /** encrypted ports declared at create time and later exposed with ports.expose */
+    /**
+     * encrypted ports declared for new sandboxes at create time
+     *
+     * reconnecting by id discovers existing Modal tunnels without repeating this option
+     */
     ports?: readonly number[];
     /** enable a pty for the Modal sandbox entrypoint */
     pty?: CreateParams["pty"];
@@ -526,6 +530,7 @@ const createSandbox = (
   raw: Raw,
   cwd: string,
   ports: readonly number[],
+  reconnected: boolean,
   stop: Modal["stop"],
   snapshot: ModalSdk.SandboxSnapshotFilesystemParams
 ): Sandbox<Raw> => ({
@@ -578,7 +583,8 @@ const createSandbox = (
   ports: {
     expose: async (value) => {
       const target = port(value, provider);
-      if (!ports.includes(target)) {
+      const declared = ports.includes(target);
+      if (!reconnected && !declared) {
         throw sandboxError(
           provider,
           "Modal ports must be declared at sandbox creation",
@@ -587,10 +593,17 @@ const createSandbox = (
       }
       const tunnels = await wrap(() => raw.tunnels(), "port exposure");
       const tunnel = tunnels[target];
-      if (!tunnel) {
-        throw sandboxError(provider, "Modal tunnel not found", "not_found");
+      if (tunnel) {
+        return { port: target, url: tunnel.url };
       }
-      return { port: target, url: tunnel.url };
+      if (!declared) {
+        throw sandboxError(
+          provider,
+          "Modal ports must be declared at sandbox creation",
+          "unsupported"
+        );
+      }
+      throw sandboxError(provider, "Modal tunnel not found", "not_found");
     },
   },
   process: {
@@ -621,7 +634,11 @@ const createSandbox = (
   },
 });
 
-/** create a modal sandbox adapter with normalized sandbox operations */
+/**
+ * create a Modal sandbox adapter with normalized file, command, port, and filesystem snapshot operations
+ *
+ * filesystem snapshots return an image id for a new sandbox through the shared snapshot create option. in-place restore and normalized background process handles are unavailable
+ */
 export const modal = (options: Modal = {}): Adapter<Raw> => ({
   capabilities,
   async create(input = {}) {
@@ -659,6 +676,7 @@ export const modal = (options: Modal = {}): Adapter<Raw> => ({
       raw,
       cwd,
       ports,
+      input.id !== undefined,
       options.stop ?? "terminate",
       snapshot
     );

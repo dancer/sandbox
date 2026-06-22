@@ -119,7 +119,7 @@ E2B microVM sandboxes via \`e2b\`. Can pin a template at construction and thread
 
 ## Modal (@sandbox-sdk/modal)
 
-Modal sandboxes via \`modal\`. Creates sandboxes inside a Modal app, maps file reads and writes through Modal's filesystem, and exposes declared ports through Modal tunnels. Supports filesystem snapshot creation; in-place restore and background process handles stay unsupported until the provider exposes a matching stable primitive.
+Modal sandboxes via \`modal\`. Creates sandboxes inside a Modal app, maps file reads and writes through Modal's filesystem, and exposes provider-declared ports through Modal tunnels. Reconnecting by sandbox id discovers existing tunnels automatically. Supports filesystem snapshot creation; in-place restore and background process handles stay unsupported until the provider exposes a matching stable primitive.
 
 - \`app\` (defaults to \`sandbox-sdk\`), \`image\`, \`ports\`.
 - Credentials: \`MODAL_TOKEN_ID\` and \`MODAL_TOKEN_SECRET\`, or Modal CLI config.

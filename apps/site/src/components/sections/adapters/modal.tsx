@@ -23,7 +23,8 @@ export const Modal = () => (
     <p>
       Modal sandboxes via <code>modal</code>. The adapter creates sandboxes
       inside a Modal app, maps file reads and writes through Modal's sandbox
-      filesystem, and exposes declared ports through Modal tunnels.
+      filesystem, and exposes provider-declared ports through Modal tunnels.
+      Reconnecting by sandbox id discovers existing tunnels automatically.
     </p>
     <p>
       Modal supports filesystem snapshot creation. In-place restore and
@@ -52,7 +53,8 @@ export const Modal = () => (
         <PropAccordionItem name="ports" status="optional" value="ports">
           <p>
             Encrypted ports declared at creation time and later exposed with{" "}
-            <code>ports.expose()</code>.
+            <code>ports.expose()</code>. Reconnecting by sandbox id discovers
+            existing tunnels without repeating this option.
           </p>
         </PropAccordionItem>
       </Accordion>

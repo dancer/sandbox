@@ -2270,7 +2270,11 @@ export type Modal = Readonly<
     outboundCidrAllowlist?: CreateParams["outboundCidrAllowlist"];
     /** outbound domain allowlist with optional wildcard prefixes such as *.example.com */
     outboundDomainAllowlist?: CreateParams["outboundDomainAllowlist"];
-    /** encrypted ports declared at create time and later exposed with ports.expose */
+    /**
+     * encrypted ports declared for new sandboxes at create time
+     *
+     * reconnecting by id discovers existing Modal tunnels without repeating this option
+     */
     ports?: readonly number[];
     /** enable a pty for the Modal sandbox entrypoint */
     pty?: CreateParams["pty"];
@@ -2306,7 +2310,9 @@ export type Modal = Readonly<
 
 #### `modal`
 
-create a modal sandbox adapter with normalized sandbox operations
+create a Modal sandbox adapter with normalized file, command, port, and filesystem snapshot operations
+
+filesystem snapshots return an image id for a new sandbox through the shared snapshot create option. in-place restore and normalized background process handles are unavailable
 
 ```ts
 export declare const modal: (options?: Modal) => Adapter<Raw>;
