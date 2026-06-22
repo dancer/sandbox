@@ -100,6 +100,7 @@ const sandbox = (capabilities: Sandbox["capabilities"]): Sandbox => ({
   raw: undefined,
   snapshots: {
     create: () => Promise.resolve({ id: "snapshot" }),
+    delete: () => Promise.resolve(),
     restore: () => Promise.resolve(),
   },
   stop: () => Promise.resolve(),
@@ -508,6 +509,10 @@ test("fromSandboxRuntime gates unsupported capabilities", async () => {
     code: "unsupported",
     provider: "test",
   });
+  await expect(current.snapshots.delete("snapshot")).rejects.toMatchObject({
+    code: "unsupported",
+    provider: "test",
+  });
 });
 
 test("fromSandboxRuntime normalizes provider failures", async () => {
@@ -535,12 +540,14 @@ test("fromSandboxRuntime normalizes provider failures", async () => {
 });
 
 test("fromSandboxRuntime preserves ports snapshots raw and stop", async () => {
+  let deleted: string | undefined;
   let stopped = 0;
   const raw = { native: true };
   const current = fromSandboxRuntime({
     ...sandbox({
       ports: "dynamic",
       snapshotCreate: "filesystem",
+      snapshotDelete: true,
       snapshotRestore: "filesystem",
     }),
     files: {
@@ -562,6 +569,10 @@ test("fromSandboxRuntime preserves ports snapshots raw and stop", async () => {
     raw,
     snapshots: {
       create: (name) => Promise.resolve({ id: "snapshot", name }),
+      delete: (id) => {
+        deleted = id;
+        return Promise.resolve();
+      },
       restore: () => Promise.resolve(),
     },
     stop: () => {
@@ -582,9 +593,11 @@ test("fromSandboxRuntime preserves ports snapshots raw and stop", async () => {
     name: "checkpoint",
   });
 
+  await current.snapshots.delete("snapshot");
   await current.snapshots.restore("snapshot");
   await current.stop();
 
+  expect(deleted).toBe("snapshot");
   expect(stopped).toBe(1);
 });
 
@@ -706,6 +719,7 @@ test("capability helpers handle boolean and mode capabilities", () => {
       tunnels: "dynamic",
     },
     snapshotCreate: "disk",
+    snapshotDelete: true,
     snapshotRestore: false,
     snapshotSource: "create-time",
     snapshots: false,
@@ -719,6 +733,7 @@ test("capability helpers handle boolean and mode capabilities", () => {
   expect(supports(current, "processExec")).toBe(true);
   expect(supports(current, "processSpawn")).toBe(false);
   expect(supports(current, "snapshotCreate")).toBe(true);
+  expect(supports(current, "snapshotDelete")).toBe(true);
   expect(supports(current, "snapshotRestore")).toBe(false);
   expect(supports(current, "snapshotSource")).toBe(true);
   expect(supports(current, "snapshots")).toBe(false);

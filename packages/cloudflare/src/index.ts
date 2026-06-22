@@ -121,6 +121,7 @@ const capabilities: Capabilities = {
     watching: true,
   },
   snapshotCreate: false,
+  snapshotDelete: false,
   snapshotRestore: false,
   snapshots: false,
   streaming: "separate",
@@ -612,6 +613,7 @@ const createSandbox = <ProviderRaw extends CloudflareRaw>(
     raw,
     snapshots: {
       create: () => rejectUnsupported("snapshots"),
+      delete: () => rejectUnsupported("snapshots"),
       restore: () => rejectUnsupported("snapshots"),
     },
     stop: async () => {

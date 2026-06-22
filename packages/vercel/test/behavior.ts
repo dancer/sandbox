@@ -127,13 +127,14 @@ export const workflowCoverage: Coverage = {
   ],
   fixture: "workflow",
   provider: "vercel",
-  uncovered: ["snapshots.create", "snapshotSource"],
+  uncovered: ["snapshots.create", "snapshots.delete", "snapshotSource"],
 };
 
 export const sourceCoverage: Coverage = {
   features: [
     "capabilities",
     "snapshots.create",
+    "snapshots.delete",
     "snapshots.restore",
     "snapshotSource",
     "files.exists",
@@ -374,6 +375,7 @@ export const expectWorkflow = (payload: Workflow): void => {
   expect(payload.capabilities.processExec).toBe(true);
   expect(payload.capabilities.processSpawn).toBe("separate");
   expect(payload.capabilities.snapshotCreate).toBe("disk");
+  expect(payload.capabilities.snapshotDelete).toBe(true);
   expect(payload.capabilities.snapshotRestore).toBe("disk");
   expect(payload.capabilities.snapshotSource).toBe("create-time");
   expect(payload.file).toEqual({
@@ -431,6 +433,7 @@ export const expectSource = (payload: Source): void => {
   expect(payload.ok).toBe(true);
   expect(payload.provider).toBe("vercel");
   expect(payload.capabilities.snapshotCreate).toBe("disk");
+  expect(payload.capabilities.snapshotDelete).toBe(true);
   expect(payload.capabilities.snapshotRestore).toBe("disk");
   expect(payload.capabilities.snapshotSource).toBe("create-time");
   expect(payload.snapshot.id).toBeTruthy();

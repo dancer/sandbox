@@ -32,7 +32,7 @@
     ],
     "fixture": "workflow",
     "provider": "vercel",
-    "uncovered": ["snapshots.create", "snapshotSource"]
+    "uncovered": ["snapshots.create", "snapshots.delete", "snapshotSource"]
   },
   "payload": {
     "capabilities": {
@@ -52,6 +52,7 @@
         "sessions": "dynamic"
       },
       "snapshotCreate": "disk",
+      "snapshotDelete": true,
       "snapshotRestore": "disk",
       "snapshotSource": "create-time",
       "snapshots": "disk",

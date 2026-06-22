@@ -24,6 +24,7 @@ export type Capability =
   | "processExec"
   | "processSpawn"
   | "snapshotCreate"
+  | "snapshotDelete"
   | "snapshotRestore"
   | "snapshotSource"
   | "snapshots"
@@ -104,6 +105,8 @@ export type CapabilityModes = Readonly<{
   processSpawn: boolean | "separate";
   /** normalized snapshot creation behavior */
   snapshotCreate: boolean | "disk" | "filesystem" | "memory" | "volume";
+  /** snapshot deletion support */
+  snapshotDelete: boolean;
   /** normalized in-place snapshot restore behavior */
   snapshotRestore: boolean | "disk" | "filesystem" | "memory" | "volume";
   /** fresh sandbox creation from a snapshot behavior */
@@ -119,8 +122,8 @@ export type CapabilityModes = Readonly<{
 
 provider capability map used by `supports`, `capabilityMode`, and docs
 
-snapshot create, restore, and source capabilities are intentionally separate
-because providers do not expose the same snapshot lifecycle
+snapshot create, delete, restore, and source capabilities are intentionally
+separate because providers do not expose the same snapshot lifecycle
 
 each normalized capability only accepts its own documented modes
 
@@ -274,13 +277,15 @@ export type Ports = Readonly<{
 
 normalized snapshot namespace for capability-gated state capture
 
-check `snapshotCreate` and `snapshotRestore` independently because creating a
-snapshot does not imply an adapter can restore one in place
+check snapshot capabilities independently because creating a snapshot does
+not imply an adapter can restore or delete one
 
 ```ts
 export type Snapshots = Readonly<{
   /** create a snapshot, optionally naming it when the provider persists snapshot names */
   create(name?: string): Promise<Snapshot>;
+  /** delete a snapshot when `snapshotDelete` is supported */
+  delete(id: string): Promise<void>;
   /** restore a snapshot when `snapshotRestore` is supported */
   restore(id: string): Promise<void>;
 }>;

@@ -436,6 +436,19 @@ test("local creates and restores snapshots", async () => {
   await sandbox.stop();
 });
 
+test("local deletes snapshots", async () => {
+  const sandbox = await create({ adapter: local() });
+  const snapshot = await sandbox.snapshots.create();
+
+  await sandbox.snapshots.delete(snapshot.id);
+
+  await expect(sandbox.snapshots.restore(snapshot.id)).rejects.toMatchObject({
+    code: "not_found",
+    provider: "local",
+  });
+  await sandbox.stop();
+});
+
 test("local writes bytes and removes files", async () => {
   const sandbox = await create({ adapter: local(), cwd: "/workspace" });
   const value = new Uint8Array([104, 101, 108, 108, 111]);

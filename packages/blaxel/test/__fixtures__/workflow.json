@@ -51,6 +51,7 @@
         "resources": "create-time"
       },
       "snapshotCreate": false,
+      "snapshotDelete": false,
       "snapshotRestore": false,
       "snapshotSource": false,
       "snapshots": false,

@@ -589,6 +589,10 @@ export const fromSandboxRuntime = <Raw = unknown>(
       guarded(input, "snapshotCreate", "snapshots.create", () =>
         input.snapshots.create(name)
       ),
+    delete: (id) =>
+      guarded(input, "snapshotDelete", "snapshots.delete", () =>
+        input.snapshots.delete(id)
+      ),
     restore: (id) =>
       guarded(input, "snapshotRestore", "snapshots.restore", () =>
         input.snapshots.restore(id)

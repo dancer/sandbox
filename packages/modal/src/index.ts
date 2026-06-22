@@ -149,6 +149,7 @@ const capabilities: Capabilities = {
     volumes: "create-time",
   },
   snapshotCreate: "filesystem",
+  snapshotDelete: true,
   snapshotRestore: false,
   snapshotSource: "create-time",
   snapshots: false,
@@ -539,7 +540,8 @@ const createSandbox = (
   ports: readonly number[],
   reconnected: boolean,
   stop: Modal["stop"],
-  snapshot: ModalSdk.SandboxSnapshotFilesystemParams
+  snapshot: ModalSdk.SandboxSnapshotFilesystemParams,
+  modalClient: ModalSdk.ModalClient
 ): Sandbox<Raw> => ({
   capabilities,
   cwd,
@@ -634,6 +636,16 @@ const createSandbox = (
       );
       return { id: created.imageId };
     },
+    delete: async (id) => {
+      if (!present(id)) {
+        throw sandboxError(
+          provider,
+          "Modal snapshot id is required for deletion",
+          "configuration"
+        );
+      }
+      await wrap(() => modalClient.images.delete(id), "snapshot delete");
+    },
     restore: () => rejectUnsupported("in-place snapshot restore"),
   },
   stop: async () => {
@@ -696,7 +708,8 @@ export const modal = (options: Modal = {}): Adapter<Raw> => ({
       ports,
       input.id !== undefined,
       options.stop ?? "terminate",
-      snapshot
+      snapshot,
+      modalClient
     );
   },
   provider,

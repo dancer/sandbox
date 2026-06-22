@@ -143,6 +143,7 @@ export const expectWorkflow = (payload: Workflow): void => {
   expect(payload.capabilities.processExec).toBe(true);
   expect(payload.capabilities.processSpawn).toBe(true);
   expect(payload.capabilities.snapshotCreate).toBe("memory");
+  expect(payload.capabilities.snapshotDelete).toBe(false);
   expect(payload.capabilities.snapshotRestore).toBe(false);
   expect(payload.capabilities.snapshotSource).toBe("create-time");
   expect(payload.file).toEqual({
@@ -200,6 +201,7 @@ export const expectSource = (payload: Source): void => {
   expect(payload.ok).toBe(true);
   expect(payload.provider).toBe("codesandbox");
   expect(payload.capabilities.snapshotCreate).toBe("memory");
+  expect(payload.capabilities.snapshotDelete).toBe(false);
   expect(payload.capabilities.snapshotRestore).toBe(false);
   expect(payload.capabilities.snapshotSource).toBe("create-time");
   expect(payload.snapshot.id).toBeTruthy();

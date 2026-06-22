@@ -19,6 +19,9 @@ const snapshotLogs = () => void 0;
 const notFound = (): Error & { statusCode: number } =>
   Object.assign(new Error("session not found"), { statusCode: 404 });
 
+const forbidden = (): Error & { statusCode: number } =>
+  Object.assign(new Error("access denied"), { statusCode: 403 });
+
 test("daytona reports missing credentials before provider calls", async () => {
   const apiKey = process.env.DAYTONA_API_KEY;
   const jwtToken = process.env.DAYTONA_JWT_TOKEN;
@@ -325,6 +328,95 @@ test("daytona maps create options without running a real provider", async () => 
     });
   } finally {
     client.create = original;
+  }
+});
+
+test("daytona deletes durable snapshots", async () => {
+  type Client = InstanceType<typeof DaytonaClient>;
+  type Create = Client["create"];
+  type Snapshots = Pick<Client["snapshot"], "delete" | "get">;
+
+  const client = DaytonaClient.prototype as Client;
+  const originalCreate = client.create;
+  const snapshots = Object.getPrototypeOf(
+    new DaytonaClient({ apiKey: "key" }).snapshot
+  ) as Snapshots;
+  const originalDelete = snapshots.delete;
+  const originalGet = snapshots.get;
+  let deleted: unknown;
+  let fetched: string | undefined;
+  const snapshot = { name: "snapshot" };
+  const raw = {
+    fs: {
+      createFolder: () => Promise.resolve(),
+    },
+    getWorkDir: () => Promise.resolve("/workspace"),
+    id: "sandbox",
+    stop: () => Promise.resolve(),
+  };
+
+  client.create = (() => Promise.resolve(raw)) as Create;
+  snapshots.get = ((id: string) => {
+    fetched = id;
+    return Promise.resolve(snapshot);
+  }) as Snapshots["get"];
+  snapshots.delete = ((value: unknown) => {
+    deleted = value;
+    return Promise.resolve();
+  }) as Snapshots["delete"];
+
+  try {
+    const sandbox = await create({ adapter: daytona({ apiKey: "key" }) });
+
+    await expect(sandbox.snapshots.delete("snapshot")).resolves.toBe(undefined);
+    expect(fetched).toBe("snapshot");
+    expect(deleted).toBe(snapshot);
+  } finally {
+    client.create = originalCreate;
+    snapshots.delete = originalDelete;
+    snapshots.get = originalGet;
+  }
+});
+
+test("daytona explains missing snapshot delete permission", async () => {
+  type Client = InstanceType<typeof DaytonaClient>;
+  type Create = Client["create"];
+  type Snapshots = Pick<Client["snapshot"], "delete" | "get">;
+
+  const client = DaytonaClient.prototype as Client;
+  const originalCreate = client.create;
+  const snapshots = Object.getPrototypeOf(
+    new DaytonaClient({ apiKey: "key" }).snapshot
+  ) as Snapshots;
+  const originalDelete = snapshots.delete;
+  const originalGet = snapshots.get;
+  const raw = {
+    fs: {
+      createFolder: () => Promise.resolve(),
+    },
+    getWorkDir: () => Promise.resolve("/workspace"),
+    id: "sandbox",
+    stop: () => Promise.resolve(),
+  };
+
+  client.create = (() => Promise.resolve(raw)) as Create;
+  snapshots.get = (() =>
+    Promise.resolve({ name: "snapshot" })) as Snapshots["get"];
+  snapshots.delete = (() => Promise.reject(forbidden())) as Snapshots["delete"];
+
+  try {
+    const sandbox = await create({ adapter: daytona({ apiKey: "key" }) });
+
+    await expect(sandbox.snapshots.delete("snapshot")).rejects.toMatchObject({
+      code: "configuration",
+      message:
+        "Daytona snapshot deletion requires an API key with delete:snapshots",
+      provider: "daytona",
+    });
+  } finally {
+    client.create = originalCreate;
+    snapshots.delete = originalDelete;
+    snapshots.get = originalGet;
   }
 });
 

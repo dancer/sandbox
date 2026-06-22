@@ -28,7 +28,7 @@
     ],
     "fixture": "workflow",
     "provider": "daytona",
-    "uncovered": ["snapshots.create", "snapshotSource"]
+    "uncovered": ["snapshots.create", "snapshots.delete", "snapshotSource"]
   },
   "payload": {
     "capabilities": {
@@ -53,6 +53,7 @@
         "resources": "dynamic"
       },
       "snapshotCreate": false,
+      "snapshotDelete": true,
       "snapshotRestore": false,
       "snapshotSource": "create-time",
       "snapshots": false,

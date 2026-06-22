@@ -28,7 +28,7 @@
     ],
     "fixture": "workflow",
     "provider": "e2b",
-    "uncovered": ["snapshots.create", "snapshotSource"]
+    "uncovered": ["snapshots.create", "snapshots.delete", "snapshotSource"]
   },
   "payload": {
     "capabilities": {
@@ -49,6 +49,7 @@
         "metrics": true
       },
       "snapshotCreate": "memory",
+      "snapshotDelete": true,
       "snapshotRestore": false,
       "snapshotSource": "create-time",
       "snapshots": false,

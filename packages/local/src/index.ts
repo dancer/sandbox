@@ -495,6 +495,7 @@ export const local = (options: Local = {}): Adapter<Raw> => ({
     processExec: true,
     processSpawn: "separate",
     snapshotCreate: "filesystem",
+    snapshotDelete: true,
     snapshotRestore: "filesystem",
     snapshots: "filesystem",
     streaming: "separate",
@@ -625,6 +626,17 @@ export const local = (options: Local = {}): Adapter<Raw> => ({
             name === undefined ? { path: target } : { name, path: target }
           );
           return name === undefined ? { id } : { id, name };
+        },
+        delete: async (id) => {
+          const snapshot = snapshots.get(id);
+          if (snapshot === undefined) {
+            throw new SandboxError("Snapshot not found", {
+              code: "not_found",
+              provider: "local",
+            });
+          }
+          snapshots.delete(id);
+          await rm(snapshot.path, { force: true, recursive: true });
         },
         restore: async (id) => {
           const snapshot = snapshots.get(id);

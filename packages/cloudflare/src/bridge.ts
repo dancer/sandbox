@@ -196,6 +196,7 @@ export const cloudflareBridge = (
       raw,
       snapshots: {
         create: () => rejectUnsupported("bridge snapshots.create"),
+        delete: () => rejectUnsupported("bridge snapshots.delete"),
         restore: () => rejectUnsupported("bridge snapshots.restore"),
       },
       stop: async () => {

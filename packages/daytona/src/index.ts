@@ -132,6 +132,7 @@ const capabilities: Capabilities = {
     volumes: "create-time",
   },
   snapshotCreate: false,
+  snapshotDelete: true,
   snapshotRestore: false,
   snapshotSource: "create-time",
   snapshots: false,
@@ -408,6 +409,12 @@ const missing = (error: unknown): boolean =>
     "statusCode" in error &&
     error.statusCode === 404);
 
+const forbidden = (error: unknown): boolean =>
+  typeof error === "object" &&
+  error !== null &&
+  "statusCode" in error &&
+  error.statusCode === 403;
+
 const content = async (input: Input): Promise<Buffer> => {
   const value = await bytes(input);
   return typeof value === "string" ? Buffer.from(value) : Buffer.from(value);
@@ -632,7 +639,8 @@ const wrap = async <Value>(
 const createSandbox = (
   raw: Raw,
   cwd: string,
-  options: Daytona
+  options: Daytona,
+  client: DaytonaClient
 ): Sandbox<Raw> => ({
   capabilities,
   cwd,
@@ -737,6 +745,34 @@ const createSandbox = (
   raw,
   snapshots: {
     create: () => rejectUnsupported("stable snapshots"),
+    delete: async (id) => {
+      if (!present(id)) {
+        throw sandboxError(
+          provider,
+          "Daytona snapshot id is required for deletion",
+          "configuration"
+        );
+      }
+      try {
+        const snapshot = await client.snapshot.get(id);
+        await client.snapshot.delete(snapshot);
+      } catch (error) {
+        if (forbidden(error)) {
+          throw sandboxError(
+            provider,
+            "Daytona snapshot deletion requires an API key with delete:snapshots",
+            "configuration",
+            error
+          );
+        }
+        throw sandboxError(
+          provider,
+          "snapshot delete failed",
+          "provider",
+          error
+        );
+      }
+    },
     restore: () => rejectUnsupported("stable snapshot restore"),
   },
   stop: async () => {
@@ -771,7 +807,7 @@ export const daytona = (options: Daytona = {}): Adapter<Raw> => ({
 
       await wrap(() => raw.fs.createFolder(cwd, "755"), "mkdir");
 
-      return createSandbox(raw, cwd, options);
+      return createSandbox(raw, cwd, options, client);
     } catch (error) {
       if (owned) {
         await raw.delete().catch(() => null);

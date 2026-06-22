@@ -40,6 +40,7 @@ const capabilities = {
     volumes: "create-time",
   },
   snapshotCreate: "filesystem",
+  snapshotDelete: true,
   snapshotRestore: false,
   snapshotSource: "create-time",
   snapshots: false,
@@ -53,12 +54,12 @@ const workflow: Workflow = {
   port: 3000,
   provider: "modal",
   spawn: false,
-  uncovered: ["snapshots.create", "snapshotSource"],
+  uncovered: ["snapshots.create", "snapshots.delete", "snapshotSource"],
 };
 
 const source: SnapshotSource = {
   capabilities,
-  features: sourceFeatures(),
+  features: sourceFeatures(true),
   provider: "modal",
   source: "snapshot",
   uncovered: [

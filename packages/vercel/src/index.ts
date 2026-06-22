@@ -26,7 +26,10 @@ import type {
   Running,
   Sandbox,
 } from "@sandbox-sdk/core";
-import { Sandbox as VercelSandbox } from "@vercel/sandbox";
+import {
+  Sandbox as VercelSandbox,
+  Snapshot as VercelSnapshot,
+} from "@vercel/sandbox";
 import type { Command as NativeCommand, NetworkPolicy } from "@vercel/sandbox";
 
 export {
@@ -254,6 +257,7 @@ const capabilities: Capabilities = {
     sessions: "dynamic",
   },
   snapshotCreate: "disk",
+  snapshotDelete: true,
   snapshotRestore: "disk",
   snapshotSource: "create-time",
   snapshots: "disk",
@@ -862,7 +866,8 @@ const createSandbox = (
   cwd: string,
   sudo: boolean | undefined,
   ports: readonly number[],
-  snapshotExpiration: number | undefined
+  snapshotExpiration: number | undefined,
+  config: Vercel
 ): Sandbox<Raw> => {
   const exposed = new Set([...ports, ...routePorts(raw)]);
   return {
@@ -972,6 +977,21 @@ const createSandbox = (
         );
         return { id: snapshot.snapshotId };
       },
+      delete: async (id) => {
+        if (!present(id)) {
+          throw sandboxError(
+            provider,
+            "Vercel snapshot id is required for deletion",
+            "configuration"
+          );
+        }
+        const input = { ...credentials(config), snapshotId: id };
+        const snapshot = await wrap(
+          () => VercelSnapshot.get(input),
+          "snapshot lookup"
+        );
+        await wrap(() => snapshot.delete(), "snapshot delete");
+      },
       restore: async (id) => {
         if (!present(id)) {
           throw sandboxError(
@@ -1022,7 +1042,8 @@ export const vercel = (options: Vercel = {}): Adapter<Raw> => ({
       cwd,
       options.sudo,
       ports,
-      options.snapshotExpiration
+      options.snapshotExpiration,
+      options
     );
   },
   provider,

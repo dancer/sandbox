@@ -81,9 +81,10 @@ export const workflowFeatures = (
   "sandbox.stop",
 ];
 
-export const sourceFeatures = (): readonly string[] => [
+export const sourceFeatures = (snapshotDelete = false): readonly string[] => [
   "capabilities",
   "snapshots.create",
+  ...(snapshotDelete ? ["snapshots.delete"] : []),
   "snapshotSource",
   "files.exists",
   "files.text",
@@ -117,10 +118,11 @@ export const workflowFixture = (
 export const sourceFixture = (
   provider: string,
   payload: Source,
-  uncovered: readonly string[]
+  uncovered: readonly string[],
+  snapshotDelete = false
 ): Fixture<Source> => ({
   coverage: {
-    features: sourceFeatures(),
+    features: sourceFeatures(snapshotDelete),
     fixture: "source",
     provider,
     uncovered,

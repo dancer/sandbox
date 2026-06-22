@@ -26,7 +26,7 @@
     ],
     "fixture": "workflow",
     "provider": "modal",
-    "uncovered": ["snapshots.create", "snapshotSource"]
+    "uncovered": ["snapshots.create", "snapshots.delete", "snapshotSource"]
   },
   "payload": {
     "capabilities": {
@@ -48,6 +48,7 @@
         "resources": "create-time"
       },
       "snapshotCreate": "filesystem",
+      "snapshotDelete": true,
       "snapshotRestore": false,
       "snapshotSource": "create-time",
       "snapshots": false,

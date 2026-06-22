@@ -3,6 +3,7 @@
     "features": [
       "capabilities",
       "snapshots.create",
+      "snapshots.delete",
       "snapshotSource",
       "files.exists",
       "files.text",
@@ -36,6 +37,7 @@
         "metrics": true
       },
       "snapshotCreate": "memory",
+      "snapshotDelete": true,
       "snapshotRestore": false,
       "snapshotSource": "create-time",
       "snapshots": false,

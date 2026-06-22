@@ -3,6 +3,7 @@
     "features": [
       "capabilities",
       "snapshots.create",
+      "snapshots.delete",
       "snapshots.restore",
       "snapshotSource",
       "files.exists",
@@ -36,6 +37,7 @@
         "sessions": "dynamic"
       },
       "snapshotCreate": "disk",
+      "snapshotDelete": true,
       "snapshotRestore": "disk",
       "snapshotSource": "create-time",
       "snapshots": "disk",

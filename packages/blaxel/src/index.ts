@@ -70,6 +70,7 @@ const capabilities: Capabilities = {
     watching: true,
   },
   snapshotCreate: false,
+  snapshotDelete: false,
   snapshotRestore: false,
   snapshotSource: false,
   snapshots: false,
@@ -716,6 +717,7 @@ const createSandbox = (raw: Raw, cwd: string): Sandbox<Raw> => ({
   raw,
   snapshots: {
     create: () => rejectUnsupported(provider, "normalized snapshot creation"),
+    delete: () => rejectUnsupported(provider, "normalized snapshot deletion"),
     restore: () => rejectUnsupported(provider, "in-place snapshot restore"),
   },
   stop: async () => {

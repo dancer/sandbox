@@ -29,6 +29,7 @@
         "resources": "dynamic"
       },
       "snapshotCreate": "memory",
+      "snapshotDelete": false,
       "snapshotRestore": false,
       "snapshotSource": "create-time",
       "snapshots": false,

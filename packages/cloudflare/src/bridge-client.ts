@@ -262,6 +262,7 @@ export const bridgeCapabilities: Capabilities = {
     tunnels: "dynamic",
   },
   snapshotCreate: false,
+  snapshotDelete: false,
   snapshotRestore: false,
   snapshots: false,
   streaming: "separate",

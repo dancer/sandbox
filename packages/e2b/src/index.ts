@@ -120,6 +120,7 @@ const capabilities: Capabilities = {
     watching: true,
   },
   snapshotCreate: "memory",
+  snapshotDelete: true,
   snapshotRestore: false,
   snapshotSource: "create-time",
   snapshots: false,
@@ -525,7 +526,8 @@ const content = async (
 const createSandbox = (
   raw: Raw,
   cwd: string,
-  user: string | undefined
+  user: string | undefined,
+  config: E2B
 ): Sandbox<Raw> => ({
   capabilities,
   cwd,
@@ -651,6 +653,22 @@ const createSandbox = (
         ...(snapshot.names[0] === undefined ? {} : { name: snapshot.names[0] }),
       };
     },
+    delete: async (id) => {
+      if (!present(id)) {
+        throw sandboxError(
+          provider,
+          "E2B snapshot id is required for deletion",
+          "configuration"
+        );
+      }
+      const deleted = await wrap(
+        () => E2BSandbox.deleteSnapshot(id, connection(config)),
+        "snapshot delete"
+      );
+      if (!deleted) {
+        throw sandboxError(provider, "E2B snapshot not found", "not_found");
+      }
+    },
     restore: () => rejectUnsupported("in-place snapshot restore"),
   },
   stop: async () => {
@@ -689,7 +707,7 @@ export const e2b = (options: E2B = {}): Adapter<Raw> => ({
       }
     }
 
-    return createSandbox(raw, cwd, options.user);
+    return createSandbox(raw, cwd, options.user, options);
   },
   provider,
 });

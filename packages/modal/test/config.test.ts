@@ -269,6 +269,7 @@ test("modal maps create options, tags, commands, and ports", async () => {
   const execSeen: unknown[] = [];
   let appSeen: unknown;
   let createSeen: unknown;
+  let deletedImage: string | undefined;
   let imageSeen: unknown;
   const directories: unknown[] = [];
   let detached = false;
@@ -327,6 +328,10 @@ test("modal maps create options, tags, commands, and ports", async () => {
       },
     },
     images: {
+      delete: (id: string) => {
+        deletedImage = id;
+        return Promise.resolve();
+      },
       fromId: (id: string) => {
         imageSeen = id;
         return Promise.resolve({});
@@ -506,6 +511,10 @@ test("modal maps create options, tags, commands, and ports", async () => {
     timeoutMs: 2000,
     ttlMs: 3_600_000,
   });
+  await expect(sandbox.snapshots.delete("im-snapshot-created")).resolves.toBe(
+    undefined
+  );
+  expect(deletedImage).toBe("im-snapshot-created");
   await expect(sandbox.snapshots.create("ready")).rejects.toMatchObject({
     code: "unsupported",
     provider: "modal",

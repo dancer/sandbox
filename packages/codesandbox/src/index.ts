@@ -110,6 +110,7 @@ const capabilities: Capabilities = {
     watching: true,
   },
   snapshotCreate: "memory",
+  snapshotDelete: false,
   snapshotRestore: false,
   snapshotSource: "create-time",
   snapshots: false,
@@ -565,6 +566,7 @@ const createSandbox = (
       await raw.sdk.sandboxes.hibernate(raw.sandbox.id);
       return { id: raw.sandbox.id };
     },
+    delete: () => rejectUnsupported("normalized snapshot deletion"),
     restore: () => rejectUnsupported("in-place snapshot restore"),
   },
   stop: async () => {

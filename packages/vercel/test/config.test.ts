@@ -3,7 +3,10 @@ import { Buffer } from "node:buffer";
 import { Readable } from "node:stream";
 
 import { create } from "@sandbox-sdk/core";
-import { Sandbox as VercelSandbox } from "@vercel/sandbox";
+import {
+  Sandbox as VercelSandbox,
+  Snapshot as VercelSnapshot,
+} from "@vercel/sandbox";
 
 import { vercel } from "../src/index";
 import type { VercelFetch } from "../src/index";
@@ -1042,7 +1045,9 @@ test("vercel deletes new get-or-create sandboxes when setup fails", async () => 
 
 test("vercel maps create options and updates dynamic ports", async () => {
   const original = VercelSandbox.create;
+  const originalGet = VercelSnapshot.get;
   let createSeen: unknown;
+  let deleted = false;
   let domainSeen: unknown;
   let mkdirSeen: unknown;
   let snapshotSeen: unknown;
@@ -1050,6 +1055,7 @@ test("vercel maps create options and updates dynamic ports", async () => {
   let stopCalled = false;
   let updateSeen: unknown;
   let snapshotCalls = 0;
+  let snapshotGetSeen: unknown;
   const raw = {
     domain: (port: number) => {
       domainSeen = port;
@@ -1089,6 +1095,15 @@ test("vercel maps create options and updates dynamic ports", async () => {
     createSeen = input;
     return Promise.resolve(raw);
   }) as typeof VercelSandbox.create;
+  VercelSnapshot.get = ((input: unknown) => {
+    snapshotGetSeen = input;
+    return Promise.resolve({
+      delete: () => {
+        deleted = true;
+        return Promise.resolve();
+      },
+    });
+  }) as typeof VercelSnapshot.get;
 
   try {
     const sandbox = await create({
@@ -1175,6 +1190,16 @@ test("vercel maps create options and updates dynamic ports", async () => {
     });
     expect(snapshotCalls).toBe(1);
     expect(snapshotSeen).toEqual({ expiration: 86_400_000 });
+    await expect(sandbox.snapshots.delete("snapshot-id")).resolves.toBe(
+      undefined
+    );
+    expect(snapshotGetSeen).toEqual({
+      projectId: "project",
+      snapshotId: "snapshot-id",
+      teamId: "team",
+      token: "token",
+    });
+    expect(deleted).toBe(true);
     await expect(sandbox.snapshots.create("ready")).rejects.toMatchObject({
       code: "unsupported",
       provider: "vercel",
@@ -1187,6 +1212,7 @@ test("vercel maps create options and updates dynamic ports", async () => {
     expect(stopCalled).toBe(true);
   } finally {
     VercelSandbox.create = original;
+    VercelSnapshot.get = originalGet;
   }
 });
 

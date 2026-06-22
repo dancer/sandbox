@@ -40,6 +40,7 @@ const workflow: Workflow = {
       watching: true,
     },
     snapshotCreate: "memory",
+    snapshotDelete: true,
     snapshotRestore: false,
     snapshotSource: "create-time",
     snapshots: false,
@@ -50,12 +51,12 @@ const workflow: Workflow = {
   port: 3000,
   provider: "e2b",
   spawn: true,
-  uncovered: ["snapshots.create", "snapshotSource"],
+  uncovered: ["snapshots.create", "snapshots.delete", "snapshotSource"],
 };
 
 const source: SnapshotSource = {
   capabilities: workflow.capabilities,
-  features: sourceFeatures(),
+  features: sourceFeatures(true),
   provider: "e2b",
   source: "snapshot",
   uncovered: [

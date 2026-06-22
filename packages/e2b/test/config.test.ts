@@ -161,8 +161,10 @@ test("e2b cleans up a created sandbox when workspace setup fails", async () => {
 
 test("e2b maps create and command options without running a real provider", async () => {
   const original = E2BSandbox.create;
+  const originalDelete = E2BSandbox.deleteSnapshot;
   let commandSeen: unknown;
   let createSeen: unknown;
+  let deleteSeen: unknown;
   let mkdirSeen: unknown;
   let portSeen: number | undefined;
   let readSeen: unknown;
@@ -240,6 +242,10 @@ test("e2b maps create and command options without running a real provider", asyn
     createSeen = input;
     return Promise.resolve(raw);
   }) as typeof E2BSandbox.create;
+  E2BSandbox.deleteSnapshot = ((id: string, options?: unknown) => {
+    deleteSeen = { id, options };
+    return Promise.resolve(true);
+  }) as typeof E2BSandbox.deleteSnapshot;
 
   try {
     const sandbox = await create({
@@ -434,6 +440,16 @@ test("e2b maps create and command options without running a real provider", asyn
     });
     expect(snapshotSeen).toEqual({ name: "ready" });
     expect(snapshotted).toBe(true);
+    await expect(sandbox.snapshots.delete("snapshot-id")).resolves.toBe(
+      undefined
+    );
+    expect(deleteSeen).toMatchObject({
+      id: "snapshot-id",
+      options: {
+        apiHeaders: { "x-api-header": "value" },
+        apiKey: "key",
+      },
+    });
     await expect(
       sandbox.snapshots.restore("snapshot-id")
     ).rejects.toMatchObject({
@@ -442,6 +458,35 @@ test("e2b maps create and command options without running a real provider", asyn
     });
   } finally {
     E2BSandbox.create = original;
+    E2BSandbox.deleteSnapshot = originalDelete;
+  }
+});
+
+test("e2b reports missing durable snapshots", async () => {
+  const originalCreate = E2BSandbox.create;
+  const originalDelete = E2BSandbox.deleteSnapshot;
+  const raw = {
+    files: {
+      makeDir: () => Promise.resolve(),
+    },
+    kill: () => Promise.resolve(),
+    sandboxId: "sandbox",
+  } as unknown as E2BSandbox;
+
+  E2BSandbox.create = (() => Promise.resolve(raw)) as typeof E2BSandbox.create;
+  E2BSandbox.deleteSnapshot = (() =>
+    Promise.resolve(false)) as typeof E2BSandbox.deleteSnapshot;
+
+  try {
+    const sandbox = await create({ adapter: e2b({ apiKey: "key" }) });
+
+    await expect(sandbox.snapshots.delete("missing")).rejects.toMatchObject({
+      code: "not_found",
+      provider: "e2b",
+    });
+  } finally {
+    E2BSandbox.create = originalCreate;
+    E2BSandbox.deleteSnapshot = originalDelete;
   }
 });
 

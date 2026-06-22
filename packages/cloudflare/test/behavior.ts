@@ -41,6 +41,7 @@ export const workflow = ({ body, response }: Result): void => {
   });
   expect(body.capabilities.raw).not.toHaveProperty("network");
   expect(body.capabilities.snapshotCreate).toBe(false);
+  expect(body.capabilities.snapshotDelete).toBe(false);
   expect(body.file).toEqual({
     exists: true,
     listed: true,

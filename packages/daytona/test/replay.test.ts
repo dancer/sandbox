@@ -36,6 +36,7 @@ const workflow: Workflow = {
       volumes: "create-time",
     },
     snapshotCreate: false,
+    snapshotDelete: true,
     snapshotRestore: false,
     snapshotSource: "create-time",
     snapshots: false,
@@ -46,7 +47,7 @@ const workflow: Workflow = {
   port: 3000,
   provider: "daytona",
   spawn: true,
-  uncovered: ["snapshots.create", "snapshotSource"],
+  uncovered: ["snapshots.create", "snapshots.delete", "snapshotSource"],
 };
 
 test("daytona replays the sanitized workflow fixture", async () => {

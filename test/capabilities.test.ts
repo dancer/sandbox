@@ -23,6 +23,7 @@ test("adapters expose capability-honest feature modes", () => {
     processExec: true,
     processSpawn: "separate",
     snapshotCreate: "filesystem",
+    snapshotDelete: true,
     snapshotRestore: "filesystem",
   });
 
@@ -43,6 +44,7 @@ test("adapters expose capability-honest feature modes", () => {
       watching: true,
     },
     snapshotCreate: "memory",
+    snapshotDelete: true,
     snapshotRestore: false,
     snapshotSource: "create-time",
     streaming: "separate",
@@ -63,6 +65,7 @@ test("adapters expose capability-honest feature modes", () => {
       sessions: "dynamic",
     },
     snapshotCreate: "disk",
+    snapshotDelete: true,
     snapshotRestore: "disk",
     snapshotSource: "create-time",
     snapshots: "disk",
@@ -89,6 +92,7 @@ test("adapters expose capability-honest feature modes", () => {
       watching: true,
     },
     snapshotCreate: false,
+    snapshotDelete: false,
     snapshotRestore: false,
   });
 
@@ -113,6 +117,7 @@ test("adapters expose capability-honest feature modes", () => {
       volumes: "create-time",
     },
     snapshotCreate: false,
+    snapshotDelete: true,
     snapshotRestore: false,
     snapshotSource: "create-time",
     streaming: "separate",
@@ -136,6 +141,7 @@ test("adapters expose capability-honest feature modes", () => {
       volumes: "create-time",
     },
     snapshotCreate: "filesystem",
+    snapshotDelete: true,
     snapshotRestore: false,
     snapshotSource: "create-time",
   });
@@ -159,6 +165,7 @@ test("adapters expose capability-honest feature modes", () => {
       watching: true,
     },
     snapshotCreate: false,
+    snapshotDelete: false,
     snapshotRestore: false,
     snapshotSource: false,
     streaming: "separate",
@@ -180,6 +187,7 @@ test("adapters expose capability-honest feature modes", () => {
       watching: true,
     },
     snapshotCreate: "memory",
+    snapshotDelete: false,
     snapshotRestore: false,
     snapshotSource: "create-time",
     streaming: "combined",
@@ -205,6 +213,7 @@ test("adapters expose capability-honest feature modes", () => {
       tunnels: "dynamic",
     },
     snapshotCreate: false,
+    snapshotDelete: false,
     snapshotRestore: false,
   });
 });
