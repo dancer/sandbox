@@ -171,9 +171,12 @@ export const ApiReference = () => (
         files.stream(path)
       </Heading>
       <p>
-        Reads a file as <code>ReadableStream&lt;Uint8Array&gt;</code>. Use it
-        when files can be large, when forwarding bytes to another stream, or
-        when agents should avoid buffering the whole file in memory.
+        Reads a file as <code>ReadableStream&lt;Uint8Array&gt;</code>. Every
+        adapter returns a web stream. For large files, check{" "}
+        <code>capabilityMode(sandbox, "fileStreaming")</code>:{" "}
+        <code>"native"</code> receives bytes incrementally, while{" "}
+        <code>"buffered"</code> exposes a stream after the provider SDK has
+        loaded the file.
       </p>
       <CodeBlock code={STREAM_EXAMPLE} lang="ts" />
     </section>

@@ -67,6 +67,8 @@ capability mode details when a feature exists but has a provider-specific shape
 
 check the specific capability before assuming related operations are supported
 
+`fileStreaming` uses `native` for incremental delivery and `buffered` when a provider SDK loads the file before exposing a stream
+
 ```ts
 export type Mode =
   | boolean
@@ -203,7 +205,7 @@ normalized filesystem namespace scoped to a sandbox root
 
 ```ts
 export type Files = Readonly<{
-  /** read a file as a byte stream */
+  /** read a file as a byte stream and check `fileStreaming` before relying on incremental delivery */
   stream(path: string): Promise<ReadableStream<Uint8Array>>;
   /** read a file as bytes */
   read(path: string): Promise<Uint8Array>;

@@ -150,9 +150,9 @@ if (supports(sandbox, "snapshotCreate")) {
 }
 \`\`\`
 
-Normalized capability flags include \`files\`, \`process\`, \`processExec\`, \`processSpawn\`, \`ports\`, \`snapshots\`, \`snapshotCreate\`, \`snapshotRestore\`, \`snapshotSource\`, \`environment\`, and \`streaming\`. Provider-specific powers are listed under \`capabilities.raw\` and reached through \`sandbox.raw\`.
+Normalized capability flags include \`files\`, \`fileStreaming\`, \`process\`, \`processExec\`, \`processSpawn\`, \`ports\`, \`snapshots\`, \`snapshotCreate\`, \`snapshotRestore\`, \`snapshotSource\`, \`environment\`, and \`streaming\`. Provider-specific powers are listed under \`capabilities.raw\` and reached through \`sandbox.raw\`.
 
-\`capabilityMode(sandbox, capability)\` returns how a feature works when it exists but has a provider-specific shape, for example \`"disk"\` versus \`"memory"\` snapshots, or \`"separate"\` versus \`"combined"\` output streams. \`sandbox.capabilities\` is the runtime source of truth for a given provider.`;
+\`capabilityMode(sandbox, capability)\` returns how a feature works when it exists but has a provider-specific shape, for example \`"disk"\` versus \`"memory"\` snapshots, \`"separate"\` versus \`"combined"\` output streams, or \`"native"\` versus \`"buffered"\` file delivery. \`sandbox.capabilities\` is the runtime source of truth for a given provider.`;
 
 const files = `# Files
 
@@ -170,7 +170,7 @@ await sandbox.files.remove("/workspace/src/index.ts");
 \`\`\`
 
 - \`files.read(path)\` returns raw \`Uint8Array\` bytes. \`files.text(path)\` decodes as UTF-8.
-- \`files.stream(path)\` returns \`ReadableStream<Uint8Array>\`. Use it for large files or when forwarding bytes without buffering the whole file in memory.
+- \`files.stream(path)\` returns \`ReadableStream<Uint8Array>\`. Check \`capabilityMode(sandbox, "fileStreaming")\` before relying on large-file behavior: \`"native"\` delivers bytes incrementally, while \`"buffered"\` exposes a stream after the provider SDK loads the file.
 - \`files.write(path, input)\` creates parent directories as needed and accepts \`string\`, \`Uint8Array\`, \`ArrayBuffer\`, \`Blob\`, or \`ReadableStream<Uint8Array>\`. Streams are drained before the write completes.
 - \`files.list(path?)\` lists the immediate children of \`path\` (defaults to the sandbox cwd) as a sorted, frozen array of \`Entry\` values, each with \`path\`, \`kind\`, plus \`size\` and \`modified\` where cheap.
 - \`files.exists(path)\` returns \`true\` when a path exists.
@@ -427,7 +427,7 @@ The maintained local adapter is the reference implementation: https://github.com
 
 Use \`SandboxRuntime<Raw>\` with \`fromSandboxRuntime()\` for adapters that can map the core contract directly.
 
-- Implement \`files.read()\` as \`ReadableStream<Uint8Array>\` so large files do not need adapter-side buffering. The helper derives \`files.read()\`, \`files.text()\`, and \`files.stream()\` from that stream.
+- Implement \`files.read()\` as \`ReadableStream<Uint8Array>\` when the provider exposes a native stream. The helper derives \`files.read()\`, \`files.text()\`, and \`files.stream()\` from that stream. When an SDK only returns a complete file, advertise \`fileStreaming: "buffered"\` rather than implying incremental delivery.
 - Resolve relative paths before calling low-level file methods when the provider needs a concrete working directory. \`fromSandboxRuntime()\` preserves runtime paths unchanged; \`sandboxPath(cwd, path)\` is the shared resolver, not a security boundary.
 - Provide direct bounded \`process.exec()\` and \`process.shell()\` results when the provider has one-shot command APIs. Provide \`spawn()\` and \`spawnShell()\` only when the provider can return a real \`Running\` handle with output, a final result, and lifecycle-safe \`kill()\` behavior.
 - Return only serializable URLs from low-level \`ports.expose()\`. Adapters with provider-authenticated previews should create the higher-level preview directly so authorization headers remain private.

@@ -51,6 +51,25 @@ const ROWS: { capability: string; cells: Record<ColumnKey, Cell> }[] = [
     },
   },
   {
+    capability: "file streaming",
+    cells: {
+      blaxel: warn(
+        "Blaxel returns a Blob from its current file API, so the adapter creates a web stream after the file is buffered."
+      ),
+      cloudflare: ok,
+      codesandbox: warn(
+        "CodeSandbox returns a Uint8Array from its current file API, so the adapter creates a web stream after the file is buffered."
+      ),
+      daytona: ok,
+      e2b: ok,
+      local: ok,
+      modal: warn(
+        "Modal returns file bytes from its current JavaScript API, so the adapter creates a web stream after the file is buffered."
+      ),
+      vercel: ok,
+    },
+  },
+  {
     capability: "process exec",
     cells: {
       blaxel: ok,

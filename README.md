@@ -81,6 +81,14 @@ For portable process calls, use paths relative to `cwd`; command strings and
 argv are forwarded to the provider unchanged. File APIs still accept absolute
 sandbox paths.
 
+## File Streaming
+
+`files.stream()` always returns a `ReadableStream<Uint8Array>`. For large files,
+check `capabilityMode(sandbox, "fileStreaming")`: `"native"` means the adapter
+receives an incremental stream from the filesystem or provider, while
+`"buffered"` means the current provider SDK loads the file before the adapter
+exposes its web stream.
+
 ## Previews
 
 `ports.expose()` returns a preview object with `url`, `port`, and `request()`.
