@@ -127,6 +127,38 @@ test("e2b rejects invalid request timeouts before provider calls", async () => {
   }
 });
 
+test("e2b cleans up a created sandbox when workspace setup fails", async () => {
+  const original = E2BSandbox.create;
+  let killed = false;
+  const raw = {
+    files: {
+      makeDir: () => Promise.reject(new Error("mkdir failed")),
+    },
+    kill: () => {
+      killed = true;
+      return Promise.reject(new Error("cleanup failed"));
+    },
+    sandboxId: "sandbox",
+  } as unknown as E2BSandbox;
+
+  E2BSandbox.create = (() => Promise.resolve(raw)) as typeof E2BSandbox.create;
+
+  try {
+    await expect(
+      create({
+        adapter: e2b({ apiKey: "key" }),
+      })
+    ).rejects.toMatchObject({
+      code: "provider",
+      message: "mkdir failed",
+      provider: "e2b",
+    });
+    expect(killed).toBe(true);
+  } finally {
+    E2BSandbox.create = original;
+  }
+});
+
 test("e2b maps create and command options without running a real provider", async () => {
   const original = E2BSandbox.create;
   let commandSeen: unknown;

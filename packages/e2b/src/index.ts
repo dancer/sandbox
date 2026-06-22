@@ -675,11 +675,16 @@ export const e2b = (options: E2B = {}): Adapter<Raw> => ({
         : await E2BSandbox.connect(input.id, connection(options));
 
     if (input.id === undefined) {
-      await wrap(
-        () =>
-          raw.files.makeDir(cwd, options.user ? { user: options.user } : {}),
-        "mkdir"
-      );
+      try {
+        await wrap(
+          () =>
+            raw.files.makeDir(cwd, options.user ? { user: options.user } : {}),
+          "mkdir"
+        );
+      } catch (error) {
+        await raw.kill().catch(() => null);
+        throw error;
+      }
     }
 
     return createSandbox(raw, cwd, options.user);
