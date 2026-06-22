@@ -17,6 +17,7 @@ import {
   command,
   duration,
   port,
+  portOptions,
   result,
   sandboxError,
   sandboxPath,
@@ -679,8 +680,9 @@ const createSandbox = (raw: Raw, cwd: string): Sandbox<Raw> => ({
   },
   id: raw.metadata.name,
   ports: {
-    expose: async (value) => {
+    expose: async (value, options) => {
       const target = port(value, provider);
+      portOptions(provider, options, "https");
       const preview = await wrap(
         () =>
           raw.previews.createIfNotExists({
@@ -719,7 +721,11 @@ const createSandbox = (raw: Raw, cwd: string): Sandbox<Raw> => ({
   },
 });
 
-/** create a blaxel adapter with normalized sandbox operations */
+/**
+ * create a Blaxel adapter with normalized sandbox operations
+ *
+ * use `sandbox.raw.previews` for private previews, preview tokens, URL prefixes, and custom domains
+ */
 export const blaxel = (options: Blaxel = {}): Adapter<Raw> => ({
   capabilities,
   async create(input = {}) {

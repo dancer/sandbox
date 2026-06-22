@@ -12,6 +12,7 @@ import {
   fromSandboxRuntime,
   isSandboxError,
   port,
+  portOptions,
   rawCapabilityMode,
   requireRawCapability,
   requireCapability,
@@ -616,6 +617,21 @@ test("port validates normalized preview ports", () => {
       });
     }
   }
+});
+
+test("portOptions rejects unsupported preview settings", () => {
+  expect(() =>
+    portOptions("test", { host: "preview.example.com" }, "https")
+  ).toThrow(SandboxError);
+  expect(() => portOptions("test", { token: "private" }, "https")).toThrow(
+    SandboxError
+  );
+  expect(() => portOptions("test", { protocol: "tcp" }, "https")).toThrow(
+    SandboxError
+  );
+  expect(() =>
+    portOptions("test", { protocol: "https" }, "https")
+  ).not.toThrow();
 });
 
 test("duration validates normalized millisecond values", () => {

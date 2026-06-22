@@ -27,6 +27,7 @@ import {
   duration,
   fromSandboxRuntime,
   port,
+  portOptions,
   sandboxPath,
 } from "@sandbox-sdk/core";
 import type {
@@ -378,7 +379,11 @@ const start = (
   };
 };
 
-/** create a local adapter that runs against an isolated host directory */
+/**
+ * create a local adapter that runs in an owned host directory
+ *
+ * local is not an isolation boundary for untrusted code. preview URLs always use the local HTTP host for the requested port
+ */
 export const local = (options: Local = {}): Adapter<Raw> => ({
   capabilities: {
     environment: true,
@@ -453,8 +458,9 @@ export const local = (options: Local = {}): Adapter<Raw> => ({
       },
       id: input.id ?? randomUUID(),
       ports: {
-        expose: async (value) => {
+        expose: async (value, preview) => {
           const target = await Promise.resolve(port(value, "local"));
+          portOptions("local", preview, "http");
           return {
             port: target,
             url: `http://localhost:${target}`,

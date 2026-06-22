@@ -76,7 +76,7 @@ Every adapter implements the same \`Sandbox\` contract. Provider-specific power 
 
 ## Local (@sandbox-sdk/local)
 
-Local filesystem and child process. The dev and test adapter: point it at a directory and it implements the same \`Sandbox\` contract as the cloud adapters using \`node:fs/promises\` and \`node:child_process\`. Every path is resolved against the sandbox root and rejected if it escapes. Ports return localhost URLs, and filesystem snapshots support create and restore in the same process.
+Local filesystem and child process. The dev and test adapter: point it at a directory and it implements the same \`Sandbox\` contract as the cloud adapters using \`node:fs/promises\` and \`node:child_process\`. It is not an isolation boundary for untrusted code. Every path is resolved against the sandbox root and rejected if it escapes. Ports return derived localhost HTTP URLs, and filesystem snapshots support create and restore in the same process.
 
 - \`root\`: directory the adapter manages. When omitted, a fresh \`mkdtemp\` directory is created and \`stop()\` deletes it. Paths that resolve outside it throw \`SandboxError\` with \`code: "path_escape"\`.
 - \`keep\`: when \`true\`, \`stop()\` leaves an auto-created root in place for inspection.
@@ -84,7 +84,7 @@ Local filesystem and child process. The dev and test adapter: point it at a dire
 
 ## Blaxel (@sandbox-sdk/blaxel)
 
-Blaxel perpetual sandboxes via \`@blaxel/core\`. Maps Blaxel files, process execution, background processes, and preview URLs onto the shared surface. Pass \`apiKey\` and \`workspace\` explicitly, or let the Blaxel SDK use its environment defaults.
+Blaxel perpetual sandboxes via \`@blaxel/core\`. Maps Blaxel files, process execution, background processes, and public HTTPS preview URLs onto the shared surface. Use \`sandbox.raw.previews\` for private previews, preview tokens, URL prefixes, and verified custom domains. Pass \`apiKey\` and \`workspace\` explicitly, or let the Blaxel SDK use its environment defaults.
 
 - \`image\`, \`workspace\`, \`ports\`.
 - Credentials: \`BL_WORKSPACE\` with \`BL_API_KEY\` or \`BL_CLIENT_CREDENTIALS\`.
@@ -106,7 +106,7 @@ CodeSandbox microVMs via \`@codesandbox/sdk\`. Creates or resumes sandboxes, con
 
 ## Daytona (@sandbox-sdk/daytona)
 
-Daytona dev environments via \`@daytona/sdk\`. Spins up a workspace from the given image, mounts a workdir, and threads files and processes through Daytona's API. Network limits are configured at creation time; native \`raw.updateNetworkSettings()\` is available when the account tier supports runtime changes.
+Daytona dev environments via \`@daytona/sdk\`. Spins up a workspace from the given image, mounts a workdir, and threads files and processes through Daytona's API. Standard private preview URLs require the native preview token in an \`x-daytona-preview-token\` header. Set \`signedPreview\` for a self-contained URL. Network limits are configured at creation time; native \`raw.updateNetworkSettings()\` is available when the account tier supports runtime changes.
 
 - \`image\`, \`apiKey\`, \`target\`, \`networkBlockAll\`, \`networkAllowList\`.
 - Credentials: \`DAYTONA_API_KEY\`.
@@ -120,7 +120,7 @@ E2B microVM sandboxes via \`e2b\`. Can pin a template at construction and thread
 
 ## Modal (@sandbox-sdk/modal)
 
-Modal sandboxes via \`modal\`. Creates sandboxes inside a Modal app, maps file reads and writes through Modal's filesystem, and exposes provider-declared ports through Modal tunnels. Reconnecting by sandbox id discovers existing tunnels automatically. Supports filesystem snapshot creation; in-place restore and background process handles stay unsupported until the provider exposes a matching stable primitive.
+Modal sandboxes via \`modal\`. Creates sandboxes inside a Modal app, maps file reads and writes through Modal's filesystem, and exposes provider-declared HTTPS ports through Modal tunnels. Reconnecting by sandbox id discovers existing tunnels automatically. Use Modal create options and \`sandbox.raw\` for provider-specific private and direct TCP tunnel controls. Supports filesystem snapshot creation; in-place restore and background process handles stay unsupported until the provider exposes a matching stable primitive.
 
 - \`app\` (defaults to \`sandbox-sdk\`), \`image\`, \`ports\`.
 - Credentials: \`MODAL_TOKEN_ID\` and \`MODAL_TOKEN_SECRET\`, or Modal CLI config.

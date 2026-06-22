@@ -955,6 +955,13 @@ test("vercel maps create options and updates dynamic ports", async () => {
       code: "configuration",
       provider: "vercel",
     });
+    await expect(
+      sandbox.ports.expose(4567, { token: "private" })
+    ).rejects.toMatchObject({
+      code: "unsupported",
+      provider: "vercel",
+    });
+    expect(updateSeen).toEqual({ ports: [8080, 3000] });
 
     await expect(sandbox.ports.expose(8080)).resolves.toEqual({
       port: 8080,

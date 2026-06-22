@@ -111,6 +111,31 @@ test("local rejects invalid preview ports", async () => {
   await sandbox.stop();
 });
 
+test("local rejects unsupported preview options", async () => {
+  const sandbox = await create({ adapter: local() });
+
+  await expect(
+    sandbox.ports.expose(3000, { host: "preview.example.com" })
+  ).rejects.toMatchObject({
+    code: "unsupported",
+    provider: "local",
+  });
+  await expect(
+    sandbox.ports.expose(3000, { protocol: "https" })
+  ).rejects.toMatchObject({
+    code: "unsupported",
+    provider: "local",
+  });
+  await expect(
+    sandbox.ports.expose(3000, { protocol: "http" })
+  ).resolves.toEqual({
+    port: 3000,
+    url: "http://localhost:3000",
+  });
+
+  await sandbox.stop();
+});
+
 test("local keeps parent paths inside the sandbox root", async () => {
   const sandbox = await create({ adapter: local() });
 

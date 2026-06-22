@@ -7,6 +7,7 @@ import type {
   Input,
   Mode,
   Options,
+  Port,
   RawCapability,
   Result,
   Running,
@@ -210,6 +211,31 @@ export const port = (value: number, provider = "sandbox"): number => {
     code: "configuration",
     provider,
   });
+};
+
+/**
+ * validate options against an adapter's provider-derived preview URL
+ *
+ * call this before provider work when custom hosts and URL tokens are unavailable. pass the derived protocol when it is known
+ */
+export const portOptions = (
+  provider: string,
+  options: Port | undefined,
+  protocol?: "http" | "https"
+): void => {
+  if (options?.host !== undefined) {
+    unsupported(provider, "custom preview hosts");
+  }
+  if (options?.token !== undefined) {
+    unsupported(provider, "preview URL tokens");
+  }
+  if (
+    protocol !== undefined &&
+    options?.protocol !== undefined &&
+    options.protocol !== protocol
+  ) {
+    unsupported(provider, `${options.protocol} preview URLs`);
+  }
 };
 
 /** validate and return a normalized millisecond duration */

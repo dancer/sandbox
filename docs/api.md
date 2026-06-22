@@ -229,7 +229,7 @@ normalized preview URL namespace
 
 ```ts
 export type Ports = Readonly<{
-  /** expose a sandbox port and return a reachable URL */
+  /** expose a sandbox port and return its provider-derived URL; adapters reject options they cannot honor */
   expose(port: number, options?: Port): Promise<Url>;
 }>;
 ```
@@ -305,7 +305,9 @@ export type Spawn = Exec;
 
 #### `Port`
 
-preview URL options for adapters that support host or protocol selection
+preview URL options for adapters that support host, protocol, or URL-token selection
+
+adapters reject unsupported values instead of silently ignoring them. use `sandbox.raw` for provider-specific preview controls
 
 ```ts
 export type Port = Readonly<{
@@ -683,6 +685,20 @@ validate and return a normalized tcp port number
 export declare const port: (value: number, provider?: string) => number;
 ```
 
+#### `portOptions`
+
+validate options against an adapter's provider-derived preview URL
+
+call this before provider work when custom hosts and URL tokens are unavailable. pass the derived protocol when it is known
+
+```ts
+export declare const portOptions: (
+  provider: string,
+  options: Port | undefined,
+  protocol?: "http" | "https"
+) => void;
+```
+
 #### `duration`
 
 validate and return a normalized millisecond duration
@@ -850,7 +866,9 @@ export type Local = Readonly<{
 
 #### `local`
 
-create a local adapter that runs against an isolated host directory
+create a local adapter that runs in an owned host directory
+
+local is not an isolation boundary for untrusted code. preview URLs always use the local HTTP host for the requested port
 
 ```ts
 export declare const local: (options?: Local) => Adapter<Raw>;
@@ -1773,7 +1791,9 @@ export declare const updateLifecycle: (
 
 #### `blaxel`
 
-create a blaxel adapter with normalized sandbox operations
+create a Blaxel adapter with normalized sandbox operations
+
+use `sandbox.raw.previews` for private previews, preview tokens, URL prefixes, and custom domains
 
 ```ts
 export declare const blaxel: (options?: Blaxel) => Adapter<Raw>;
@@ -2289,13 +2309,13 @@ export type Daytona = DaytonaConfig &
     networkAllowList?: string;
     /** block outbound network access at sandbox creation when supported by Daytona */
     networkBlockAll?: boolean;
-    /** signed preview url expiration in seconds */
+    /** signed preview URL expiration in seconds */
     previewExpires?: number;
     /** make the Daytona sandbox public when supported */
     public?: boolean;
     /** resource request for new sandboxes */
     resources?: Resources;
-    /** use signed preview urls instead of standard preview links */
+    /** use self-contained signed preview URLs instead of standard links that can require the native preview-token header */
     signedPreview?: boolean;
     /** Daytona snapshot id used when create input omits snapshot */
     snapshot?: string;
@@ -2315,6 +2335,8 @@ export type Daytona = DaytonaConfig &
 #### `daytona`
 
 create a Daytona adapter with normalized sandbox operations
+
+standard private preview URLs require the token returned by `sandbox.raw.getPreviewLink()` in the `x-daytona-preview-token` request header. set `signedPreview` for a self-contained preview URL
 
 ```ts
 export declare const daytona: (options?: Daytona) => Adapter<Raw>;
@@ -2522,6 +2544,8 @@ export type Modal = Readonly<
 create a Modal sandbox adapter with normalized file, command, port, and filesystem snapshot operations
 
 filesystem snapshots return an image id for a new sandbox through the shared snapshot create option. in-place restore and normalized background process handles are unavailable
+
+use Modal create options and `sandbox.raw` for provider-specific private tunnels and direct TCP controls
 
 ```ts
 export declare const modal: (options?: Modal) => Adapter<Raw>;

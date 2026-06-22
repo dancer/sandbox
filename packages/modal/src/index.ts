@@ -6,6 +6,7 @@ import {
   abort,
   sandboxError,
   port,
+  portOptions,
   result,
   sandboxPath,
   unsupported,
@@ -581,8 +582,9 @@ const createSandbox = (
   },
   id: raw.sandboxId,
   ports: {
-    expose: async (value) => {
+    expose: async (value, options) => {
       const target = port(value, provider);
+      portOptions(provider, options, "https");
       const declared = ports.includes(target);
       if (!reconnected && !declared) {
         throw sandboxError(
@@ -638,6 +640,8 @@ const createSandbox = (
  * create a Modal sandbox adapter with normalized file, command, port, and filesystem snapshot operations
  *
  * filesystem snapshots return an image id for a new sandbox through the shared snapshot create option. in-place restore and normalized background process handles are unavailable
+ *
+ * use Modal create options and `sandbox.raw` for provider-specific private tunnels and direct TCP controls
  */
 export const modal = (options: Modal = {}): Adapter<Raw> => ({
   capabilities,

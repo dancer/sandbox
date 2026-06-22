@@ -169,7 +169,7 @@ export type Files = Readonly<{
 
 /** normalized preview URL namespace */
 export type Ports = Readonly<{
-  /** expose a sandbox port and return a reachable URL */
+  /** expose a sandbox port and return its provider-derived URL; adapters reject options they cannot honor */
   expose(port: number, options?: Port): Promise<Url>;
 }>;
 
@@ -221,7 +221,11 @@ export type Exec = Readonly<{
 /** background process options shared with one-shot execution */
 export type Spawn = Exec;
 
-/** preview URL options for adapters that support host or protocol selection */
+/**
+ * preview URL options for adapters that support host, protocol, or URL-token selection
+ *
+ * adapters reject unsupported values instead of silently ignoring them. use `sandbox.raw` for provider-specific preview controls
+ */
 export type Port = Readonly<{
   /** custom preview host when the provider supports it */
   host?: string;

@@ -417,6 +417,13 @@ test("modal maps create options, tags, commands, and ports", async () => {
     code: "configuration",
     provider: "modal",
   });
+  await expect(
+    sandbox.ports.expose(8080, { token: "private" })
+  ).rejects.toMatchObject({
+    code: "unsupported",
+    provider: "modal",
+  });
+  expect(tunnelCalls).toBe(0);
   await expect(sandbox.ports.expose(8080)).resolves.toEqual({
     port: 8080,
     url: "https://preview.example.com",

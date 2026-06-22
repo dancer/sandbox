@@ -20,6 +20,7 @@ import {
   command,
   duration,
   port,
+  portOptions,
   quote,
   result,
   sandboxError,
@@ -81,13 +82,13 @@ export type Daytona = DaytonaConfig &
     networkAllowList?: string;
     /** block outbound network access at sandbox creation when supported by Daytona */
     networkBlockAll?: boolean;
-    /** signed preview url expiration in seconds */
+    /** signed preview URL expiration in seconds */
     previewExpires?: number;
     /** make the Daytona sandbox public when supported */
     public?: boolean;
     /** resource request for new sandboxes */
     resources?: Resources;
-    /** use signed preview urls instead of standard preview links */
+    /** use self-contained signed preview URLs instead of standard links that can require the native preview-token header */
     signedPreview?: boolean;
     /** Daytona snapshot id used when create input omits snapshot */
     snapshot?: string;
@@ -681,8 +682,9 @@ const createSandbox = (
   },
   id: raw.id,
   ports: {
-    expose: async (value) => {
+    expose: async (value, input) => {
       const target = port(value, provider);
+      portOptions(provider, input, "https");
       const preview = options.signedPreview
         ? await wrap(
             () => raw.getSignedPreviewUrl(target, options.previewExpires),
@@ -718,7 +720,11 @@ const createSandbox = (
   },
 });
 
-/** create a Daytona adapter with normalized sandbox operations */
+/**
+ * create a Daytona adapter with normalized sandbox operations
+ *
+ * standard private preview URLs require the token returned by `sandbox.raw.getPreviewLink()` in the `x-daytona-preview-token` request header. set `signedPreview` for a self-contained preview URL
+ */
 export const daytona = (options: Daytona = {}): Adapter<Raw> => ({
   capabilities,
   async create(input = {}) {

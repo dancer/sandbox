@@ -7,6 +7,7 @@ import {
   bytes,
   duration,
   port,
+  portOptions,
   result,
   sandboxError,
   sandboxPath,
@@ -871,8 +872,9 @@ const createSandbox = (
     },
     id: raw.name,
     ports: {
-      expose: async (value) => {
+      expose: async (value, options) => {
         const target = port(value, provider);
+        portOptions(provider, options, "https");
         if (!exposed.has(target)) {
           if (exposed.size >= 4) {
             throw sandboxError(
