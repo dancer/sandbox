@@ -35,6 +35,8 @@ export type {
   CloudflareBridgePtyConnection,
   CloudflareBridgeRaw,
   CloudflareBridgeSession,
+  CloudflareBridgeTunnel,
+  CloudflareBridgeTunnelOptions,
 } from "./bridge.js";
 export type { Sandbox as CloudflareSandbox } from "@cloudflare/sandbox";
 

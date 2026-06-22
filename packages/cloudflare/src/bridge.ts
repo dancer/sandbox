@@ -30,6 +30,8 @@ export type {
   CloudflareBridgePty,
   CloudflareBridgePtyConnection,
   CloudflareBridgeSession,
+  CloudflareBridgeTunnel,
+  CloudflareBridgeTunnelOptions,
 } from "./bridge-client.js";
 
 const execJson = async (
@@ -59,7 +61,11 @@ const execJson = async (
   }
 };
 
-/** create a Cloudflare Sandbox adapter that talks to the official HTTP bridge */
+/**
+ * create a Cloudflare Sandbox adapter that talks to the official HTTP bridge
+ *
+ * `ports.expose()` creates an ephemeral HTTPS quick tunnel by default. configure `tunnel` for a named tunnel when the bridge Worker has the required Cloudflare credentials
+ */
 export const cloudflareBridge = (
   options: CloudflareBridge = {}
 ): Adapter<CloudflareBridgeRaw> => ({
@@ -149,7 +155,26 @@ export const cloudflareBridge = (
       },
       id,
       ports: {
-        expose: () => rejectUnsupported("bridge ports"),
+        expose: async (value, portOptions = {}) => {
+          if (
+            portOptions.host !== undefined ||
+            portOptions.token !== undefined ||
+            (portOptions.protocol !== undefined &&
+              portOptions.protocol !== "https")
+          ) {
+            throw sandboxError(
+              provider,
+              "Cloudflare tunnels only support the default HTTPS URL through ports.expose. Use sandbox.raw for provider-specific networking.",
+              "unsupported"
+            );
+          }
+          const tunnel = await raw.tunnels.get(
+            id,
+            value,
+            options.tunnel === undefined ? undefined : { name: options.tunnel }
+          );
+          return { port: tunnel.port, url: tunnel.url };
+        },
       },
       process: {
         spawn: (executable, args, spawnOptions) =>

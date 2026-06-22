@@ -177,7 +177,7 @@ test("adapters expose capability-honest feature modes", () => {
     }).capabilities
   ).toMatchObject({
     files: true,
-    ports: false,
+    ports: "dynamic",
     processExec: true,
     processSpawn: false,
     raw: {
@@ -186,6 +186,7 @@ test("adapters expose capability-honest feature modes", () => {
       lifecycle: "dynamic",
       pty: true,
       sessions: true,
+      tunnels: "dynamic",
     },
     snapshotCreate: false,
     snapshotRestore: false,

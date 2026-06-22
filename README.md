@@ -251,12 +251,15 @@ const sandbox = await create({
 });
 ```
 
-The bridge adapter supports normalized files and command execution over HTTP.
-Bridge lifecycle, sessions, persist, hydrate, bucket mounts, warm-pool controls,
-health, OpenAPI schema access, and PTY connection descriptors are available
-through `sandbox.raw`. Normalized ports, snapshots, and terminal I/O stay
-unsupported because the bridge does not expose the same preview, snapshot, or
-WebSocket ownership contract as the Worker binding adapter.
+The bridge adapter supports normalized files, command execution, and HTTPS port
+exposure over HTTP. `ports.expose()` creates a zero-config ephemeral quick
+tunnel by default. Set the adapter `tunnel` option to request a stable named
+tunnel when the bridge Worker has the required Cloudflare account and zone
+credentials. Bridge lifecycle, sessions, persist, hydrate, bucket mounts,
+warm-pool controls, health, OpenAPI schema access, raw tunnel controls, and PTY
+connection descriptors are available through `sandbox.raw`. Normalized
+snapshots and terminal I/O stay unsupported because the bridge does not expose
+the same snapshot or WebSocket ownership contract as the Worker binding adapter.
 
 ## Cloudflare Validation
 

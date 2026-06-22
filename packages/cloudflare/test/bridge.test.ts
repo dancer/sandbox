@@ -167,7 +167,7 @@ test("cloudflareBridge maps create session and cleanup", async () => {
 
   expect(sandbox.id).toBe("box-1");
   expect(sandbox.cwd).toBe("/workspace/app");
-  expect(sandbox.capabilities.ports).toBe(false);
+  expect(sandbox.capabilities.ports).toBe("dynamic");
   expect(sandbox.capabilities.raw?.sessions).toBe(true);
   expect(
     seen.every((request) => request.headers.authorization === "Bearer secret")
@@ -310,6 +310,145 @@ test("cloudflareBridge maps files and command execution", async () => {
   ).toBe(true);
 });
 
+test("cloudflareBridge exposes normalized and raw tunnels", async () => {
+  const seen: Seen[] = [];
+  const sandbox = await create({
+    adapter: cloudflareBridge({
+      fetch: bridgeFetch((request) => {
+        if (request.path === "/v1/sandbox") {
+          return json({ id: "box-1" });
+        }
+        if (
+          request.method === "POST" &&
+          request.path === "/v1/sandbox/box-1/tunnel/3456"
+        ) {
+          expect(request.body).toBe('{"name":"preview"}');
+          return json({
+            createdAt: "2026-06-22T00:00:00.000Z",
+            hostname: "preview.example.com",
+            id: "named-1",
+            name: "preview",
+            port: 3456,
+            url: "https://preview.example.com",
+          });
+        }
+        if (
+          request.method === "POST" &&
+          request.path === "/v1/sandbox/box-1/tunnel/4567"
+        ) {
+          expect(request.body).toBeUndefined();
+          return json({
+            createdAt: "2026-06-22T00:00:00.000Z",
+            hostname: "quick.trycloudflare.com",
+            id: "quick-1",
+            port: 4567,
+            url: "https://quick.trycloudflare.com",
+          });
+        }
+        if (
+          request.method === "POST" &&
+          request.path === "/v1/sandbox/box-1/tunnel/5678"
+        ) {
+          expect(request.body).toBe('{"name":"raw"}');
+          return json({
+            createdAt: "2026-06-22T00:00:00.000Z",
+            hostname: "raw.example.com",
+            id: "named-2",
+            name: "raw",
+            port: 5678,
+            url: "https://raw.example.com",
+          });
+        }
+        if (request.method === "DELETE") {
+          return new Response(null, { status: 204 });
+        }
+        return missing();
+      }, seen),
+      tunnel: "preview",
+      url: "https://bridge.example.com",
+    }),
+  });
+
+  try {
+    await expect(sandbox.ports.expose(3456)).resolves.toEqual({
+      port: 3456,
+      url: "https://preview.example.com",
+    });
+    await expect(sandbox.raw.tunnels.get("box-1", 4567)).resolves.toMatchObject(
+      {
+        id: "quick-1",
+        port: 4567,
+        url: "https://quick.trycloudflare.com",
+      }
+    );
+    await expect(
+      sandbox.raw.tunnels.get("box-1", 5678, { name: "raw" })
+    ).resolves.toMatchObject({
+      id: "named-2",
+      name: "raw",
+      port: 5678,
+    });
+    await sandbox.raw.tunnels.destroy("box-1", 5678);
+  } finally {
+    await sandbox.stop();
+  }
+
+  expect(seen.map((request) => `${request.method} ${request.path}`)).toEqual([
+    "POST /v1/sandbox",
+    "POST /v1/sandbox/box-1/tunnel/3456",
+    "POST /v1/sandbox/box-1/tunnel/4567",
+    "POST /v1/sandbox/box-1/tunnel/5678",
+    "DELETE /v1/sandbox/box-1/tunnel/5678",
+    "DELETE /v1/sandbox/box-1",
+  ]);
+});
+
+test("cloudflareBridge validates tunnel configuration before bridge calls", async () => {
+  let calls = 0;
+  const fetch = bridgeFetch(() => {
+    calls += 1;
+    return new Response(null, { status: 204 });
+  }, []);
+
+  await expect(
+    create({
+      adapter: cloudflareBridge({
+        fetch,
+        id: "box-1",
+        tunnel: "not_valid",
+        url: "https://bridge.example.com",
+      }),
+    })
+  ).rejects.toMatchObject({
+    code: "configuration",
+    provider: "cloudflare",
+  });
+  expect(calls).toBe(0);
+
+  const sandbox = await create({
+    adapter: cloudflareBridge({
+      fetch,
+      id: "box-1",
+      url: "https://bridge.example.com",
+    }),
+  });
+
+  try {
+    await expect(sandbox.ports.expose(80)).rejects.toMatchObject({
+      code: "configuration",
+      provider: "cloudflare",
+    });
+    await expect(sandbox.ports.expose(3000)).rejects.toMatchObject({
+      code: "unsupported",
+      provider: "cloudflare",
+    });
+  } finally {
+    await sandbox.stop();
+  }
+
+  expect(calls).toBe(1);
+});
+
 test("cloudflareBridge exposes raw bridge lifecycle methods", async () => {
   const seen: Seen[] = [];
   const sandbox = await create({
@@ -441,7 +580,7 @@ test("cloudflareBridge validates raw pty dimensions", async () => {
   }
 });
 
-test("cloudflareBridge keeps unsupported normalized features capability gated", async () => {
+test("cloudflareBridge keeps unsupported bridge features capability gated", async () => {
   const sandbox = await create({
     adapter: cloudflareBridge({
       fetch: bridgeFetch((request) => {
@@ -458,7 +597,9 @@ test("cloudflareBridge keeps unsupported normalized features capability gated", 
   });
 
   try {
-    await expect(sandbox.ports.expose(3000)).rejects.toMatchObject({
+    await expect(
+      sandbox.ports.expose(3456, { host: "preview.example.com" })
+    ).rejects.toMatchObject({
       code: "unsupported",
       provider: "cloudflare",
     });

@@ -1,4 +1,4 @@
-import { bytes, sandboxError } from "@sandbox-sdk/core";
+import { bytes, port, sandboxError } from "@sandbox-sdk/core";
 import type { Capabilities, Input } from "@sandbox-sdk/core";
 
 export type Fetch = typeof fetch;
@@ -28,6 +28,28 @@ type SessionResponse = Readonly<{
 
 /** generic JSON object returned by bridge utility routes */
 export type CloudflareBridgeJson = Readonly<Record<string, unknown>>;
+
+/** public tunnel returned by the Cloudflare bridge */
+export type CloudflareBridgeTunnel = Readonly<{
+  /** bridge tunnel id */
+  id: string;
+  /** port exposed inside the sandbox */
+  port: number;
+  /** public HTTPS tunnel URL */
+  url: string;
+  /** public tunnel hostname */
+  hostname: string;
+  /** ISO timestamp when the bridge created the tunnel */
+  createdAt: string;
+  /** named tunnel label when the bridge created a named tunnel */
+  name?: string;
+}>;
+
+/** options for creating a Cloudflare bridge tunnel */
+export type CloudflareBridgeTunnelOptions = Readonly<{
+  /** optional DNS label for a stable named tunnel */
+  name?: string;
+}>;
 
 /**
  * advanced bridge operations exposed as `sandbox.raw`
@@ -71,6 +93,21 @@ export type CloudflareBridgeRaw = Readonly<{
   request(path: string, init?: RequestInit): Promise<Response>;
   /** return whether a bridge sandbox is still running */
   running(id: string): Promise<boolean>;
+  /** bridge tunnel controls */
+  tunnels: Readonly<{
+    /**
+     * create or return a public HTTPS tunnel for an already-listening sandbox port
+     *
+     * ports must be integers from 1024 through 65535, excluding 3000. pass `name` only when the bridge Worker is configured for named tunnels
+     */
+    get(
+      id: string,
+      port: number,
+      options?: CloudflareBridgeTunnelOptions
+    ): Promise<CloudflareBridgeTunnel>;
+    /** delete a tunnel and its tracked named-tunnel resources when present */
+    destroy(id: string, port: number): Promise<void>;
+  }>;
   /** bridge execution session controls */
   session: Readonly<{
     /** create an execution session scoped to one sandbox */
@@ -122,6 +159,12 @@ export type CloudflareBridge = Readonly<{
   fetch?: typeof fetch;
   /** stable sandbox id used when create input omits id */
   id?: string;
+  /**
+   * optional DNS label for normalized named tunnel previews
+   *
+   * omit it for a zero-config ephemeral `trycloudflare.com` tunnel. named tunnels require the bridge Worker to have Cloudflare account and zone credentials
+   */
+  tunnel?: string;
 }>;
 
 /** connection details for the bridge PTY WebSocket route */
@@ -175,7 +218,7 @@ export const provider = "cloudflare";
 export const bridgeCapabilities: Capabilities = {
   environment: "separate",
   files: true,
-  ports: false,
+  ports: "dynamic",
   process: true,
   processExec: true,
   processSpawn: false,
@@ -185,6 +228,7 @@ export const bridgeCapabilities: Capabilities = {
     lifecycle: "dynamic",
     pty: true,
     sessions: true,
+    tunnels: "dynamic",
   },
   snapshotCreate: false,
   snapshotRestore: false,
@@ -231,6 +275,31 @@ const env = (name: string): string | undefined =>
   (globalThis as Environment).process?.env?.[name]?.trim() || undefined;
 
 const trim = (value: string): string => value.replace(/\/+$/u, "");
+
+const tunnelPattern = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/u;
+
+const tunnelName = (value: string): string => {
+  if (tunnelPattern.test(value)) {
+    return value;
+  }
+  throw sandboxError(
+    provider,
+    "Cloudflare named tunnel labels must use 1 to 63 lowercase letters, digits, and internal hyphens",
+    "configuration"
+  );
+};
+
+const tunnelPort = (value: number): number => {
+  const target = port(value, provider);
+  if (target >= 1024 && target !== 3000) {
+    return target;
+  }
+  throw sandboxError(
+    provider,
+    "Cloudflare tunnel ports must be integers from 1024 to 65535, excluding 3000",
+    target === 3000 ? "unsupported" : "configuration"
+  );
+};
 
 export const bridgeBody = (input: Uint8Array | string): ArrayBuffer | string =>
   typeof input === "string" ? input : Uint8Array.from(input).buffer;
@@ -286,6 +355,9 @@ const validate = (
   }
 
   const token = options.token?.trim() || env("SANDBOX_API_KEY");
+  if (options.tunnel !== undefined) {
+    tunnelName(options.tunnel);
+  }
   const value = bridgeUrl(url);
   return token === undefined ? { url: value } : { token, url: value };
 };
@@ -486,6 +558,37 @@ export const bridge = (options: CloudflareBridge): CloudflareBridgeRaw => {
         if (!response.ok && response.status !== 404) {
           await fail(response, "bridge session delete");
         }
+      },
+    },
+    tunnels: {
+      destroy: async (id, value) => {
+        const target = tunnelPort(value);
+        const response = await request(
+          `/v1/sandbox/${encodeURIComponent(id)}/tunnel/${target}`,
+          { method: "DELETE" }
+        );
+        if (!response.ok && response.status !== 404) {
+          await fail(response, "bridge tunnel delete");
+        }
+      },
+      get: async (id, value, input = {}) => {
+        const target = tunnelPort(value);
+        const name =
+          input.name === undefined ? undefined : tunnelName(input.name);
+        const response = await request(
+          `/v1/sandbox/${encodeURIComponent(id)}/tunnel/${target}`,
+          name === undefined
+            ? { method: "POST" }
+            : {
+                body: JSON.stringify({ name }),
+                headers: { "content-type": "application/json" },
+                method: "POST",
+              }
+        );
+        if (!response.ok) {
+          await fail(response, "bridge tunnel create");
+        }
+        return parseJson<CloudflareBridgeTunnel>(response);
       },
     },
     unmount: async (id, mountPath) => {

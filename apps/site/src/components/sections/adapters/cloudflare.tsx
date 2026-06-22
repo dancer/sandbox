@@ -66,12 +66,15 @@ export const Cloudflare = () => (
     <CodeBlock code={CLOUDFLARE_EXAMPLE} lang="ts" />
     <p>
       For Node apps and other non-Worker runtimes, deploy Cloudflare's HTTP
-      bridge and use <code>cloudflareBridge()</code>. It keeps normalized files
-      and command execution available over HTTP while bridge lifecycle,
-      sessions, persist, hydrate, bucket mounts, warm-pool controls, health, and
-      OpenAPI schema access stay typed on <code>sandbox.raw</code>. PTY support
-      returns a typed WebSocket connection descriptor so your app can own the
-      terminal client.
+      bridge and use <code>cloudflareBridge()</code>. It keeps normalized files,
+      command execution, and HTTPS tunnel previews available over HTTP.
+      <code>ports.expose()</code> creates a zero-config quick tunnel by default;
+      set <code>tunnel</code> to request a named tunnel when the bridge Worker
+      has the required Cloudflare account and zone credentials. Bridge
+      lifecycle, sessions, persist, hydrate, bucket mounts, warm-pool controls,
+      health, OpenAPI schema access, and raw tunnel controls stay typed on{" "}
+      <code>sandbox.raw</code>. PTY support returns a typed WebSocket connection
+      descriptor so your app can own the terminal client.
     </p>
     <CodeBlock code={CLOUDFLARE_BRIDGE_EXAMPLE} lang="ts" />
     <div className="flex flex-col gap-2">

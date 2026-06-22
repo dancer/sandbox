@@ -1793,6 +1793,38 @@ generic JSON object returned by bridge utility routes
 export type CloudflareBridgeJson = Readonly<Record<string, unknown>>;
 ```
 
+#### `CloudflareBridgeTunnel`
+
+public tunnel returned by the Cloudflare bridge
+
+```ts
+export type CloudflareBridgeTunnel = Readonly<{
+  /** bridge tunnel id */
+  id: string;
+  /** port exposed inside the sandbox */
+  port: number;
+  /** public HTTPS tunnel URL */
+  url: string;
+  /** public tunnel hostname */
+  hostname: string;
+  /** ISO timestamp when the bridge created the tunnel */
+  createdAt: string;
+  /** named tunnel label when the bridge created a named tunnel */
+  name?: string;
+}>;
+```
+
+#### `CloudflareBridgeTunnelOptions`
+
+options for creating a Cloudflare bridge tunnel
+
+```ts
+export type CloudflareBridgeTunnelOptions = Readonly<{
+  /** optional DNS label for a stable named tunnel */
+  name?: string;
+}>;
+```
+
 #### `CloudflareBridgeRaw`
 
 advanced bridge operations exposed as `sandbox.raw`
@@ -1837,6 +1869,21 @@ export type CloudflareBridgeRaw = Readonly<{
   request(path: string, init?: RequestInit): Promise<Response>;
   /** return whether a bridge sandbox is still running */
   running(id: string): Promise<boolean>;
+  /** bridge tunnel controls */
+  tunnels: Readonly<{
+    /**
+     * create or return a public HTTPS tunnel for an already-listening sandbox port
+     *
+     * ports must be integers from 1024 through 65535, excluding 3000. pass `name` only when the bridge Worker is configured for named tunnels
+     */
+    get(
+      id: string,
+      port: number,
+      options?: CloudflareBridgeTunnelOptions
+    ): Promise<CloudflareBridgeTunnel>;
+    /** delete a tunnel and its tracked named-tunnel resources when present */
+    destroy(id: string, port: number): Promise<void>;
+  }>;
   /** bridge execution session controls */
   session: Readonly<{
     /** create an execution session scoped to one sandbox */
@@ -1893,6 +1940,12 @@ export type CloudflareBridge = Readonly<{
   fetch?: typeof fetch;
   /** stable sandbox id used when create input omits id */
   id?: string;
+  /**
+   * optional DNS label for normalized named tunnel previews
+   *
+   * omit it for a zero-config ephemeral `trycloudflare.com` tunnel. named tunnels require the bridge Worker to have Cloudflare account and zone credentials
+   */
+  tunnel?: string;
 }>;
 ```
 
@@ -2034,6 +2087,8 @@ export type Cloudflare<ProviderRaw extends CloudflareRaw = CloudflareRaw> =
 #### `cloudflareBridge`
 
 create a Cloudflare Sandbox adapter that talks to the official HTTP bridge
+
+`ports.expose()` creates an ephemeral HTTPS quick tunnel by default. configure `tunnel` for a named tunnel when the bridge Worker has the required Cloudflare credentials
 
 ```ts
 export declare const cloudflareBridge: (
