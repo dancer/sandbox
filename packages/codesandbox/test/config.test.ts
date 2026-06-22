@@ -191,6 +191,7 @@ test("codesandbox maps create options and normalized operations", async () => {
   let shutdownSeen: string | undefined;
   let disconnected = false;
   let hibernated: string | undefined;
+  let hibernateCalls = 0;
   let killed = false;
   const background = {
     command: "sleep 1",
@@ -329,6 +330,7 @@ test("codesandbox maps create options and normalized operations", async () => {
       delete: () => Promise.resolve(),
       hibernate: (id: string) => {
         hibernated = id;
+        hibernateCalls += 1;
         return Promise.resolve();
       },
       resume: () => Promise.resolve(sandbox),
@@ -486,11 +488,16 @@ test("codesandbox maps create options and normalized operations", async () => {
   const running = await current.process.spawnShell("sleep 1");
   await running.kill();
   expect(killed).toBe(true);
-  await expect(current.snapshots.create("ready")).resolves.toEqual({
+  await expect(current.snapshots.create()).resolves.toEqual({
     id: "sandbox",
-    name: "ready",
   });
   expect(hibernated).toBe("sandbox");
+  expect(hibernateCalls).toBe(1);
+  await expect(current.snapshots.create("ready")).rejects.toMatchObject({
+    code: "unsupported",
+    provider: "codesandbox",
+  });
+  expect(hibernateCalls).toBe(1);
 
   await current.stop();
   expect(disconnected).toBe(true);

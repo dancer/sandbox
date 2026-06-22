@@ -86,7 +86,7 @@ of the current sandbox.
 To create a fresh sandbox from a snapshot, pass the snapshot id to `create()`:
 
 ```ts
-const checkpoint = await sandbox.snapshots.create("ready");
+const checkpoint = await sandbox.snapshots.create();
 
 const next = await create({
   adapter,
@@ -96,6 +96,9 @@ const next = await create({
 
 The `snapshot` create option is supported by adapters that advertise
 `snapshotSource`. Provider template ids still use `template`.
+
+Snapshot names are supported only when the selected provider persists them.
+Other adapters reject a name instead of silently discarding it.
 
 ## Adapters
 

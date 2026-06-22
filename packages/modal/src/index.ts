@@ -623,11 +623,14 @@ const createSandbox = (
   raw,
   snapshots: {
     create: async (name) => {
+      if (name !== undefined) {
+        unsupported(provider, "named snapshots");
+      }
       const created = await wrap(
         () => raw.snapshotFilesystem(snapshot),
         "snapshot"
       );
-      return { id: created.imageId, ...(name === undefined ? {} : { name }) };
+      return { id: created.imageId };
     },
     restore: () => rejectUnsupported("in-place snapshot restore"),
   },
@@ -643,7 +646,7 @@ const createSandbox = (
 /**
  * create a Modal sandbox adapter with normalized file, command, port, and filesystem snapshot operations
  *
- * filesystem snapshots return an image id for a new sandbox through the shared snapshot create option. in-place restore and normalized background process handles are unavailable
+ * filesystem snapshots return an image id for a new sandbox through the shared snapshot create option. Modal does not persist arbitrary snapshot names, so call `snapshots.create()` without a name. in-place restore and normalized background process handles are unavailable
  *
  * use Modal create options and `sandbox.raw` for provider-specific private tunnels and direct TCP controls
  */

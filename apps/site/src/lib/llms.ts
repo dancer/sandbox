@@ -145,7 +145,7 @@ if (supports(sandbox, "ports")) {
 }
 
 if (supports(sandbox, "snapshotCreate")) {
-  const snapshot = await sandbox.snapshots.create("ready");
+  const snapshot = await sandbox.snapshots.create();
   console.log(snapshot.id);
 }
 \`\`\`
@@ -229,7 +229,7 @@ Snapshot support is capability-gated because providers expose different lifecycl
 
 \`\`\`ts
 if (supports(sandbox, "snapshotCreate")) {
-  const snapshot = await sandbox.snapshots.create("after-install");
+  const snapshot = await sandbox.snapshots.create();
 
   await withSandbox(
     {
@@ -243,7 +243,7 @@ if (supports(sandbox, "snapshotCreate")) {
 }
 \`\`\`
 
-- \`snapshots.create(name?)\` captures provider state when \`snapshotCreate\` is supported.
+- \`snapshots.create(name?)\` captures provider state when \`snapshotCreate\` is supported. Snapshot names are accepted only when the provider persists them. Other adapters reject a name rather than silently discarding it.
 - \`snapshots.restore(id)\` means in-place restore of the current sandbox, gated separately by \`snapshotRestore\`.
 - To create a fresh sandbox from a snapshot, pass the snapshot id as the \`snapshot\` create option on adapters that advertise \`snapshotSource\`. Provider template ids still use \`template\`.`;
 

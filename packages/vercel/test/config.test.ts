@@ -848,7 +848,7 @@ test("vercel maps create options and updates dynamic ports", async () => {
   let restoreSeen: unknown;
   let stopCalled = false;
   let updateSeen: unknown;
-  let snapshotted = false;
+  let snapshotCalls = 0;
   const raw = {
     domain: (port: number) => {
       domainSeen = port;
@@ -863,7 +863,7 @@ test("vercel maps create options and updates dynamic ports", async () => {
     name: "sandbox",
     snapshot: (input?: unknown) => {
       snapshotSeen = input;
-      snapshotted = true;
+      snapshotCalls += 1;
       return Promise.resolve({ snapshotId: "snapshot-id" });
     },
     status: "running",
@@ -972,8 +972,13 @@ test("vercel maps create options and updates dynamic ports", async () => {
     await expect(sandbox.snapshots.create()).resolves.toEqual({
       id: "snapshot-id",
     });
-    expect(snapshotted).toBe(true);
+    expect(snapshotCalls).toBe(1);
     expect(snapshotSeen).toEqual({ expiration: 86_400_000 });
+    await expect(sandbox.snapshots.create("ready")).rejects.toMatchObject({
+      code: "unsupported",
+      provider: "vercel",
+    });
+    expect(snapshotCalls).toBe(1);
     await expect(sandbox.snapshots.restore("snapshot-id")).resolves.toBe(
       undefined
     );

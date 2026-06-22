@@ -180,7 +180,7 @@ export type Ports = Readonly<{
  * snapshot does not imply an adapter can restore one in place
  */
 export type Snapshots = Readonly<{
-  /** create a snapshot when `snapshotCreate` is supported */
+  /** create a snapshot, optionally naming it when the provider persists snapshot names */
   create(name?: string): Promise<Snapshot>;
   /** restore a snapshot when `snapshotRestore` is supported */
   restore(id: string): Promise<void>;
@@ -198,7 +198,7 @@ export type Url = Readonly<{
 export type Snapshot = Readonly<{
   /** provider snapshot id */
   id: string;
-  /** optional friendly snapshot name */
+  /** provider-persisted snapshot name when supported */
   name?: string;
 }>;
 

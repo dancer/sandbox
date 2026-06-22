@@ -40,8 +40,7 @@
     "ok": true,
     "provider": "codesandbox",
     "snapshot": {
-      "id": "snapshot",
-      "name": "sandbox-sdk-live"
+      "id": "snapshot"
     },
     "source": "snapshot"
   }

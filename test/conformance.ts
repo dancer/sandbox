@@ -167,7 +167,7 @@ export const conformance = (input: Conformance): void => {
       }
 
       await current.files.write(`${current.cwd}/state.txt`, "before");
-      const snapshot = await current.snapshots.create("conformance");
+      const snapshot = await current.snapshots.create();
       await current.files.write(`${current.cwd}/state.txt`, "after");
       await current.snapshots.restore(snapshot.id);
 

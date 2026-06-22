@@ -81,7 +81,7 @@ const PORTS_EXAMPLE = `const { url, port } = await sandbox.ports.expose(3000, {
 const SNAPSHOTS_EXAMPLE = `import { supports } from "@sandbox-sdk/core";
 
 if (supports(sandbox, "snapshotCreate")) {
-  const snap = await sandbox.snapshots.create("after-bun-install");
+  const snap = await sandbox.snapshots.create();
 
   if (supports(sandbox, "snapshotRestore")) {
     await sandbox.snapshots.restore(snap.id);
@@ -330,7 +330,9 @@ export const ApiReference = () => (
         Restore means in-place restore of the current sandbox and is tracked
         separately with <code>snapshotRestore</code>. To create a fresh sandbox
         from a snapshot, pass <code>snapshot</code> to <code>create()</code> on
-        adapters that advertise <code>snapshotSource</code>.
+        adapters that advertise <code>snapshotSource</code>. Snapshot names are
+        accepted only when the provider persists them. Other adapters reject a
+        name rather than silently discarding it.
       </p>
       <CodeBlock code={SNAPSHOTS_EXAMPLE} lang="ts" />
     </section>

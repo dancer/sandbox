@@ -49,8 +49,7 @@
     "ok": true,
     "provider": "modal",
     "snapshot": {
-      "id": "snapshot",
-      "name": "sandbox-sdk-live"
+      "id": "snapshot"
     },
     "source": "snapshot"
   }

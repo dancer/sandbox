@@ -80,7 +80,7 @@ live("vercel creates and starts from a live snapshot", async () => {
   try {
     await sandbox.files.write(file, "ready");
 
-    const snapshot = await sandbox.snapshots.create("sandbox-sdk-live");
+    const snapshot = await sandbox.snapshots.create();
     expect(snapshot.id).toBeTruthy();
     snapshotId = snapshot.id;
 
@@ -109,7 +109,7 @@ live("vercel restores a live snapshot in place", async () => {
 
   try {
     await sandbox.files.write(file, "restored");
-    const snapshot = await sandbox.snapshots.create("sandbox-sdk-live");
+    const snapshot = await sandbox.snapshots.create();
     snapshotId = snapshot.id;
 
     await sandbox.snapshots.restore(snapshot.id);

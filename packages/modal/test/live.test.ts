@@ -70,7 +70,7 @@ live("modal creates and starts from a live snapshot", async () => {
   try {
     await sandbox.files.write(file, "ready");
 
-    const snapshot = await sandbox.snapshots.create("sandbox-sdk-live");
+    const snapshot = await sandbox.snapshots.create();
     expect(snapshot.id).toBeTruthy();
 
     derived = await create({

@@ -203,7 +203,6 @@ export const expectSource = (payload: Source): void => {
   expect(payload.capabilities.snapshotRestore).toBe(false);
   expect(payload.capabilities.snapshotSource).toBe("create-time");
   expect(payload.snapshot.id).toBeTruthy();
-  expect(payload.snapshot.name).toBe("sandbox-sdk-live");
   expect(payload.source).toBe(payload.snapshot.id);
   expect(payload.file.text).toBe("ready");
 };

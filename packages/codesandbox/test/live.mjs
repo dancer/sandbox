@@ -281,7 +281,7 @@ const source = async (sandbox) => {
 
   await sandbox.files.mkdir(root);
   await sandbox.files.write(file, "ready");
-  const snapshot = await sandbox.snapshots.create("sandbox-sdk-live");
+  const snapshot = await sandbox.snapshots.create();
 
   try {
     derived = await create({

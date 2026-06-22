@@ -243,7 +243,7 @@ snapshot does not imply an adapter can restore one in place
 
 ```ts
 export type Snapshots = Readonly<{
-  /** create a snapshot when `snapshotCreate` is supported */
+  /** create a snapshot, optionally naming it when the provider persists snapshot names */
   create(name?: string): Promise<Snapshot>;
   /** restore a snapshot when `snapshotRestore` is supported */
   restore(id: string): Promise<void>;
@@ -271,7 +271,7 @@ snapshot identifier returned by `snapshots.create`
 export type Snapshot = Readonly<{
   /** provider snapshot id */
   id: string;
-  /** optional friendly snapshot name */
+  /** provider-persisted snapshot name when supported */
   name?: string;
 }>;
 ```
@@ -2241,7 +2241,7 @@ export type CodeSandbox = Readonly<{
 
 create a CodeSandbox adapter with normalized sandbox operations
 
-create with id resumes an existing sandbox. create with template or snapshot starts a new sandbox from an existing sandbox id. normalized snapshot creation hibernates the source and returns its id for a later create
+create with id resumes an existing sandbox. create with template or snapshot starts a new sandbox from an existing sandbox id. normalized snapshot creation hibernates the source and returns its id for a later create. CodeSandbox does not persist arbitrary snapshot names, so call `snapshots.create()` without a name
 
 ```ts
 export declare const codesandbox: (
@@ -2546,7 +2546,7 @@ export type Modal = Readonly<
 
 create a Modal sandbox adapter with normalized file, command, port, and filesystem snapshot operations
 
-filesystem snapshots return an image id for a new sandbox through the shared snapshot create option. in-place restore and normalized background process handles are unavailable
+filesystem snapshots return an image id for a new sandbox through the shared snapshot create option. Modal does not persist arbitrary snapshot names, so call `snapshots.create()` without a name. in-place restore and normalized background process handles are unavailable
 
 use Modal create options and `sandbox.raw` for provider-specific private tunnels and direct TCP controls
 
@@ -2742,6 +2742,8 @@ export type Vercel = Readonly<{
 #### `vercel`
 
 create a Vercel Sandbox adapter with normalized sandbox operations
+
+Vercel does not persist arbitrary snapshot names, so call `snapshots.create()` without a name
 
 ```ts
 export declare const vercel: (options?: Vercel) => Adapter<Raw>;

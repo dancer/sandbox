@@ -562,8 +562,11 @@ const createSandbox = (
   raw,
   snapshots: {
     create: async (name) => {
+      if (name !== undefined) {
+        unsupported(provider, "named snapshots");
+      }
       await raw.sdk.sandboxes.hibernate(raw.sandbox.id);
-      return { id: raw.sandbox.id, ...(name === undefined ? {} : { name }) };
+      return { id: raw.sandbox.id };
     },
     restore: () => rejectUnsupported("in-place snapshot restore"),
   },
@@ -587,7 +590,7 @@ const createSandbox = (
 /**
  * create a CodeSandbox adapter with normalized sandbox operations
  *
- * create with id resumes an existing sandbox. create with template or snapshot starts a new sandbox from an existing sandbox id. normalized snapshot creation hibernates the source and returns its id for a later create
+ * create with id resumes an existing sandbox. create with template or snapshot starts a new sandbox from an existing sandbox id. normalized snapshot creation hibernates the source and returns its id for a later create. CodeSandbox does not persist arbitrary snapshot names, so call `snapshots.create()` without a name
  */
 export const codesandbox = (
   options: CodeSandbox = {}

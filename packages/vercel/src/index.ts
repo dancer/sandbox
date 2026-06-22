@@ -12,6 +12,7 @@ import {
   sandboxError,
   sandboxPath,
   timeout,
+  unsupported,
 } from "@sandbox-sdk/core";
 import type {
   Adapter,
@@ -910,7 +911,10 @@ const createSandbox = (
     provider,
     raw,
     snapshots: {
-      create: async () => {
+      create: async (name) => {
+        if (name !== undefined) {
+          unsupported(provider, "named snapshots");
+        }
         const expiration = duration(
           snapshotExpiration,
           provider,
@@ -943,7 +947,11 @@ const createSandbox = (
   };
 };
 
-/** create a Vercel Sandbox adapter with normalized sandbox operations */
+/**
+ * create a Vercel Sandbox adapter with normalized sandbox operations
+ *
+ * Vercel does not persist arbitrary snapshot names, so call `snapshots.create()` without a name
+ */
 export const vercel = (options: Vercel = {}): Adapter<Raw> => ({
   capabilities,
   async create(input = {}) {
