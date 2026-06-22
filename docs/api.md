@@ -921,59 +921,70 @@ export type Options = Readonly<{
 
 #### `Kit`
 
-AI toolkit with prompt context and a minimal sandbox session shape
+agent-ready sandbox tools, prompt context, and a restricted sandbox session
+
+pass this to `aisdk()` for AI SDK v6 and v7 generation calls
 
 ```ts
 export type Kit = Readonly<{
-  /** prompt context describing the sandbox, capabilities, and limits */
+  /** agent-facing context describing the workspace, capabilities, and limits */
   description: string;
   /** restricted sandbox session for agent integrations */
   sandbox: SandboxSession;
-  /** aisdk compatible tools keyed by enabled tool name */
+  /** AI SDK-compatible tools keyed by enabled tool name */
   tools: Tools;
 }>;
 ```
 
 #### `AisdkOptions`
 
-options ready to spread into aisdk v6/v7 generateText, streamText, or ToolLoopAgent
+options ready to spread into AI SDK v6 or v7 generation calls
+
+v6 receives tools and prompt context, while v7 also receives `experimental_sandbox`
 
 ```ts
 export type AisdkOptions = Readonly<{
-  /** aisdk sandbox object forwarded to tool execution */
+  /** sandbox session forwarded to AI SDK tool execution */
   experimental_sandbox: SandboxSession;
   /** ToolLoopAgent instructions describing the sandbox, available tools, and safety limits */
   instructions: string;
-  /** prompt context describing the sandbox, available tools, and safety limits */
+  /** system prompt context describing the sandbox, available tools, and safety limits */
   system: string;
-  /** aisdk compatible tool set */
+  /** AI SDK-compatible tool set */
   tools: Tools;
 }>;
 ```
 
 #### `SandboxSession`
 
-restricted sandbox session compatible with current and older AI SDK integrations
+restricted agent-facing sandbox session compatible with the AI SDK v7 sandbox contract
+
+tools and prompt context work with v6 and v7, while host-only lifecycle,
+networking, and provider-specific controls remain on `Sandbox`
 
 ```ts
 export type SandboxSession = Readonly<{
-  /** advertised sandbox capabilities */
+  /** normalized capabilities advertised by the underlying sandbox */
   capabilities: Sandbox["capabilities"];
-  /** prompt context describing the sandbox */
+  /** agent-facing sandbox context, including workspace, tools, and limits */
   description: string;
-  /** provider name */
+  /** adapter provider name */
   provider: string;
   /** read one file as a byte stream, returning null when it does not exist */
   readFile(input: File): PromiseLike<ReadableStream<Uint8Array> | null>;
   /** read one file as bytes, returning null when it does not exist */
   readBinaryFile(input: File): PromiseLike<Uint8Array | null>;
-  /** read one text file, returning null when it does not exist */
+  /**
+   * read one decoded text file, returning null when it does not exist
+   *
+   * line ranges are 1-based and inclusive, with `endLine` clamped at EOF
+   */
   readTextFile(input: TextFile): PromiseLike<string | null>;
   /** run a shell command and return buffered stdout and stderr */
   run(input: Command): PromiseLike<CommandResult>;
   /** start a shell command and return a streaming process handle */
   spawn(input: Command): PromiseLike<SandboxProcess>;
-  /** default working directory */
+  /** default working directory used when an input does not provide one */
   workingDirectory: string;
   /** write one file from a byte stream */
   writeFile(input: FileWrite): PromiseLike<void>;
@@ -981,9 +992,9 @@ export type SandboxSession = Readonly<{
   writeBinaryFile(input: BinaryFileWrite): PromiseLike<void>;
   /** write one text file */
   writeTextFile(input: TextFileWrite): PromiseLike<void>;
-  /** compatibility alias for older integrations */
+  /** compatibility alias for older integrations that expect `executeCommand` */
   executeCommand(input: Command): Promise<CommandResult>;
-  /** compatibility alias for older integrations */
+  /** compatibility alias for older integrations that expect `runCommand` */
   runCommand(input: Command): PromiseLike<CommandResult>;
 }>;
 ```
@@ -1010,17 +1021,19 @@ export type AgentSandbox = SandboxSession;
 
 #### `SandboxProcess`
 
-process handle compatible with the current AI SDK sandbox contract
+streaming process handle compatible with the current AI SDK sandbox contract
+
+call `kill()` to stop the process, then `wait()` to observe its exit code
 
 ```ts
 export type SandboxProcess = Readonly<{
-  /** process stderr byte stream */
+  /** bytes written by the process to standard error */
   stderr: ReadableStream<Uint8Array>;
-  /** process stdout byte stream */
+  /** bytes written by the process to standard output */
   stdout: ReadableStream<Uint8Array>;
-  /** terminate the process */
+  /** terminate the process, safely allowing repeated calls */
   kill(): PromiseLike<void>;
-  /** resolve with the process exit code */
+  /** resolve after the process exits with its exit code */
   wait(): PromiseLike<{
     exitCode: number;
   }>;
@@ -1069,13 +1082,13 @@ export type Command = Readonly<{
 
 #### `File`
 
-file stream input used by the AI SDK sandbox shape
+file read input used by the AI SDK sandbox shape
 
 ```ts
 export type File = Readonly<{
-  /** abort signal forwarded when supported by the underlying adapter */
+  /** signal forwarded when the underlying adapter supports cancellation */
   abortSignal?: AbortSignal;
-  /** file path inside the sandbox */
+  /** absolute or sandbox-relative file path */
   path: string;
 }>;
 ```
@@ -1087,11 +1100,11 @@ text file read input used by the AI SDK sandbox shape
 ```ts
 export type TextFile = File &
   Readonly<{
-    /** 1-based inclusive ending line */
+    /** 1-based inclusive final line, clamped to EOF when it exceeds the file */
     endLine?: number;
-    /** text encoding used to decode the file */
+    /** text encoding used to decode the file, defaulting to utf-8 */
     encoding?: string;
-    /** 1-based inclusive starting line */
+    /** 1-based inclusive first line, defaulting to the first file line */
     startLine?: number;
   }>;
 ```

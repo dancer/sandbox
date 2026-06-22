@@ -286,6 +286,41 @@ test("ai sdk sandbox shape reads and writes files", async () => {
   await sandbox.stop();
 });
 
+test("ai sdk sandbox text ranges preserve file line endings", async () => {
+  const sandbox = await create({ adapter: local(), cwd: "/workspace" });
+
+  try {
+    const agent: SandboxSession = tools(sandbox, {
+      allow: ["read", "write"],
+    }).sandbox;
+
+    await agent.writeTextFile({
+      content: "one\r\ntwo\r\nthree\r\nfour",
+      path: "/workspace/windows.txt",
+    });
+    await agent.writeTextFile({
+      content: "one\rtwo\rthree\rfour",
+      path: "/workspace/carriage.txt",
+    });
+
+    const windows = await agent.readTextFile({
+      endLine: 3,
+      path: "/workspace/windows.txt",
+      startLine: 2,
+    });
+    const carriage = await agent.readTextFile({
+      endLine: 99,
+      path: "/workspace/carriage.txt",
+      startLine: 3,
+    });
+
+    expect(windows).toBe("two\r\nthree");
+    expect(carriage).toBe("three\rfour");
+  } finally {
+    await sandbox.stop();
+  }
+});
+
 test("openai creates real agents sdk tools", async () => {
   const sandbox = await create({ adapter: local(), cwd: "/workspace" });
   const kit = tools(sandbox, {
