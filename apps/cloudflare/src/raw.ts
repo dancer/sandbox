@@ -1,4 +1,4 @@
-import type { Sandbox as CloudflareSandbox } from "@cloudflare/sandbox";
+import type { CloudflareRaw } from "@sandbox-sdk/cloudflare";
 import type { Sandbox as CoreSandbox } from "@sandbox-sdk/core";
 
 import type { Env } from "./shared";
@@ -8,14 +8,14 @@ export const handleRaw = async (env: Env): Promise<Response> => {
   const id = crypto.randomUUID();
   const cwd = `/workspace/${id}`;
   const rawFile = `${cwd}/raw.txt`;
-  let sandbox: CoreSandbox | undefined;
+  let sandbox: CoreSandbox<CloudflareRaw> | undefined;
   let sessionDeleted = false;
   let contextDeleted = false;
 
   try {
     sandbox = await instance(env, cwd, id);
     await sandbox.files.mkdir(cwd);
-    const raw = sandbox.raw as CloudflareSandbox<unknown>;
+    const { raw } = sandbox;
     const session = await raw.createSession({
       cwd,
       env: { SANDBOX_SDK_RAW: "raw-session" },

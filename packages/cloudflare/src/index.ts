@@ -43,47 +43,47 @@ type Native = CloudflareSandbox<unknown>;
 /** native Cloudflare Sandbox object exposed as `sandbox.raw` for Worker-only features */
 export type CloudflareRaw = Native;
 
-/** structural Durable Object namespace binding accepted by the Worker-native adapter */
-export type CloudflareBinding = Readonly<{
-  /** return a Durable Object stub for a resolved id */
-  get(id: unknown): unknown;
-  /** resolve a Durable Object id from a stable sandbox name */
-  idFromName(name: string): unknown;
-}>;
+/** Cloudflare Worker Durable Object namespace for a native Sandbox class */
+export type CloudflareBinding<
+  ProviderRaw extends CloudflareRaw = CloudflareRaw,
+> = DurableObjectNamespace<ProviderRaw>;
 
 /**
  * Cloudflare Worker-native Sandbox adapter configuration
  *
+ * `ProviderRaw` is inferred from `binding`, so `sandbox.raw` keeps the exact native Cloudflare Sandbox environment type
+ *
  * use `cloudflareBridge()` for a deployed HTTP bridge outside a Cloudflare Worker
  */
-export type Cloudflare = Readonly<{
-  /** required Durable Object binding for the Cloudflare Sandbox class, usually `env.Sandbox` */
-  binding: CloudflareBinding;
-  /**
-   * default working directory for normalized file and process operations
-   *
-   * @default "/workspace"
-   */
-  cwd?: string;
-  /** default environment variables written to the selected sandbox; values are not filtered, so never pass Worker secrets */
-  env?: Readonly<Record<string, string>>;
-  /** stable sandbox id used when create input omits id */
-  id?: string;
-  /** list options forwarded to Cloudflare `listFiles` */
-  list?: ListFilesOptions;
-  /**
-   * optional named tunnel label with lowercase letters, digits, and internal hyphens
-   *
-   * omit it for a zero-config quick tunnel; named tunnels require Worker-side API token, account, and zone configuration
-   */
-  tunnel?: string;
-  /**
-   * low-level options forwarded to `getSandbox`, with the current RPC transport enforced
-   *
-   * normalized commands are sessionless by default. set `enableDefaultSession: true` only when native raw operations need shared shell state
-   */
-  options?: Omit<SandboxOptions, "transport">;
-}>;
+export type Cloudflare<ProviderRaw extends CloudflareRaw = CloudflareRaw> =
+  Readonly<{
+    /** required Durable Object binding for the Cloudflare Sandbox class, usually `env.Sandbox` */
+    binding: CloudflareBinding<ProviderRaw>;
+    /**
+     * default working directory for normalized file and process operations
+     *
+     * @default "/workspace"
+     */
+    cwd?: string;
+    /** default environment variables written to the selected sandbox; values are not filtered, so never pass Worker secrets */
+    env?: Readonly<Record<string, string>>;
+    /** stable sandbox id used when create input omits id */
+    id?: string;
+    /** list options forwarded to Cloudflare `listFiles` */
+    list?: ListFilesOptions;
+    /**
+     * optional named tunnel label with lowercase letters, digits, and internal hyphens
+     *
+     * omit it for a zero-config quick tunnel; named tunnels require Worker-side API token, account, and zone configuration
+     */
+    tunnel?: string;
+    /**
+     * low-level options forwarded to `getSandbox`, with the current RPC transport enforced
+     *
+     * normalized commands are sessionless by default. set `enableDefaultSession: true` only when native raw operations need shared shell state
+     */
+    options?: Omit<SandboxOptions, "transport">;
+  }>;
 
 const provider = "cloudflare";
 
@@ -496,10 +496,10 @@ const spawn = (
   options: Exec
 ): Promise<Running> => spawnLine(raw, cwd, command(executable, args), options);
 
-const createSandbox = <ProviderRaw>(
-  raw: Native,
+const createSandbox = <ProviderRaw extends CloudflareRaw>(
+  raw: ProviderRaw,
   cwd: string,
-  options: Cloudflare
+  options: Cloudflare<ProviderRaw>
 ): Sandbox<ProviderRaw> => ({
   capabilities,
   cwd,
@@ -599,7 +599,7 @@ const createSandbox = <ProviderRaw>(
     spawnShell: (script, run = {}) => spawnLine(raw, cwd, script, run),
   },
   provider,
-  raw: raw as ProviderRaw,
+  raw,
   snapshots: {
     create: () => rejectUnsupported("snapshots"),
     restore: () => rejectUnsupported("snapshots"),
@@ -609,9 +609,13 @@ const createSandbox = <ProviderRaw>(
   },
 });
 
-/** create a Cloudflare Sandbox adapter from a Worker binding */
-export const cloudflare = <ProviderRaw = unknown>(
-  options: Cloudflare
+/**
+ * create a Cloudflare Sandbox adapter from a Worker binding
+ *
+ * `sandbox.raw` preserves the native Sandbox type from `binding` and defaults to `CloudflareRaw`
+ */
+export const cloudflare = <ProviderRaw extends CloudflareRaw = CloudflareRaw>(
+  options: Cloudflare<ProviderRaw>
 ): Adapter<ProviderRaw> => ({
   capabilities,
   async create(input = {}) {
@@ -619,16 +623,12 @@ export const cloudflare = <ProviderRaw = unknown>(
     const id = input.id ?? options.id ?? crypto.randomUUID();
     const cwd = input.cwd ?? options.cwd ?? "/workspace";
     const { getSandbox } = await import("@cloudflare/sandbox");
-    const raw = getSandbox(
-      options.binding as DurableObjectNamespace<Native>,
-      id,
-      {
-        enableDefaultSession: false,
-        normalizeId: true,
-        ...options.options,
-        transport: "rpc",
-      }
-    );
+    const raw = getSandbox(options.binding, id, {
+      enableDefaultSession: false,
+      normalizeId: true,
+      ...options.options,
+      transport: "rpc",
+    });
     const env = { ...options.env, ...input.env };
 
     if (Object.keys(env).length > 0) {

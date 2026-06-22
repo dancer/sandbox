@@ -1,5 +1,6 @@
 import type { Sandbox as CloudflareSandbox } from "@cloudflare/sandbox";
 import { cloudflare } from "@sandbox-sdk/cloudflare";
+import type { CloudflareRaw } from "@sandbox-sdk/cloudflare";
 import { create } from "@sandbox-sdk/core";
 import type { Sandbox as CoreSandbox } from "@sandbox-sdk/core";
 
@@ -28,7 +29,7 @@ export const instance = (
   cwd: string,
   id: string,
   variables?: Readonly<Record<string, string>>
-): Promise<CoreSandbox> =>
+): Promise<CoreSandbox<CloudflareRaw>> =>
   create({
     adapter: cloudflare({
       binding: env.Sandbox,
