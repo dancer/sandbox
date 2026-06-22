@@ -39,13 +39,7 @@ export type RawCapability =
   | "volumes"
   | "watching";
 
-/**
- * capability mode details when a feature exists but has a provider-specific shape
- *
- * check the specific capability before assuming related operations are supported
- *
- * `fileStreaming` uses `native` for incremental delivery and `buffered` when a provider SDK loads the file before exposing a stream
- */
+/** generic capability mode vocabulary for raw capabilities and custom type composition */
 export type Mode =
   | boolean
   | "buffered"
@@ -61,14 +55,44 @@ export type Mode =
   | "separate"
   | "volume";
 
+/** allowed modes for each normalized capability */
+export type CapabilityModes = Readonly<{
+  /** sandbox creation environment support */
+  environment: boolean | "separate";
+  /** file delivery behavior for `files.stream()` */
+  fileStreaming: boolean | "buffered" | "native";
+  /** normalized filesystem support */
+  files: boolean;
+  /** preview port exposure behavior */
+  ports: boolean | "create-time" | "derived" | "dynamic";
+  /** normalized process namespace support */
+  process: boolean;
+  /** one-shot process execution support */
+  processExec: boolean;
+  /** lifecycle-safe background process support */
+  processSpawn: boolean | "separate";
+  /** normalized snapshot creation behavior */
+  snapshotCreate: boolean | "disk" | "filesystem" | "memory" | "volume";
+  /** normalized in-place snapshot restore behavior */
+  snapshotRestore: boolean | "disk" | "filesystem" | "memory" | "volume";
+  /** fresh sandbox creation from a snapshot behavior */
+  snapshotSource: boolean | "create-time";
+  /** normalized snapshot namespace support */
+  snapshots: boolean | "disk" | "filesystem" | "memory" | "volume";
+  /** background process output stream behavior */
+  streaming: boolean | "combined" | "separate";
+}>;
+
 /**
  * provider capability map used by `supports`, `capabilityMode`, and docs
  *
  * snapshot create, restore, and source capabilities are intentionally separate
  * because providers do not expose the same snapshot lifecycle
+ *
+ * each normalized capability only accepts its own documented modes
  */
 export type Capabilities = Readonly<
-  Partial<Record<Capability, Mode>> & {
+  Partial<CapabilityModes> & {
     /** provider-specific powers available through `sandbox.raw` */
     raw?: Partial<Record<RawCapability, Mode>>;
   }

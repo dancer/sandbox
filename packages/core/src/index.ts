@@ -2,10 +2,10 @@ import type {
   Adapter,
   Capabilities,
   Capability,
+  CapabilityModes,
   Cause,
   Code,
   Input,
-  Mode,
   Options,
   Port,
   Preview,
@@ -22,6 +22,7 @@ export type {
   Adapter,
   Capabilities,
   Capability,
+  CapabilityModes,
   Cause,
   Code,
   Entry,
@@ -145,14 +146,23 @@ export const withSandbox = async <Raw = unknown, Output = unknown>(
   return value;
 };
 
-/** return the advertised mode for a capability or undefined when absent */
-export const capabilityMode = (
-  subject: { capabilities: Capabilities },
-  capability: Capability
-): Exclude<Mode, false> | undefined => {
-  const value = subject.capabilities[capability];
-  return value === undefined || value === false ? undefined : value;
+type Available<Value> = Exclude<Value, false | undefined>;
+
+const available = <Value>(value: Value): Available<Value> | undefined => {
+  if (value === undefined || value === false) {
+    return undefined;
+  }
+  return value as Available<Value>;
 };
+
+/** return the advertised mode for a capability or undefined when absent */
+export const capabilityMode = <Key extends Capability>(
+  subject: { capabilities: Capabilities },
+  capability: Key
+): Exclude<CapabilityModes[Key], false | undefined> | undefined =>
+  available(
+    subject.capabilities[capability] as CapabilityModes[Key] | undefined
+  );
 
 /** throw a normalized unsupported feature error */
 export const unsupported = (provider: string, feature: string): never => {
@@ -163,10 +173,10 @@ export const unsupported = (provider: string, feature: string): never => {
 };
 
 /** require a capability and throw a typed unsupported error when missing */
-export const requireCapability = (
+export const requireCapability = <Key extends Capability>(
   subject: { capabilities: Capabilities; provider?: string },
-  capability: Capability
-): Exclude<Mode, false> => {
+  capability: Key
+): Exclude<CapabilityModes[Key], false | undefined> => {
   const value = capabilityMode(subject, capability);
   if (value !== undefined) {
     return value;
@@ -175,25 +185,29 @@ export const requireCapability = (
 };
 
 /** true when a subject advertises a capability */
-export const supports = (
+export const supports = <Key extends Capability>(
   subject: { capabilities: Capabilities },
-  capability: Capability
+  capability: Key
 ): boolean => capabilityMode(subject, capability) !== undefined;
 
 /** return the advertised mode for a provider-specific raw capability */
-export const rawCapabilityMode = (
+export const rawCapabilityMode = <Key extends RawCapability>(
   subject: { capabilities: Capabilities },
-  capability: RawCapability
-): Exclude<Mode, false> | undefined => {
-  const value = subject.capabilities.raw?.[capability];
-  return value === undefined || value === false ? undefined : value;
-};
+  capability: Key
+):
+  | Exclude<NonNullable<Capabilities["raw"]>[Key], false | undefined>
+  | undefined =>
+  available(
+    subject.capabilities.raw?.[capability] as
+      | NonNullable<Capabilities["raw"]>[Key]
+      | undefined
+  );
 
 /** require a provider-specific raw capability and throw when missing */
-export const requireRawCapability = (
+export const requireRawCapability = <Key extends RawCapability>(
   subject: { capabilities: Capabilities; provider?: string },
-  capability: RawCapability
-): Exclude<Mode, false> => {
+  capability: Key
+): Exclude<NonNullable<Capabilities["raw"]>[Key], false | undefined> => {
   const value = rawCapabilityMode(subject, capability);
   if (value !== undefined) {
     return value;
@@ -202,9 +216,9 @@ export const requireRawCapability = (
 };
 
 /** true when a provider-specific feature is available through `sandbox.raw` */
-export const supportsRaw = (
+export const supportsRaw = <Key extends RawCapability>(
   subject: { capabilities: Capabilities },
-  capability: RawCapability
+  capability: Key
 ): boolean => rawCapabilityMode(subject, capability) !== undefined;
 
 /** validate and return a normalized tcp port number */

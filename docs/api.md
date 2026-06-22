@@ -63,11 +63,7 @@ export type RawCapability =
 
 #### `Mode`
 
-capability mode details when a feature exists but has a provider-specific shape
-
-check the specific capability before assuming related operations are supported
-
-`fileStreaming` uses `native` for incremental delivery and `buffered` when a provider SDK loads the file before exposing a stream
+generic capability mode vocabulary for raw capabilities and custom type composition
 
 ```ts
 export type Mode =
@@ -86,6 +82,39 @@ export type Mode =
   | "volume";
 ```
 
+#### `CapabilityModes`
+
+allowed modes for each normalized capability
+
+```ts
+export type CapabilityModes = Readonly<{
+  /** sandbox creation environment support */
+  environment: boolean | "separate";
+  /** file delivery behavior for `files.stream()` */
+  fileStreaming: boolean | "buffered" | "native";
+  /** normalized filesystem support */
+  files: boolean;
+  /** preview port exposure behavior */
+  ports: boolean | "create-time" | "derived" | "dynamic";
+  /** normalized process namespace support */
+  process: boolean;
+  /** one-shot process execution support */
+  processExec: boolean;
+  /** lifecycle-safe background process support */
+  processSpawn: boolean | "separate";
+  /** normalized snapshot creation behavior */
+  snapshotCreate: boolean | "disk" | "filesystem" | "memory" | "volume";
+  /** normalized in-place snapshot restore behavior */
+  snapshotRestore: boolean | "disk" | "filesystem" | "memory" | "volume";
+  /** fresh sandbox creation from a snapshot behavior */
+  snapshotSource: boolean | "create-time";
+  /** normalized snapshot namespace support */
+  snapshots: boolean | "disk" | "filesystem" | "memory" | "volume";
+  /** background process output stream behavior */
+  streaming: boolean | "combined" | "separate";
+}>;
+```
+
 #### `Capabilities`
 
 provider capability map used by `supports`, `capabilityMode`, and docs
@@ -93,9 +122,11 @@ provider capability map used by `supports`, `capabilityMode`, and docs
 snapshot create, restore, and source capabilities are intentionally separate
 because providers do not expose the same snapshot lifecycle
 
+each normalized capability only accepts its own documented modes
+
 ```ts
 export type Capabilities = Readonly<
-  Partial<Record<Capability, Mode>> & {
+  Partial<CapabilityModes> & {
     /** provider-specific powers available through `sandbox.raw` */
     raw?: Partial<Record<RawCapability, Mode>>;
   }
@@ -653,12 +684,12 @@ export declare const withSandbox: <Raw = unknown, Output = unknown>(
 return the advertised mode for a capability or undefined when absent
 
 ```ts
-export declare const capabilityMode: (
+export declare const capabilityMode: <Key extends Capability>(
   subject: {
     capabilities: Capabilities;
   },
-  capability: Capability
-) => Exclude<Mode, false> | undefined;
+  capability: Key
+) => Exclude<CapabilityModes[Key], false | undefined> | undefined;
 ```
 
 #### `unsupported`
@@ -674,13 +705,13 @@ export declare const unsupported: (provider: string, feature: string) => never;
 require a capability and throw a typed unsupported error when missing
 
 ```ts
-export declare const requireCapability: (
+export declare const requireCapability: <Key extends Capability>(
   subject: {
     capabilities: Capabilities;
     provider?: string;
   },
-  capability: Capability
-) => Exclude<Mode, false>;
+  capability: Key
+) => Exclude<CapabilityModes[Key], false | undefined>;
 ```
 
 #### `supports`
@@ -688,11 +719,11 @@ export declare const requireCapability: (
 true when a subject advertises a capability
 
 ```ts
-export declare const supports: (
+export declare const supports: <Key extends Capability>(
   subject: {
     capabilities: Capabilities;
   },
-  capability: Capability
+  capability: Key
 ) => boolean;
 ```
 
@@ -701,12 +732,14 @@ export declare const supports: (
 return the advertised mode for a provider-specific raw capability
 
 ```ts
-export declare const rawCapabilityMode: (
+export declare const rawCapabilityMode: <Key extends RawCapability>(
   subject: {
     capabilities: Capabilities;
   },
-  capability: RawCapability
-) => Exclude<Mode, false> | undefined;
+  capability: Key
+) =>
+  | Exclude<NonNullable<Capabilities["raw"]>[Key], false | undefined>
+  | undefined;
 ```
 
 #### `requireRawCapability`
@@ -714,13 +747,13 @@ export declare const rawCapabilityMode: (
 require a provider-specific raw capability and throw when missing
 
 ```ts
-export declare const requireRawCapability: (
+export declare const requireRawCapability: <Key extends RawCapability>(
   subject: {
     capabilities: Capabilities;
     provider?: string;
   },
-  capability: RawCapability
-) => Exclude<Mode, false>;
+  capability: Key
+) => Exclude<NonNullable<Capabilities["raw"]>[Key], false | undefined>;
 ```
 
 #### `supportsRaw`
@@ -728,11 +761,11 @@ export declare const requireRawCapability: (
 true when a provider-specific feature is available through `sandbox.raw`
 
 ```ts
-export declare const supportsRaw: (
+export declare const supportsRaw: <Key extends RawCapability>(
   subject: {
     capabilities: Capabilities;
   },
-  capability: RawCapability
+  capability: Key
 ) => boolean;
 ```
 
@@ -928,6 +961,8 @@ export type Local = Readonly<{
   keep?: boolean;
   /**
    * host directory used as the sandbox root
+   *
+   * existing symlinks must resolve inside this root
    *
    * when omitted, the adapter creates a temporary directory
    */

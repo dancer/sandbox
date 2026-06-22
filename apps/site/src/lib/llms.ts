@@ -76,9 +76,9 @@ Every adapter implements the same \`Sandbox\` contract. Provider-specific power 
 
 ## Local (@sandbox-sdk/local)
 
-Local filesystem and child process. The dev and test adapter: point it at a directory and it implements the same \`Sandbox\` contract as the cloud adapters using \`node:fs/promises\` and \`node:child_process\`. It is not an isolation boundary for untrusted code. Every path is resolved against the sandbox root and rejected if it escapes. Ports return derived localhost HTTP URLs, and filesystem snapshots support create and restore in the same process.
+Local filesystem and child process. The dev and test adapter: point it at a directory and it implements the same \`Sandbox\` contract as the cloud adapters using \`node:fs/promises\` and \`node:child_process\`. It is not an isolation boundary for untrusted code. Every sandbox path is mapped below the root, and existing symlinks are rejected when they resolve outside it. Ports return derived localhost HTTP URLs, and filesystem snapshots support create and restore in the same process.
 
-- \`root\`: directory the adapter manages. When omitted, a fresh \`mkdtemp\` directory is created and \`stop()\` deletes it. Paths that resolve outside it throw \`SandboxError\` with \`code: "path_escape"\`.
+- \`root\`: directory the adapter manages. When omitted, a fresh \`mkdtemp\` directory is created and \`stop()\` deletes it. Existing symlinks that resolve outside it throw \`SandboxError\` with \`code: "path_escape"\`.
 - \`keep\`: when \`true\`, \`stop()\` leaves an auto-created root in place for inspection.
 - Credentials: none.
 
@@ -152,11 +152,11 @@ if (supports(sandbox, "snapshotCreate")) {
 
 Normalized capability flags include \`files\`, \`fileStreaming\`, \`process\`, \`processExec\`, \`processSpawn\`, \`ports\`, \`snapshots\`, \`snapshotCreate\`, \`snapshotRestore\`, \`snapshotSource\`, \`environment\`, and \`streaming\`. Provider-specific powers are listed under \`capabilities.raw\` and reached through \`sandbox.raw\`.
 
-\`capabilityMode(sandbox, capability)\` returns how a feature works when it exists but has a provider-specific shape, for example \`"disk"\` versus \`"memory"\` snapshots, \`"separate"\` versus \`"combined"\` output streams, or \`"native"\` versus \`"buffered"\` file delivery. \`sandbox.capabilities\` is the runtime source of truth for a given provider.`;
+\`capabilityMode(sandbox, capability)\` returns how a feature works when it exists but has a provider-specific shape, for example \`"disk"\` versus \`"memory"\` snapshots, \`"separate"\` versus \`"combined"\` output streams, or \`"native"\` versus \`"buffered"\` file delivery. The TypeScript map only accepts modes that belong to the named normalized capability, so output shape stays under \`streaming\` rather than \`processSpawn\`. \`sandbox.capabilities\` is the runtime source of truth for a given provider.`;
 
 const files = `# Files
 
-Filesystem operations are scoped to the sandbox root. The local adapter rejects any path that escapes the root with \`SandboxError\` and \`code: "path_escape"\`.
+Filesystem operations are scoped to the sandbox root. The local adapter rejects existing symlinks that resolve outside the root with \`SandboxError\` and \`code: "path_escape"\`.
 
 \`\`\`ts
 await sandbox.files.mkdir("/workspace/src");

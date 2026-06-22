@@ -2,6 +2,7 @@ import type {
   Adapter,
   Capabilities,
   Capability,
+  CapabilityModes,
   Cause,
   Code,
   Entry,
@@ -27,10 +28,20 @@ import type {
 } from "@sandbox-sdk/core";
 import { duration, fromSandboxRuntime, port } from "@sandbox-sdk/core";
 
+type Equal<Left, Right> =
+  (<Value>() => Value extends Left ? 1 : 2) extends <
+    Value,
+  >() => Value extends Right ? 1 : 2
+    ? true
+    : false;
+
+type Assert<Value extends true> = Value;
+
 export type CoreTypes = Readonly<{
   adapter: Adapter;
   capabilities: Capabilities;
   capability: Capability;
+  capabilityModes: CapabilityModes;
   cause: Cause;
   code: Code;
   entry: Entry;
@@ -55,12 +66,25 @@ export type CoreTypes = Readonly<{
   url: Url;
 }>;
 
+export type CapabilityTypeChecks = Readonly<{
+  fileStreaming: Assert<
+    Equal<Extract<Capabilities["fileStreaming"], "disk">, never>
+  >;
+  processSpawn: Assert<
+    Equal<Extract<Capabilities["processSpawn"], "combined">, never>
+  >;
+  streaming: Assert<
+    Equal<Extract<Capabilities["streaming"], "combined">, "combined">
+  >;
+}>;
+
 export const capabilities = {
   files: true,
   processExec: true,
-  processSpawn: "combined",
+  processSpawn: true,
   snapshotCreate: "filesystem",
   snapshotRestore: "filesystem",
+  streaming: "combined",
 } satisfies Capabilities;
 
 export const validated = {

@@ -72,6 +72,7 @@ import type {
   Adapter,
   Capabilities,
   Capability,
+  CapabilityModes,
   Cause,
   Code,
   Entry,
@@ -168,6 +169,7 @@ export type EntrypointTypes = Readonly<{
   blaxelSandboxUpdateNetwork: SandboxUpdateNetwork;
   capabilities: Capabilities;
   capability: Capability;
+  capabilityModes: CapabilityModes;
   cause: Cause;
   claudeOptions: ClaudeOptions;
   claudeResult: ClaudeResult;
