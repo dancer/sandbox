@@ -221,7 +221,7 @@ export const port = (value: number, provider = "sandbox"): number => {
 /**
  * create a provider-aware preview with access headers kept out of serializable data
  *
- * adapter authors pass provider-required request headers here instead of placing credentials in the returned url. requests are limited to the preview origin
+ * adapter authors pass provider-required request headers here instead of placing credentials in the returned url. requests are limited to the preview origin and handle redirects manually
  */
 export const preview = (
   url: string,
@@ -271,6 +271,17 @@ export const preview = (
         })
       );
     }
+    if (init?.redirect === "follow") {
+      return Promise.reject(
+        new SandboxError(
+          "Preview requests cannot follow redirects because provider credentials may be attached",
+          {
+            code: "configuration",
+            provider,
+          }
+        )
+      );
+    }
 
     for (const [name] of base.searchParams) {
       target.searchParams.delete(name);
@@ -283,7 +294,11 @@ export const preview = (
     for (const [name, entry] of configured) {
       headers.set(name, entry);
     }
-    return fetch(target, { ...init, headers });
+    return fetch(target, {
+      ...init,
+      headers,
+      redirect: init?.redirect ?? "manual",
+    });
   };
   const output = { port: targetPort, request, url } satisfies Preview;
 

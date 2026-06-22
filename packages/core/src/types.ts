@@ -205,7 +205,7 @@ export type PreviewOptions = Readonly<{
 /**
  * provider-aware preview returned by `ports.expose`
  *
- * `request` adds provider-required access headers without exposing them in returned data. it preserves provider URL query parameters, so treat provider-issued signed or tokenized urls as credentials
+ * `request` adds provider-required access headers without exposing them in returned data. it preserves provider URL query parameters, so treat provider-issued signed or tokenized urls as credentials. redirects are manual by default because provider credentials must not leave the preview origin
  *
  * @example
  * const preview = await sandbox.ports.expose(3000)
@@ -213,7 +213,7 @@ export type PreviewOptions = Readonly<{
  */
 export type Preview = Readonly<
   Url & {
-    /** request a same-origin preview path with provider-required access headers and query parameters */
+    /** request a same-origin preview path with provider-required access headers and query parameters; use `redirect: "manual"` or `"error"` because automatic redirects are rejected */
     request(path?: string, init?: RequestInit): Promise<Response>;
   }
 >;

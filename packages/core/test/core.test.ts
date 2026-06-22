@@ -581,6 +581,47 @@ test("preview rejects non-http URLs", () => {
   ).toThrow("Preview URL must use HTTP or HTTPS");
 });
 
+test("preview does not forward provider access across redirects", async () => {
+  let received = "";
+  const target = Bun.serve({
+    fetch: (request) => {
+      received = request.headers.get("x-preview-token") ?? "";
+      return new Response("target");
+    },
+    hostname: "127.0.0.1",
+    port: 0,
+  });
+  const source = Bun.serve({
+    fetch: () =>
+      new Response(null, {
+        headers: { location: `http://127.0.0.1:${target.port}/target` },
+        status: 302,
+      }),
+    hostname: "127.0.0.1",
+    port: 0,
+  });
+
+  try {
+    const endpoint = preview(`http://127.0.0.1:${source.port}`, source.port, {
+      headers: { "x-preview-token": "provider-token" },
+      provider: "test",
+    });
+    const response = await endpoint.request("/redirect");
+
+    expect(response.status).toBe(302);
+    expect(received).toBe("");
+    await expect(
+      endpoint.request("/redirect", { redirect: "follow" })
+    ).rejects.toMatchObject({
+      code: "configuration",
+      provider: "test",
+    });
+  } finally {
+    source.stop(true);
+    target.stop(true);
+  }
+});
+
 test("capability helpers handle boolean and mode capabilities", () => {
   const current = sandbox({
     files: true,
