@@ -1,5 +1,5 @@
 import { duration, sandboxError, unsupported } from "@sandbox-sdk/core";
-import type { Entry, Exec, Result, Running } from "@sandbox-sdk/core";
+import type { Entry, Exec, Result } from "@sandbox-sdk/core";
 
 import type { CloudflareBridgeRaw } from "./bridge-client.js";
 import { absolute, fail, provider } from "./bridge-client.js";
@@ -76,6 +76,27 @@ const parseEvent = (
 export const discard = (): WritableStreamDefaultWriter<Uint8Array> =>
   new WritableStream<Uint8Array>().getWriter();
 
+const request = (
+  raw: CloudflareBridgeRaw,
+  id: string,
+  session: string | undefined,
+  cwd: string,
+  executable: string,
+  args: readonly string[],
+  options: Exec
+): Promise<Response> => {
+  const headers = new Headers({ "content-type": "application/json" });
+  if (session !== undefined) {
+    headers.set("session-id", session);
+  }
+  return raw.request(`/v1/sandbox/${encodeURIComponent(id)}/exec`, {
+    body: JSON.stringify(execPayload(cwd, executable, args, options)),
+    headers,
+    method: "POST",
+    ...(options.signal === undefined ? {} : { signal: options.signal }),
+  });
+};
+
 export const parseExec = async (
   response: Response,
   writer: WritableStreamDefaultWriter<Uint8Array>
@@ -149,7 +170,7 @@ export const parseExec = async (
   return { code, ok: code === 0, stderr, stdout };
 };
 
-export const execute = async (
+export const run = async (
   raw: CloudflareBridgeRaw,
   id: string,
   session: string | undefined,
@@ -157,36 +178,17 @@ export const execute = async (
   executable: string,
   args: readonly string[] = [],
   options: Exec = {}
-): Promise<Running> => {
-  const output = new TransformStream<Uint8Array>();
-  const writer = output.writable.getWriter();
-  const headers = new Headers({ "content-type": "application/json" });
-  if (session !== undefined) {
-    headers.set("session-id", session);
+): Promise<Result> => {
+  const writer = discard();
+  try {
+    const result = await parseExec(
+      await request(raw, id, session, cwd, executable, args, options),
+      writer
+    );
+    return result;
+  } finally {
+    await writer.close();
   }
-  const response = await raw.request(
-    `/v1/sandbox/${encodeURIComponent(id)}/exec`,
-    {
-      body: JSON.stringify(execPayload(cwd, executable, args, options)),
-      headers,
-      method: "POST",
-      ...(options.signal === undefined ? {} : { signal: options.signal }),
-    }
-  );
-  const result = (async (): Promise<Result> => {
-    try {
-      return await parseExec(response, writer);
-    } finally {
-      await writer.close();
-    }
-  })();
-
-  return {
-    id: crypto.randomUUID(),
-    kill: () => rejectUnsupported("bridge process kill"),
-    output: output.readable,
-    result,
-  };
 };
 
 const listScript = `

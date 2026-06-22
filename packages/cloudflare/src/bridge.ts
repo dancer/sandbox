@@ -11,15 +11,7 @@ import {
   route,
 } from "./bridge-client.js";
 import type { CloudflareBridge, CloudflareBridgeRaw } from "./bridge-client.js";
-import {
-  discard,
-  execPayload,
-  execute,
-  list,
-  mustOk,
-  parseExec,
-  rejectUnsupported,
-} from "./bridge-exec.js";
+import { list, mustOk, rejectUnsupported, run } from "./bridge-exec.js";
 
 const secrets = ["SANDBOX_API_KEY"] as const;
 
@@ -57,23 +49,8 @@ const execJson = async (
   executable: string,
   args: readonly string[]
 ): Promise<void> => {
-  const writer = discard();
-  try {
-    const result = await parseExec(
-      await raw.request(`/v1/sandbox/${encodeURIComponent(id)}/exec`, {
-        body: JSON.stringify(execPayload(cwd, executable, args)),
-        headers: {
-          ...(session === undefined ? {} : { "session-id": session }),
-          "content-type": "application/json",
-        },
-        method: "POST",
-      }),
-      writer
-    );
-    mustOk(result, executable);
-  } finally {
-    await writer.close();
-  }
+  const result = await run(raw, id, session, cwd, executable, args);
+  mustOk(result, executable);
 };
 
 /**
@@ -193,10 +170,10 @@ export const cloudflareBridge = (
         },
       },
       process: {
-        spawn: (executable, args, spawnOptions) =>
-          execute(raw, id, session, cwd, executable, args, spawnOptions),
-        spawnShell: (line, spawnOptions) =>
-          execute(raw, id, session, cwd, "sh", ["-lc", line], spawnOptions),
+        exec: (executable, args, execOptions) =>
+          run(raw, id, session, cwd, executable, args, execOptions),
+        shell: (line, execOptions) =>
+          run(raw, id, session, cwd, "sh", ["-lc", line], execOptions),
       },
       provider,
       raw,
