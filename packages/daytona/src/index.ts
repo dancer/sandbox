@@ -38,7 +38,16 @@ import type {
   Sandbox,
 } from "@sandbox-sdk/core";
 
-/** native Daytona sandbox object exposed as `sandbox.raw` */
+/**
+ * native Daytona sandbox object exposed as `sandbox.raw`
+ *
+ * use `updateNetworkSettings` for dynamic outbound network policy changes on
+ * Daytona Tier 3 and Tier 4 targets
+ *
+ * @example
+ * await sandbox.raw.updateNetworkSettings({ networkBlockAll: true })
+ * await sandbox.raw.updateNetworkSettings({ networkBlockAll: false })
+ */
 export type DaytonaRaw = DaytonaSandbox;
 
 /** Daytona adapter configuration */
@@ -111,7 +120,7 @@ const capabilities: Capabilities = {
     interpreter: true,
     lifecycle: "dynamic",
     lsp: true,
-    network: "create-time",
+    network: "dynamic",
     previews: true,
     pty: true,
     resources: "dynamic",

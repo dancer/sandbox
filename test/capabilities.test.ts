@@ -93,7 +93,7 @@ test("adapters expose capability-honest feature modes", () => {
       interpreter: true,
       lifecycle: "dynamic",
       lsp: true,
-      network: "create-time",
+      network: "dynamic",
       previews: true,
       pty: true,
       resources: "dynamic",

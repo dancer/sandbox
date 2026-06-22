@@ -51,6 +51,12 @@ const waitFor = async (
   }
 };
 
+const restricted = (error: unknown): boolean =>
+  error instanceof Error &&
+  error.message.includes(
+    "Network access is restricted and cannot be overridden at the sandbox level"
+  );
+
 live("daytona runs a live sandbox workflow", async () => {
   const cwd = `/tmp/sandbox-sdk-${randomUUID()}`;
   const sandbox = await create({
@@ -200,6 +206,41 @@ live("daytona exposes advertised raw capabilities", async () => {
     } finally {
       await handle.disconnect();
     }
+  } finally {
+    await sandbox.stop();
+  }
+});
+
+live("daytona updates live raw network settings", async () => {
+  const sandbox = await create({
+    adapter: daytona({
+      deleteOnStop: true,
+      networkBlockAll: false,
+      timeout: 300_000,
+    }),
+  });
+
+  try {
+    let changed = true;
+
+    try {
+      await sandbox.raw.updateNetworkSettings({ networkBlockAll: true });
+    } catch (error) {
+      if (!restricted(error)) {
+        throw error;
+      }
+      changed = false;
+    }
+
+    if (!changed) {
+      expect(sandbox.raw.networkBlockAll).toBe(false);
+      return;
+    }
+
+    expect(sandbox.raw.networkBlockAll).toBe(true);
+
+    await sandbox.raw.updateNetworkSettings({ networkBlockAll: false });
+    expect(sandbox.raw.networkBlockAll).toBe(false);
   } finally {
     await sandbox.stop();
   }

@@ -2031,6 +2031,16 @@ Daytona adapter for Sandbox SDK
 
 native Daytona sandbox object exposed as `sandbox.raw`
 
+use `updateNetworkSettings` for dynamic outbound network policy changes on
+Daytona Tier 3 and Tier 4 targets
+
+**example**
+
+```ts
+await sandbox.raw.updateNetworkSettings({ networkBlockAll: true });
+await sandbox.raw.updateNetworkSettings({ networkBlockAll: false });
+```
+
 ```ts
 export type DaytonaRaw = DaytonaSandbox;
 ```
