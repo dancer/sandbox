@@ -23,9 +23,11 @@ export const Local = () => (
       Local filesystem and child process. The dev/test adapter: point it at a
       directory and it implements the same <code>Sandbox</code> contract as the
       cloud adapters using <code>node:fs/promises</code> and{" "}
-      <code>node:child_process</code>. Every path is resolved against the
-      sandbox root and rejected if it escapes. Ports return localhost URLs, and
-      filesystem snapshots support create and restore in the same process.
+      <code>node:child_process</code>. It is not an isolation boundary for
+      untrusted code. Every sandbox path is mapped below the root, and existing
+      symlinks are rejected when they resolve outside it. Ports return localhost
+      URLs, and filesystem snapshots support create and restore in the same
+      process.
     </p>
     <CodeBlock code={LOCAL_EXAMPLE} lang="ts" />
     <div className="flex flex-col gap-2">
@@ -36,11 +38,12 @@ export const Local = () => (
         <PropAccordionItem name="root" status="optional" value="root">
           <p>
             Directory the adapter manages. Absolute or relative; created on
-            <code>create()</code>. All file operations are scoped to it; paths
-            that resolve outside (e.g. <code>../etc/passwd</code>) throw{" "}
-            <code>SandboxError</code> with <code>code: "path_escape"</code>.
-            When omitted, the adapter creates a fresh <code>mkdtemp</code>{" "}
-            directory under the OS temp dir and <code>stop()</code> deletes it.
+            <code>create()</code>. All file operations and command working
+            directories are scoped to it. Existing symlinks that resolve outside
+            it throw <code>SandboxError</code> with{" "}
+            <code>code: "path_escape"</code>. When omitted, the adapter creates
+            a fresh <code>mkdtemp</code> directory under the OS temp dir and{" "}
+            <code>stop()</code> deletes it.
           </p>
         </PropAccordionItem>
         <PropAccordionItem name="keep" status="optional" value="keep">

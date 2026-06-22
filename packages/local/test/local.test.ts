@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { access, mkdtemp, rm } from "node:fs/promises";
+import { access, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -143,6 +143,96 @@ test("local keeps parent paths inside the sandbox root", async () => {
   expect(await sandbox.files.text("/outside.txt")).toBe("safe");
 
   await sandbox.stop();
+});
+
+test("local rejects outward filesystem symlinks", async () => {
+  const root = await mkdtemp(join(tmpdir(), "sandbox-test-"));
+  const outside = await mkdtemp(join(tmpdir(), "sandbox-outside-"));
+  const sandbox = await create({
+    adapter: local({ keep: true, root }),
+    cwd: "/workspace",
+  });
+
+  try {
+    await writeFile(join(outside, "known.txt"), "outside");
+    await symlink(outside, join(root, "workspace", "outside"));
+    await symlink(
+      join(outside, "missing.txt"),
+      join(root, "workspace", "broken")
+    );
+
+    await expect(sandbox.files.list()).rejects.toMatchObject({
+      code: "path_escape",
+      provider: "local",
+    });
+    await expect(
+      sandbox.files.exists("outside/known.txt")
+    ).rejects.toMatchObject({
+      code: "path_escape",
+      provider: "local",
+    });
+    await expect(sandbox.files.text("outside/known.txt")).rejects.toMatchObject(
+      {
+        code: "path_escape",
+        provider: "local",
+      }
+    );
+    await expect(
+      sandbox.files.stream("outside/known.txt")
+    ).rejects.toMatchObject({
+      code: "path_escape",
+      provider: "local",
+    });
+    await expect(sandbox.files.list("outside")).rejects.toMatchObject({
+      code: "path_escape",
+      provider: "local",
+    });
+    await expect(
+      sandbox.files.write("outside/leak.txt", "leaked")
+    ).rejects.toMatchObject({
+      code: "path_escape",
+      provider: "local",
+    });
+    await expect(sandbox.files.write("broken", "leaked")).rejects.toMatchObject(
+      {
+        code: "path_escape",
+        provider: "local",
+      }
+    );
+    await expect(
+      sandbox.process.shell("pwd", { cwd: "outside" })
+    ).rejects.toMatchObject({
+      code: "path_escape",
+      provider: "local",
+    });
+    await expect(access(join(outside, "leak.txt"))).rejects.toThrow();
+  } finally {
+    await sandbox.stop();
+    await rm(root, { force: true, recursive: true });
+    await rm(outside, { force: true, recursive: true });
+  }
+});
+
+test("local allows filesystem symlinks that resolve inside its root", async () => {
+  const root = await mkdtemp(join(tmpdir(), "sandbox-test-"));
+  const sandbox = await create({
+    adapter: local({ keep: true, root }),
+    cwd: "/workspace",
+  });
+
+  try {
+    await sandbox.files.mkdir("inside");
+    await symlink(
+      join(root, "workspace", "inside"),
+      join(root, "workspace", "link")
+    );
+    await sandbox.files.write("link/value.txt", "safe");
+
+    expect(await sandbox.files.text("inside/value.txt")).toBe("safe");
+  } finally {
+    await sandbox.stop();
+    await rm(root, { force: true, recursive: true });
+  }
 });
 
 test("local rejects filesystem root sandboxes", async () => {

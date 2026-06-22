@@ -4,10 +4,13 @@ import { once } from "node:events";
 import { createReadStream } from "node:fs";
 import {
   cp,
+  lstat,
   mkdir,
   mkdtemp,
   readdir,
   readFile,
+  readlink,
+  realpath,
   rm,
   stat,
   writeFile,
@@ -15,10 +18,12 @@ import {
 import { tmpdir } from "node:os";
 import {
   dirname,
+  isAbsolute,
   join,
   parse,
   relative,
   resolve as pathResolve,
+  sep,
 } from "node:path";
 import { Readable } from "node:stream";
 
@@ -67,6 +72,8 @@ export type Local = Readonly<{
   keep?: boolean;
   /**
    * host directory used as the sandbox root
+   *
+   * existing symlinks must resolve inside this root
    *
    * when omitted, the adapter creates a temporary directory
    */
@@ -126,10 +133,18 @@ const mount = (path: string): string => {
   return target;
 };
 
+const contained = (root: string, target: string): boolean => {
+  const value = relative(root, target);
+  return (
+    value.length === 0 ||
+    (!isAbsolute(value) && value !== ".." && !value.startsWith(`..${sep}`))
+  );
+};
+
 const safe = (root: string, path: string): string => {
   const value = path.startsWith("/") ? path.slice(1) : path;
   const target = pathResolve(root, value);
-  if (target === root || target.startsWith(`${root}/`)) {
+  if (contained(root, target)) {
     return target;
   }
   throw new SandboxError("Path escapes sandbox root", {
@@ -142,13 +157,85 @@ const inside = (root: string, cwd: string, path?: string): string =>
   safe(root, sandboxPath(cwd, path));
 
 const display = (root: string, target: string): string =>
-  `/${relative(root, target)}`;
+  `/${relative(root, target).split(sep).join("/")}`;
 
 const missing = (error: unknown): boolean =>
   typeof error === "object" &&
   error !== null &&
   "code" in error &&
   error.code === "ENOENT";
+
+const escaped = (): never => {
+  throw new SandboxError("Path resolves outside sandbox root", {
+    code: "path_escape",
+    provider: "local",
+  });
+};
+
+const ancestor = async (root: string, target: string): Promise<void> => {
+  let current = target;
+  while (true) {
+    try {
+      if (!contained(root, await realpath(current))) {
+        escaped();
+      }
+      return;
+    } catch (error) {
+      if (!missing(error)) {
+        throw error;
+      }
+      const parent = dirname(current);
+      if (parent === current) {
+        throw error;
+      }
+      current = parent;
+    }
+  }
+};
+
+const guard = async (root: string, target: string): Promise<void> => {
+  let current = root;
+  for (const part of relative(root, target).split(sep)) {
+    if (part.length === 0) {
+      continue;
+    }
+    current = join(current, part);
+    try {
+      const info = await lstat(current);
+      if (!info.isSymbolicLink()) {
+        continue;
+      }
+      const linked = pathResolve(dirname(current), await readlink(current));
+      await ancestor(root, linked);
+      try {
+        current = await realpath(linked);
+      } catch (error) {
+        if (!missing(error)) {
+          throw error;
+        }
+        current = linked;
+      }
+      if (!contained(root, current)) {
+        escaped();
+      }
+    } catch (error) {
+      if (missing(error)) {
+        return;
+      }
+      throw error;
+    }
+  }
+};
+
+const locate = async (
+  root: string,
+  cwd: string,
+  path?: string
+): Promise<string> => {
+  const target = inside(root, cwd, path);
+  await guard(root, target);
+  return target;
+};
 
 const readable = (value: Uint8Array): ReadableStream<Uint8Array> =>
   new ReadableStream({
@@ -178,7 +265,7 @@ const fileStream = async (
   cwd: string,
   path: string
 ): Promise<ReadableStream<Uint8Array>> => {
-  const target = inside(root, cwd, path);
+  const target = await locate(root, cwd, path);
   await wrap(() => stat(target));
   return Readable.toWeb(
     createReadStream(target)
@@ -374,19 +461,19 @@ const settle = async (
   }
 };
 
-const start = (
+const start = async (
   root: string,
   cwd: string,
   env: Readonly<Record<string, string>>,
   command: string,
   args: readonly string[],
   options: Exec
-): Readonly<{ child: ReturnType<typeof spawn>; run: Exec }> => {
+): Promise<Readonly<{ child: ReturnType<typeof spawn>; run: Exec }>> => {
   const run = execution(options);
   check(run.signal);
   return {
     child: spawn(command, args, {
-      cwd: inside(root, cwd, run.cwd),
+      cwd: await locate(root, cwd, run.cwd),
       env: { ...env, ...run.env },
     }),
     run,
@@ -413,13 +500,13 @@ export const local = (options: Local = {}): Adapter<Raw> => ({
     streaming: "separate",
   },
   async create(input = {}) {
-    const root = options.root
+    const location = options.root
       ? mount(options.root)
       : await mkdtemp(join(tmpdir(), "sandbox-sdk-"));
+    await mkdir(location, { recursive: true });
+    const root = mount(await realpath(location));
     const snapshots = new Map<string, State>();
     const snapshotsRoot = await mkdtemp(join(tmpdir(), "sandbox-sdk-snap-"));
-
-    await mkdir(root, { recursive: true });
     const cwd = input.cwd ?? "/workspace";
     const env = { ...hostEnv(options.inheritEnv), ...input.env };
     await mkdir(safe(root, cwd), { recursive: true });
@@ -430,7 +517,7 @@ export const local = (options: Local = {}): Adapter<Raw> => ({
       files: {
         exists: async (path) => {
           try {
-            await stat(inside(root, cwd, path));
+            await stat(await locate(root, cwd, path));
             return true;
           } catch (error) {
             if ((error as NodeJS.ErrnoException).code === "ENOENT") {
@@ -440,11 +527,12 @@ export const local = (options: Local = {}): Adapter<Raw> => ({
           }
         },
         list: async (path = cwd) => {
-          const base = inside(root, cwd, path);
+          const base = await locate(root, cwd, path);
           const names = await wrap(() => readdir(base));
           const entries = await Promise.all(
             names.map(async (name): Promise<Entry> => {
               const target = join(base, name);
+              await guard(root, target);
               const info = await stat(target);
               return {
                 kind: info.isDirectory() ? "directory" : "file",
@@ -459,14 +547,20 @@ export const local = (options: Local = {}): Adapter<Raw> => ({
           );
         },
         mkdir: async (path) => {
-          await mkdir(inside(root, cwd, path), { recursive: true });
+          await mkdir(await locate(root, cwd, path), { recursive: true });
         },
-        read: async (path) =>
-          readable(await wrap(() => readFile(inside(root, cwd, path)))),
-        remove: (path) =>
-          rm(inside(root, cwd, path), { force: true, recursive: true }),
+        read: async (path) => {
+          const target = await locate(root, cwd, path);
+          return readable(await wrap(() => readFile(target)));
+        },
+        remove: async (path) => {
+          await rm(await locate(root, cwd, path), {
+            force: true,
+            recursive: true,
+          });
+        },
         write: async (path, value) => {
-          const target = inside(root, cwd, path);
+          const target = await locate(root, cwd, path);
           await mkdir(dirname(target), { recursive: true });
           await writeFile(target, await bytes(value));
         },
@@ -484,9 +578,7 @@ export const local = (options: Local = {}): Adapter<Raw> => ({
       },
       process: {
         spawn: async (command, args = [], run = {}) => {
-          const ready = await Promise.resolve(
-            start(root, cwd, env, command, args, run)
-          );
+          const ready = await start(root, cwd, env, command, args, run);
           const { child } = ready;
           const output = streams(child);
           return {
@@ -500,8 +592,13 @@ export const local = (options: Local = {}): Adapter<Raw> => ({
           };
         },
         spawnShell: async (command, run = {}) => {
-          const ready = await Promise.resolve(
-            start(root, cwd, env, "sh", ["-lc", command], run)
+          const ready = await start(
+            root,
+            cwd,
+            env,
+            "sh",
+            ["-lc", command],
+            run
           );
           const { child } = ready;
           const output = streams(child);
