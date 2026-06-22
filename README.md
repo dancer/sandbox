@@ -89,7 +89,9 @@ the same API. A signed Daytona preview remains useful when an external client
 needs a self-contained URL. Treat any provider-issued signed or tokenized URL
 as a credential and do not log or return it to an untrusted consumer. Daytona
 standard preview tokens reset on sandbox restart, so call `ports.expose()` again
-after restarting a sandbox.
+after restarting a sandbox. `request()` handles redirects manually by default
+and rejects `redirect: "follow"`, so provider credentials cannot leave the
+preview origin.
 
 ## Snapshots
 

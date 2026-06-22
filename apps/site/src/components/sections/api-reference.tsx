@@ -305,6 +305,11 @@ export const ApiReference = () => (
         credential. It is intentionally usable by an external client and may
         therefore contain provider access data.
       </p>
+      <p>
+        Requests handle redirects manually by default and reject{" "}
+        <code>redirect: "follow"</code>, so provider access headers cannot leave
+        the preview origin.
+      </p>
       <CodeBlock code={PORTS_EXAMPLE} lang="ts" />
       <div className="flex flex-col gap-2">
         <Heading as="h4" id="ports-expose-options">

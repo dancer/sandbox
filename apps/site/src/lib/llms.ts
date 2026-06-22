@@ -219,7 +219,7 @@ const response = await preview.request("/health");
 console.log(preview.url, response.status);
 \`\`\`
 
-\`ports.expose(port, options?)\` returns \`{ url, port, request() }\`. \`request(path?, init?)\` only accepts same-origin paths and retains header-based provider access credentials outside serialized data. This makes restricted E2B and standard private Daytona previews usable without passing headers through agent output. Treat any provider-issued signed or tokenized \`url\` as a credential. Options are provider-specific and unsupported values throw at \`expose()\` time:
+\`ports.expose(port, options?)\` returns \`{ url, port, request() }\`. \`request(path?, init?)\` only accepts same-origin paths and retains header-based provider access credentials outside serialized data. Redirects are manual by default and \`redirect: "follow"\` is rejected, so provider credentials cannot leave the preview origin. This makes restricted E2B and standard private Daytona previews usable without passing headers through agent output. Treat any provider-issued signed or tokenized \`url\` as a credential. Options are provider-specific and unsupported values throw at \`expose()\` time:
 
 - \`protocol\`: \`"http"\`, \`"https"\`, or \`"tcp"\`. Consult the adapter docs for supported protocols; \`capabilities.ports\` describes port exposure mode, not protocol support.
 - \`token\`: provider-issued preview URL token when the adapter supports it. Use \`sandbox.raw\` for provider-specific preview controls, not private preview request headers.`;
