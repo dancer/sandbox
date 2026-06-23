@@ -2104,6 +2104,8 @@ export type CloudflareBridge = Readonly<{
    * deployed bridge base URL
    *
    * falls back to `SANDBOX_API_URL`
+   *
+   * remote bridges must use https, with http supported only for local loopback development
    */
   url?: string;
   /**

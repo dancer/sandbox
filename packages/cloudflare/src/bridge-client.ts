@@ -161,6 +161,8 @@ export type CloudflareBridge = Readonly<{
    * deployed bridge base URL
    *
    * falls back to `SANDBOX_API_URL`
+   *
+   * remote bridges must use https, with http supported only for local loopback development
    */
   url?: string;
   /**
@@ -309,15 +311,18 @@ const env = (name: string): string | undefined =>
 
 const trim = (value: string): string => value.replace(/\/+$/u, "");
 
+const loopback = (url: URL): boolean =>
+  url.hostname === "localhost" ||
+  url.hostname === "127.0.0.1" ||
+  url.hostname === "[::1]";
+
 export const bridgeBody = (input: Uint8Array | string): ArrayBuffer | string =>
   typeof input === "string" ? input : Uint8Array.from(input).buffer;
 
 const bridgeUrl = (value: string): string => {
+  let url: URL;
   try {
-    const url = new URL(trim(value));
-    if (url.protocol === "http:" || url.protocol === "https:") {
-      return trim(url.toString());
-    }
+    url = new URL(trim(value));
   } catch {
     throw sandboxError(
       provider,
@@ -326,9 +331,23 @@ const bridgeUrl = (value: string): string => {
     );
   }
 
+  if (url.username || url.password || url.search || url.hash) {
+    throw sandboxError(
+      provider,
+      "Cloudflare bridge URL must not include credentials, a query, or a fragment",
+      "configuration"
+    );
+  }
+  if (
+    url.protocol === "https:" ||
+    (url.protocol === "http:" && loopback(url))
+  ) {
+    return trim(url.toString());
+  }
+
   throw sandboxError(
     provider,
-    "Cloudflare bridge URL must be a valid http or https URL",
+    "Cloudflare bridge URL must use HTTPS outside local loopback development",
     "configuration"
   );
 };
@@ -425,6 +444,7 @@ const bridgeRequest = (
   return bridgeFetch(`${url}${path}`, {
     ...init,
     headers,
+    redirect: "error",
   });
 };
 

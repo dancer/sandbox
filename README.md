@@ -352,7 +352,8 @@ service through its typed raw PTY connection or a bridge image entrypoint before
 calling `ports.expose()`.
 `SANDBOX_API_KEY` authenticates the bridge and is rejected from sandbox
 environment configuration so the control-plane credential is not forwarded into
-the remote sandbox.
+the remote sandbox. Remote bridge URLs must use HTTPS. HTTP is supported only
+for local loopback development.
 
 ## Cloudflare Validation
 

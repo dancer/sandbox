@@ -13,6 +13,7 @@ type Seen = Readonly<{
   headers: Record<string, string>;
   method: string;
   path: string;
+  redirect?: RequestRedirect;
   url: string;
 }>;
 
@@ -63,11 +64,12 @@ const bridgeFetch =
     const url = String(input);
     const body = await requestBody(init.body);
     const headers = Object.fromEntries(new Headers(init.headers).entries());
-    const request = {
+    const request: Seen = {
       ...(body === undefined ? {} : { body }),
       headers,
       method: init.method ?? "GET",
       path: new URL(url).pathname + new URL(url).search,
+      ...(init.redirect === undefined ? {} : { redirect: init.redirect }),
       url,
     };
     seen.push(request);
@@ -94,18 +96,47 @@ test("cloudflareBridge reports missing bridge url", async () => {
   }
 });
 
-test("cloudflareBridge rejects invalid bridge urls", async () => {
-  await expect(
-    create({
-      adapter: cloudflareBridge({
-        fetch: bridgeFetch(() => json({}), []),
-        url: "bridge.example.com",
-      }),
-    })
-  ).rejects.toMatchObject({
-    code: "configuration",
-    provider: "cloudflare",
-  });
+test("cloudflareBridge validates bridge urls before requests", async () => {
+  const inputs = [
+    [
+      "bridge.example.com",
+      "Cloudflare bridge URL must be a valid http or https URL",
+    ],
+    [
+      "http://bridge.example.com",
+      "Cloudflare bridge URL must use HTTPS outside local loopback development",
+    ],
+    [
+      "https://token@bridge.example.com",
+      "Cloudflare bridge URL must not include credentials, a query, or a fragment",
+    ],
+    [
+      "https://bridge.example.com?token=secret",
+      "Cloudflare bridge URL must not include credentials, a query, or a fragment",
+    ],
+    [
+      "https://bridge.example.com#token",
+      "Cloudflare bridge URL must not include credentials, a query, or a fragment",
+    ],
+  ] as const satisfies readonly (readonly [string, string])[];
+
+  for (const [url, message] of inputs) {
+    const seen: Seen[] = [];
+    await expect(
+      create({
+        adapter: cloudflareBridge({
+          fetch: bridgeFetch(() => json({}), seen),
+          token: "secret",
+          url,
+        }),
+      })
+    ).rejects.toMatchObject({
+      code: "configuration",
+      message,
+      provider: "cloudflare",
+    });
+    expect(seen).toEqual([]);
+  }
 });
 
 test("cloudflareBridge distinguishes quick and named tunnel records", () => {
@@ -911,26 +942,57 @@ test("cloudflareBridge preserves non-json bridge errors", async () => {
   });
 });
 
-test("cloudflareBridge returns bearer headers for raw pty", async () => {
+test("cloudflareBridge supports loopback HTTP for raw pty", async () => {
+  const inputs = [
+    ["http://localhost:8787", "ws://localhost:8787"],
+    ["http://127.0.0.1:8787", "ws://127.0.0.1:8787"],
+    ["http://[::1]:8787", "ws://[::1]:8787"],
+  ] as const;
+
+  for (const [url, endpoint] of inputs) {
+    const sandbox = await create({
+      adapter: cloudflareBridge({
+        fetch: bridgeFetch((request) => {
+          if (request.method === "DELETE") {
+            return new Response(null, { status: 204 });
+          }
+          return missing();
+        }, []),
+        id: "box-1",
+        token: "secret",
+        url,
+      }),
+    });
+
+    try {
+      expect(sandbox.raw.pty("box-1")).toEqual({
+        headers: { Authorization: "Bearer secret" },
+        url: `${endpoint}/v1/sandbox/box-1/pty`,
+      });
+    } finally {
+      await sandbox.stop();
+    }
+  }
+});
+
+test("cloudflareBridge rejects redirects for bridge requests", async () => {
+  const seen: Seen[] = [];
   const sandbox = await create({
     adapter: cloudflareBridge({
       fetch: bridgeFetch((request) => {
         if (request.method === "DELETE") {
           return new Response(null, { status: 204 });
         }
-        return missing();
-      }, []),
+        return json({ ok: true });
+      }, seen),
       id: "box-1",
-      token: "secret",
-      url: "http://bridge.example.com",
+      url: "https://bridge.example.com",
     }),
   });
 
   try {
-    expect(sandbox.raw.pty("box-1")).toEqual({
-      headers: { Authorization: "Bearer secret" },
-      url: "ws://bridge.example.com/v1/sandbox/box-1/pty",
-    });
+    await sandbox.raw.health();
+    expect(seen.at(-1)?.redirect).toBe("error");
   } finally {
     await sandbox.stop();
   }
