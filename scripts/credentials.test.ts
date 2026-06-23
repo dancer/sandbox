@@ -298,6 +298,7 @@ test("live workflow uses durable Vercel credentials", () => {
   expect(workflow).toContain(
     `VERCEL_PROJECT_ID: ${dollar}{{ secrets.VERCEL_PROJECT_ID }}`
   );
+  expect(workflow).not.toContain("CLOUDFLARE_SANDBOX_PREVIEW_HOST:");
   expect(workflow).not.toContain("VERCEL_OIDC_TOKEN:");
 });
 

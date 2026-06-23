@@ -29,7 +29,6 @@ jobs:
           BL_REGION: ${{ secrets.BL_REGION }}
           BL_WORKSPACE: ${{ secrets.BL_WORKSPACE }}
           CLOUDFLARE_SANDBOX_TOKEN: ${{ secrets.CLOUDFLARE_SANDBOX_TOKEN }}
-          CLOUDFLARE_SANDBOX_PREVIEW_HOST: ${{ secrets.CLOUDFLARE_SANDBOX_PREVIEW_HOST }}
           CLOUDFLARE_SANDBOX_WORKER_URL: ${{ secrets.CLOUDFLARE_SANDBOX_WORKER_URL }}
           CSB_API_KEY: ${{ secrets.CSB_API_KEY }}
           DAYTONA_API_KEY: ${{ secrets.DAYTONA_API_KEY }}
