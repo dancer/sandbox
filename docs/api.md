@@ -2482,7 +2482,7 @@ export type Daytona = DaytonaConfig &
     labels?: Readonly<Record<string, string>>;
     /** Daytona code language label for created sandboxes */
     language?: CodeLanguage | string;
-    /** existing ephemeral sandbox id or name used for runner co-location; requires ephemeral: true */
+    /** existing ephemeral sandbox id or name used for runner co-location; requires autoDeleteInterval: 0, usually through ephemeral: true */
     linkedSandbox?: string;
     /** stable Daytona sandbox name used when create input omits id */
     name?: string;

@@ -238,8 +238,9 @@ test("daytona validates lifecycle options before provider calls", async () => {
         options: { autoArchiveInterval: 1.5 },
       },
       {
-        message: "linkedSandbox requires ephemeral: true",
-        options: { linkedSandbox: "source-sandbox" },
+        message:
+          "linkedSandbox requires autoDeleteInterval: 0 or ephemeral: true",
+        options: { autoDeleteInterval: -1, linkedSandbox: "source-sandbox" },
       },
     ] as const;
 
@@ -255,6 +256,46 @@ test("daytona validates lifecycle options before provider calls", async () => {
       });
     }
     expect(called).toBe(false);
+  } finally {
+    client.create = original;
+  }
+});
+
+test("daytona accepts linked sandboxes with explicit auto deletion", async () => {
+  type Client = InstanceType<typeof DaytonaClient>;
+  type Create = Client["create"];
+
+  const client = DaytonaClient.prototype as Client;
+  const original = client.create;
+  const raw = {
+    fs: {
+      createFolder: () => Promise.resolve(),
+    },
+    getWorkDir: () => Promise.resolve("/workspace"),
+    id: "sandbox",
+    stop: () => Promise.resolve(),
+  };
+  let seen: unknown;
+
+  client.create = ((params?: unknown) => {
+    seen = params;
+    return Promise.resolve(raw);
+  }) as Create;
+
+  try {
+    await expect(
+      create({
+        adapter: daytona({
+          apiKey: "key",
+          autoDeleteInterval: 0,
+          linkedSandbox: "source-sandbox",
+        }),
+      })
+    ).resolves.toMatchObject({ id: "sandbox" });
+    expect(seen).toMatchObject({
+      autoDeleteInterval: 0,
+      linkedSandbox: "source-sandbox",
+    });
   } finally {
     client.create = original;
   }

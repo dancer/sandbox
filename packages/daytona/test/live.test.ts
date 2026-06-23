@@ -360,8 +360,8 @@ live("daytona creates a linked sandbox", async () => {
   try {
     linked = await create({
       adapter: daytona({
+        autoDeleteInterval: 0,
         deleteOnStop: true,
-        ephemeral: true,
         linkedSandbox: source.id,
         timeout: 300_000,
       }),
