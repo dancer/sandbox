@@ -23,12 +23,7 @@ export type BlaxelRaw = SandboxInstance;
 export type Blaxel = Readonly<
   Pick<
     BlaxelConfig,
-    | "apiKey"
-    | "apikey"
-    | "clientCredentials"
-    | "disableH2"
-    | "proxy"
-    | "workspace"
+    "apiKey" | "clientCredentials" | "disableH2" | "proxy" | "workspace"
   > & {
     /** default working directory for normalized file and process operations */
     cwd?: string;

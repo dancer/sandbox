@@ -45,6 +45,31 @@ test("blaxel reports incomplete credentials before provider calls", async () => 
   });
 });
 
+test("blaxel rejects the legacy apikey option before provider calls", async () => {
+  const original = SandboxInstance.create;
+  let called = false;
+
+  SandboxInstance.create = (() => {
+    called = true;
+    return Promise.reject(new Error("provider called"));
+  }) as typeof SandboxInstance.create;
+
+  try {
+    await expect(
+      create({
+        adapter: Reflect.apply(blaxel, undefined, [{ apikey: "key" }]),
+      })
+    ).rejects.toMatchObject({
+      code: "configuration",
+      message: "Blaxel apikey is not supported. Use apiKey.",
+      provider: "blaxel",
+    });
+    expect(called).toBe(false);
+  } finally {
+    SandboxInstance.create = original;
+  }
+});
+
 test("blaxel ignores empty explicit credentials when env credentials exist", async () => {
   const apiKey = process.env.BL_API_KEY;
   const clientCredentials = process.env.BL_CLIENT_CREDENTIALS;

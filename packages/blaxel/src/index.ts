@@ -197,7 +197,14 @@ const readable = (value: Uint8Array): ReadableStream<Uint8Array> =>
   });
 
 const validate = (options: Blaxel): void => {
-  const apiKey = first(options.apiKey, options.apikey, env("BL_API_KEY"));
+  if ("apikey" in options) {
+    throw sandboxError(
+      provider,
+      "Blaxel apikey is not supported. Use apiKey.",
+      "configuration"
+    );
+  }
+  const apiKey = first(options.apiKey, env("BL_API_KEY"));
   const clientCredentials = credential(options.clientCredentials);
   const workspace = first(options.workspace, env("BL_WORKSPACE"));
 
@@ -225,7 +232,7 @@ const validate = (options: Blaxel): void => {
 };
 
 const configure = (options: Blaxel): void => {
-  const apiKey = first(options.apiKey, options.apikey, env("BL_API_KEY"));
+  const apiKey = first(options.apiKey, env("BL_API_KEY"));
   const clientCredentials = credential(options.clientCredentials);
   const workspace = first(options.workspace, env("BL_WORKSPACE"));
 

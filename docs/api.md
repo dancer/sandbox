@@ -1815,12 +1815,7 @@ blaxel({ workspace: "acme", apiKey: process.env.BL_API_KEY });
 export type Blaxel = Readonly<
   Pick<
     BlaxelConfig,
-    | "apiKey"
-    | "apikey"
-    | "clientCredentials"
-    | "disableH2"
-    | "proxy"
-    | "workspace"
+    "apiKey" | "clientCredentials" | "disableH2" | "proxy" | "workspace"
   > & {
     /** default working directory for normalized file and process operations */
     cwd?: string;
