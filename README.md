@@ -393,7 +393,7 @@ const sandbox = await create({
   adapter: cloudflare({
     binding: env.Sandbox,
     backups: {
-      gitignore: true,
+      useGitignore: true,
       ttl: 86_400,
     },
   }),
@@ -404,16 +404,18 @@ const snapshot = await sandbox.snapshots.create("before-upgrade");
 await sandbox.snapshots.restore(snapshot.id);
 ```
 
-`backups` forwards the current native `BackupOptions` except `dir` and `name`.
-The adapter supplies its `cwd` for `dir` and maps `snapshots.create(name?)` to
-the native name. Cloudflare stores that name in backup metadata. Restore uses
-the adapter's current `cwd` and `localBucket` setting; use `sandbox.raw` when
-you need a different restore directory or need to carry the full native backup
-handle across configurations. Production restores are copy-on-write mounts and
-are lost when the sandbox sleeps or restarts, so restore again from the snapshot
-id. Configure an R2 lifecycle rule because backup TTL limits restoration but
-does not delete R2 objects. Snapshot deletion and fresh-sandbox creation from a
-backup remain unsupported by the normalized API.
+`backups` forwards the current native `BackupOptions` except `dir`, `name`, and
+the installed SDK's internal `gitignore` name. Use `useGitignore` to match
+Cloudflare's public backup documentation. The adapter supplies its `cwd` for
+`dir` and maps `snapshots.create(name?)` to the native name. Cloudflare stores
+that name in backup metadata. Restore uses the adapter's current `cwd` and
+`localBucket` setting; use `sandbox.raw` when you need a different restore
+directory or need to carry the full native backup handle across configurations.
+Production restores are copy-on-write mounts and are lost when the sandbox
+sleeps or restarts, so restore again from the snapshot id. Configure an R2
+lifecycle rule because backup TTL limits restoration but does not delete R2
+objects. Snapshot deletion and fresh-sandbox creation from a backup remain
+unsupported by the normalized API.
 
 ## API Reference
 

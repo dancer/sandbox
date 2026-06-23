@@ -2244,13 +2244,27 @@ export type CloudflareBinding<
 
 #### `CloudflareBackups`
 
-native Cloudflare R2 backup options for normalized filesystem snapshots
+Cloudflare R2 backup options for normalized filesystem snapshots
 
 `dir` is the sandbox cwd and `name` comes from `snapshots.create(name?)`
+use `useGitignore` to match Cloudflare's public backup documentation
 configure `BACKUP_BUCKET` and production R2 credentials on the Worker before enabling this
 
 ```ts
-export type CloudflareBackups = Readonly<Omit<BackupOptions, "dir" | "name">>;
+export type CloudflareBackups = Readonly<{
+  /** archive compression format and worker count */
+  compression?: NonNullable<BackupOptions["compression"]>;
+  /** glob patterns excluded from the backup archive */
+  excludes?: NonNullable<BackupOptions["excludes"]>;
+  /** use the Worker R2 binding directly for local development */
+  localBucket?: NonNullable<BackupOptions["localBucket"]>;
+  /** use multipart R2 uploads for large archives */
+  multipart?: NonNullable<BackupOptions["multipart"]>;
+  /** backup lifetime in seconds */
+  ttl?: NonNullable<BackupOptions["ttl"]>;
+  /** exclude files matched by .gitignore when the backup directory is a git repository */
+  useGitignore?: boolean;
+}>;
 ```
 
 #### `Cloudflare`

@@ -48,7 +48,7 @@ const CLOUDFLARE_BACKUPS_EXAMPLE = `const sandbox = await create({
   adapter: cloudflare({
     binding: env.Sandbox,
     backups: {
-      gitignore: true,
+      useGitignore: true,
       ttl: 86_400,
     },
   }),

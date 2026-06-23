@@ -249,10 +249,10 @@ test("cloudflare enables configured R2 backup snapshots", async () => {
       backups: {
         compression: { format: "zstd", threads: 2 },
         excludes: ["node_modules", "*.log"],
-        gitignore: true,
         localBucket: true,
         multipart: false,
         ttl: 600,
+        useGitignore: true,
       },
       binding,
     }),
@@ -294,6 +294,23 @@ test("cloudflare enables configured R2 backup snapshots", async () => {
   } finally {
     await sandbox.stop();
   }
+});
+
+test("cloudflare rejects the legacy native backup gitignore option", async () => {
+  getSeen = undefined;
+  await expect(
+    create({
+      adapter: Reflect.apply(cloudflare, undefined, [
+        { backups: { gitignore: true }, binding },
+      ]),
+    })
+  ).rejects.toMatchObject({
+    code: "configuration",
+    message:
+      "Cloudflare backups.gitignore is not supported. Use backups.useGitignore.",
+    provider: "cloudflare",
+  });
+  expect(getSeen).toBeUndefined();
 });
 
 test("cloudflare rejects unsupported backup directories before provider calls", async () => {
