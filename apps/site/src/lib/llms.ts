@@ -100,14 +100,14 @@ Cloudflare via \`@cloudflare/sandbox\`. Backed by a Durable Object running a Lin
 
 ## CodeSandbox (@sandbox-sdk/codesandbox)
 
-CodeSandbox microVMs via \`@codesandbox/sdk\`. Creates or resumes sandboxes, connects a session, and normalizes files, commands, background commands, and opened ports. Use \`template\` to fork from a template, \`snapshot\` to fork from a snapshot, or \`id\` to resume an existing sandbox.
+CodeSandbox microVMs via \`@codesandbox/sdk\`. Creates or resumes sandboxes, connects a session, and normalizes files, commands, background commands, and opened ports. Use \`template\` to fork from a template, \`snapshot\` to fork from a snapshot, or \`id\` to resume an existing sandbox. Pass a shared \`CodeSandboxClient\` through \`client\` when application code also needs native sandbox or host-token managers.
 
 - \`token\`, \`template\`, \`stop\` (\`shutdown\` default, or \`hibernate\`, \`disconnect\`, \`delete\`).
 - Credentials: \`CSB_API_KEY\`.
 
 ## Daytona (@sandbox-sdk/daytona)
 
-Daytona dev environments via \`@daytona/sdk\`. Spins up a workspace from the given image, mounts a workdir, and threads files and processes through Daytona's API. Standard private previews work through \`preview.request()\`, which retains Daytona's preview token. Standard tokens reset after a sandbox restart, so expose the port again after restarting. Set \`signedPreview\` when an external client needs a self-contained URL. Network limits are configured at creation time; native \`raw.updateNetworkSettings()\` is available when the account tier supports runtime changes.
+Daytona dev environments via \`@daytona/sdk\`. Spins up a workspace from the given image, mounts a workdir, and threads files and processes through Daytona's API. Standard private previews work through \`preview.request()\`, which retains Daytona's preview token. Standard tokens reset after a sandbox restart, so expose the port again after restarting. Set \`signedPreview\` when an external client needs a self-contained URL. Network limits are configured at creation time; native \`raw.updateNetworkSettings()\` is available when the account tier supports runtime changes. Pass a shared \`DaytonaClient\` through \`client\` when application code also needs native snapshot or volume services.
 
 - \`image\`, \`apiKey\`, \`target\`, \`networkBlockAll\`, \`networkAllowList\`.
 - Credentials: \`DAYTONA_API_KEY\`. Include the Daytona \`delete:snapshots\` permission when using \`snapshots.delete()\`.
@@ -121,7 +121,7 @@ E2B microVM sandboxes via \`e2b\`. Can pin a template at construction and thread
 
 ## Modal (@sandbox-sdk/modal)
 
-Modal sandboxes via \`modal\`. Creates sandboxes inside a Modal app, maps file reads and writes through Modal's filesystem, and exposes provider-declared HTTPS ports through Modal tunnels. Reconnecting by sandbox id discovers existing tunnels automatically. Use typed Modal adapter options and \`sandbox.raw\` for provider-specific private and direct TCP tunnel controls. Supports filesystem snapshot creation; in-place restore and background process handles stay unsupported until the provider exposes a matching stable primitive.
+Modal sandboxes via \`modal\`. Creates sandboxes inside a Modal app, maps file reads and writes through Modal's filesystem, and exposes provider-declared HTTPS ports through Modal tunnels. Reconnecting by sandbox id discovers existing tunnels automatically. Use typed Modal adapter options and \`sandbox.raw\` for provider-specific private and direct TCP tunnel controls. Pass a shared \`ModalClient\` through \`client\` when application code also uses native app, image, volume, or secret services. Supports filesystem snapshot creation; in-place restore and background process handles stay unsupported until the provider exposes a matching stable primitive.
 
 - \`app\` (defaults to \`sandbox-sdk\`), \`image\`, \`ports\`.
 - Credentials: \`MODAL_TOKEN_ID\` and \`MODAL_TOKEN_SECRET\`, or Modal CLI config.
