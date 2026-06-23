@@ -59,8 +59,6 @@ export type E2B = Readonly<{
   domain?: string;
   /** default environment variables for new sandboxes; rejects E2B_API_KEY and E2B_ACCESS_TOKEN to prevent credential forwarding */
   env?: Readonly<Record<string, string>>;
-  /** @deprecated use apiHeaders for additional E2B control-plane headers */
-  headers?: Readonly<Record<string, string>>;
   /** integration identifier appended to the E2B user agent */
   integration?: string;
   /** e2b lifecycle behavior such as pause or kill when timeout is reached */
@@ -153,6 +151,13 @@ const assertSandboxEnv = (value: Readonly<Record<string, string>>): void => {
 };
 
 const validate = (options: E2B): void => {
+  if ("headers" in options) {
+    throw sandboxError(
+      provider,
+      "E2B headers are not supported. Use apiHeaders for control-plane headers.",
+      "configuration"
+    );
+  }
   if (
     first(options.apiKey, env("E2B_API_KEY")) !== undefined ||
     first(options.accessToken, env("E2B_ACCESS_TOKEN")) !== undefined
@@ -180,9 +185,6 @@ const connection = (options: E2B): SandboxConnectOpts => {
     ...(present(options.apiUrl) ? { apiUrl: options.apiUrl } : {}),
     ...(options.debug === undefined ? {} : { debug: options.debug }),
     ...(present(options.domain) ? { domain: options.domain } : {}),
-    ...(options.headers === undefined
-      ? {}
-      : { headers: { ...options.headers } }),
     ...(present(options.integration)
       ? { integration: options.integration }
       : {}),

@@ -2553,8 +2553,6 @@ export type E2B = Readonly<{
   domain?: string;
   /** default environment variables for new sandboxes; rejects E2B_API_KEY and E2B_ACCESS_TOKEN to prevent credential forwarding */
   env?: Readonly<Record<string, string>>;
-  /** @deprecated use apiHeaders for additional E2B control-plane headers */
-  headers?: Readonly<Record<string, string>>;
   /** integration identifier appended to the E2B user agent */
   integration?: string;
   /** e2b lifecycle behavior such as pause or kill when timeout is reached */

@@ -29,6 +29,34 @@ test("e2b reports missing credentials before provider calls", async () => {
   }
 });
 
+test("e2b rejects deprecated headers before provider calls", async () => {
+  const original = E2BSandbox.create;
+  let called = false;
+
+  E2BSandbox.create = (() => {
+    called = true;
+    return Promise.reject(new Error("provider called"));
+  }) as typeof E2BSandbox.create;
+
+  try {
+    await expect(
+      create({
+        adapter: Reflect.apply(e2b, undefined, [
+          { apiKey: "key", headers: { "x-header": "value" } },
+        ]),
+      })
+    ).rejects.toMatchObject({
+      code: "configuration",
+      message:
+        "E2B headers are not supported. Use apiHeaders for control-plane headers.",
+      provider: "e2b",
+    });
+    expect(called).toBe(false);
+  } finally {
+    E2BSandbox.create = original;
+  }
+});
+
 test("e2b ignores empty explicit credentials when env credentials exist", async () => {
   const apiKey = process.env.E2B_API_KEY;
   const accessToken = process.env.E2B_ACCESS_TOKEN;
@@ -254,7 +282,6 @@ test("e2b maps create and command options without running a real provider", asyn
         apiHeaders: { "x-api-header": "value" },
         apiKey: "key",
         env: { A: "1" },
-        headers: { header: "value" },
         integration: "sandbox-sdk-test/1.0.0",
         lifecycle: { autoResume: true, onTimeout: "pause" },
         mcp: {
@@ -292,7 +319,6 @@ test("e2b maps create and command options without running a real provider", asyn
       apiHeaders: { "x-api-header": "value" },
       apiKey: "key",
       envs: { A: "1", B: "2" },
-      headers: { header: "value" },
       integration: "sandbox-sdk-test/1.0.0",
       lifecycle: { autoResume: true, onTimeout: "pause" },
       mcp: {
