@@ -2392,8 +2392,8 @@ export type CodeSandbox = Readonly<{
   ipcountry?: CreateOptions["ipcountry"];
   /** custom sandbox path inside the codesandbox workspace */
   path?: string;
-  /** sandbox preview privacy for newly created sandboxes */
-  privacy?: CreateOptions["privacy"];
+  /** sandbox privacy for newly created sandboxes */
+  privacy?: Exclude<CreateOptions["privacy"], "unlisted">;
   /** sdk session options forwarded to `sandbox.connect`; custom ids must be 20 characters or less */
   session?: Omit<SessionOptions, "env">;
   /**

@@ -29,6 +29,19 @@ test("codesandbox reports missing credentials before provider calls", async () =
   });
 });
 
+test("codesandbox rejects the deprecated unlisted privacy option", async () => {
+  await expect(
+    create({
+      adapter: Reflect.apply(codesandbox, undefined, [{ privacy: "unlisted" }]),
+    })
+  ).rejects.toMatchObject({
+    code: "configuration",
+    message:
+      'CodeSandbox privacy "unlisted" is not supported. Use "public" or "public-hosts".',
+    provider: "codesandbox",
+  });
+});
+
 test("codesandbox accepts csb api key fallback", async () => {
   const codeSandboxKey = process.env.CSB_API_KEY;
   process.env.CSB_API_KEY = "codesandbox";

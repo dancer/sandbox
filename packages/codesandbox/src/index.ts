@@ -59,8 +59,8 @@ export type CodeSandbox = Readonly<{
   ipcountry?: CreateOptions["ipcountry"];
   /** custom sandbox path inside the codesandbox workspace */
   path?: string;
-  /** sandbox preview privacy for newly created sandboxes */
-  privacy?: CreateOptions["privacy"];
+  /** sandbox privacy for newly created sandboxes */
+  privacy?: Exclude<CreateOptions["privacy"], "unlisted">;
   /** sdk session options forwarded to `sandbox.connect`; custom ids must be 20 characters or less */
   session?: Omit<SessionOptions, "env">;
   /**
@@ -152,7 +152,20 @@ const sandboxEnv = (
   return value;
 };
 
+const legacyPrivacy = (value: unknown): boolean =>
+  typeof value === "object" &&
+  value !== null &&
+  "privacy" in value &&
+  value.privacy === "unlisted";
+
 const validate = (options: CodeSandbox): void => {
+  if (legacyPrivacy(options)) {
+    throw sandboxError(
+      provider,
+      'CodeSandbox privacy "unlisted" is not supported. Use "public" or "public-hosts".',
+      "configuration"
+    );
+  }
   if (options.client) {
     return;
   }
