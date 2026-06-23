@@ -83,6 +83,39 @@ test("blaxel ignores empty explicit credentials when env credentials exist", asy
   }
 });
 
+test("blaxel forwards an explicit region over BL_REGION", async () => {
+  const region = process.env.BL_REGION;
+  const original = SandboxInstance.create;
+  let seen: unknown;
+  const raw = {
+    delete: () => Promise.resolve(),
+    fs: {
+      mkdir: () => Promise.resolve({}),
+    },
+    metadata: { name: "sandbox" },
+  } as unknown as SandboxInstance;
+
+  process.env.BL_REGION = "eu-lon-1";
+  SandboxInstance.create = ((input: unknown) => {
+    seen = input;
+    return Promise.resolve(raw);
+  }) as typeof SandboxInstance.create;
+
+  try {
+    await create({
+      adapter: blaxel({
+        apiKey: "key",
+        region: "us-pdx-1",
+        workspace: "workspace",
+      }),
+    });
+    expect(seen).toMatchObject({ region: "us-pdx-1" });
+  } finally {
+    SandboxInstance.create = original;
+    restore("BL_REGION", region);
+  }
+});
+
 test("blaxel rejects provider credentials in sandbox env before provider calls", async () => {
   const original = SandboxInstance.create;
   let called = false;

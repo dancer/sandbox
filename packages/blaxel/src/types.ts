@@ -69,7 +69,7 @@ export type Blaxel = Readonly<
     >;
     /** ports declared at create time and later exposed through previews; Blaxel reserves port 80 for system operations */
     ports?: readonly number[];
-    /** blaxel region such as `us-pdx-1` */
+    /** blaxel region such as `us-pdx-1`; overrides `BL_REGION`, which Blaxel uses when this is omitted */
     region?: string;
     /** verify basic filesystem access after creation */
     safe?: boolean;
