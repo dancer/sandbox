@@ -123,18 +123,20 @@ test("blaxel rejects invalid declared ports before provider calls", async () => 
   }) as typeof SandboxInstance.create;
 
   try {
-    await expect(
-      create({
-        adapter: blaxel({
-          apiKey: "key",
-          workspace: "workspace",
-        }),
-        ports: [0],
-      })
-    ).rejects.toMatchObject({
-      code: "configuration",
-      provider: "blaxel",
-    });
+    for (const value of [0, 80]) {
+      await expect(
+        create({
+          adapter: blaxel({
+            apiKey: "key",
+            workspace: "workspace",
+          }),
+          ports: [value],
+        })
+      ).rejects.toMatchObject({
+        code: "configuration",
+        provider: "blaxel",
+      });
+    }
     expect(called).toBe(false);
   } finally {
     SandboxInstance.create = original;
@@ -479,6 +481,10 @@ test("blaxel maps create options and normalized operations", async () => {
     await expect(sandbox.ports.expose(8080)).resolves.toEqual({
       port: 8080,
       url: "https://preview.bl.run",
+    });
+    await expect(sandbox.ports.expose(80)).rejects.toMatchObject({
+      code: "configuration",
+      provider: "blaxel",
     });
     await expect(sandbox.ports.expose(0)).rejects.toMatchObject({
       code: "configuration",

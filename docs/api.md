@@ -1813,6 +1813,7 @@ export type BlaxelRaw = SandboxInstance;
 configure a Blaxel adapter
 
 explicit configuration takes precedence over environment values and provider credentials are never forwarded into the sandbox environment
+`@blaxel/core` keeps connection settings process-global, so do not use different Blaxel workspaces or credential sets concurrently in one process
 
 **example**
 
@@ -1868,7 +1869,7 @@ export type Blaxel = Readonly<
       | "ttl"
       | "volumes"
     >;
-    /** ports declared at create time and later exposed through previews */
+    /** ports declared at create time and later exposed through previews; Blaxel reserves port 80 for system operations */
     ports?: readonly number[];
     /** blaxel region such as `us-pdx-1` */
     region?: string;

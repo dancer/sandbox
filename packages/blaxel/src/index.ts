@@ -256,10 +256,22 @@ const environment = (
 ): NonNullable<SandboxCreateConfiguration["envs"]> =>
   Object.entries(values ?? {}).map(([name, value]) => ({ name, value }));
 
+const target = (value: number): number => {
+  const current = port(value, provider);
+  if (current === 80) {
+    throw sandboxError(
+      provider,
+      "Blaxel reserves port 80 for system operations",
+      "configuration"
+    );
+  }
+  return current;
+};
+
 const portConfiguration = (
   ports: readonly number[]
 ): NonNullable<SandboxCreateConfiguration["ports"]> =>
-  ports.map((target) => ({ protocol: "HTTP", target }));
+  ports.map((value) => ({ protocol: "HTTP", target: value }));
 
 const seconds = (milliseconds?: number): number | undefined => {
   const value = duration(milliseconds, provider);
@@ -684,13 +696,13 @@ const createSandbox = (raw: Raw, cwd: string): Sandbox<Raw> => ({
   id: raw.metadata.name,
   ports: {
     expose: async (value, options) => {
-      const target = port(value, provider);
+      const current = target(value);
       portOptions(provider, options, "https");
       const endpoint = await wrap(
         () =>
           raw.previews.createIfNotExists({
-            metadata: { name: `sandbox-sdk-${target}` },
-            spec: { port: target, public: true },
+            metadata: { name: `sandbox-sdk-${current}` },
+            spec: { port: current, public: true },
           }),
         "port exposure"
       );
@@ -702,7 +714,7 @@ const createSandbox = (raw: Raw, cwd: string): Sandbox<Raw> => ({
           "not_found"
         );
       }
-      return preview(url, target, { provider });
+      return preview(url, current, { provider });
     },
   },
   process: {
@@ -740,9 +752,7 @@ export const blaxel = (options: Blaxel = {}): Adapter<Raw> => ({
     const envs = input.id === undefined ? sandboxEnv(options, input) : {};
     configure(options);
     const cwd = input.cwd ?? options.cwd ?? "/app";
-    const ports = (input.ports ?? options.ports ?? []).map((value) =>
-      port(value, provider)
-    );
+    const ports = (input.ports ?? options.ports ?? []).map(target);
     const owned = input.id === undefined;
     const raw = owned
       ? await SandboxInstance.create(
