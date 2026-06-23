@@ -43,6 +43,19 @@ test("modal reports missing credentials before provider calls", async () => {
   }
 });
 
+test("modal rejects the legacy generic options object", async () => {
+  await expect(
+    create({
+      adapter: Reflect.apply(modal, undefined, [{ options: { cpu: 0.5 } }]),
+    })
+  ).rejects.toMatchObject({
+    code: "configuration",
+    message:
+      "Modal options is not supported. Use first-class Modal adapter options.",
+    provider: "modal",
+  });
+});
+
 test("modal rejects invalid declared ports before provider calls", async () => {
   let called = false;
   const client = {
@@ -275,7 +288,6 @@ test("modal maps create options, tags, commands, and ports", async () => {
   let detached = false;
   let snapshotCalls = 0;
   let snapshotSeen: unknown;
-  let tagsSeen: unknown;
   let terminated = false;
   let tunnelCalls = 0;
   const bucket = {} as ModalSdk.CloudBucketMount;
@@ -298,10 +310,6 @@ test("modal maps create options, tags, commands, and ports", async () => {
       },
     },
     sandboxId: "sandbox",
-    setTags: (tags: unknown) => {
-      tagsSeen = tags;
-      return Promise.resolve();
-    },
     snapshotFilesystem: (options: unknown) => {
       snapshotSeen = options;
       snapshotCalls += 1;
@@ -371,7 +379,6 @@ test("modal maps create options, tags, commands, and ports", async () => {
       memoryLimitMiB: 1024,
       memoryMiB: 512,
       name: "sdk-sandbox",
-      options: { cpu: 0.5 },
       outboundCidrAllowlist: ["0.0.0.0/0"],
       outboundDomainAllowlist: ["api.example.com"],
       ports: [3000],
@@ -431,6 +438,7 @@ test("modal maps create options, tags, commands, and ports", async () => {
       readinessProbe: probe,
       regions: ["us-east"],
       secrets: [secret],
+      tags: { owner: "sdk", task: "test" },
       timeoutMs: 1000,
       unencryptedPorts: [7070],
       verbose: true,
@@ -438,7 +446,6 @@ test("modal maps create options, tags, commands, and ports", async () => {
       workdir: "/work",
     },
   });
-  expect(tagsSeen).toEqual({ owner: "sdk", task: "test" });
   expect(directories).toContainEqual({
     options: { createParents: true },
     path: "/work",

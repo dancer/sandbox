@@ -81,11 +81,6 @@ export type Modal = Readonly<
     name?: CreateParams["name"];
     /** published Modal image name, optionally including a tag; cannot be combined with image */
     namedImage?: string;
-    /** modal sandbox create options forwarded to the native sdk */
-    options?: Omit<
-      ModalSdk.SandboxCreateParams,
-      "encryptedPorts" | "env" | "timeoutMs" | "workdir"
-    >;
     /** outbound CIDR allowlist for sandbox network access */
     outboundCidrAllowlist?: CreateParams["outboundCidrAllowlist"];
     /** outbound domain allowlist with optional wildcard prefixes such as *.example.com */
@@ -112,7 +107,7 @@ export type Modal = Readonly<
     snapshotTtl?: number | null;
     /** stop behavior used by `sandbox.stop` */
     stop?: "detach" | "terminate";
-    /** default tags attached to new sandboxes */
+    /** default tags for new sandboxes; create metadata overrides same-name defaults */
     tags?: Readonly<Record<string, string>>;
     /** sandbox lifetime timeout in milliseconds */
     timeout?: number;
@@ -187,6 +182,13 @@ const readable = (value: Uint8Array): ReadableStream<Uint8Array> =>
   });
 
 const validate = (options: Modal): void => {
+  if (Reflect.get(options, "options") !== undefined) {
+    throw sandboxError(
+      provider,
+      "Modal options is not supported. Use first-class Modal adapter options.",
+      "configuration"
+    );
+  }
   if (options.image !== undefined && options.namedImage !== undefined) {
     throw sandboxError(
       provider,
@@ -356,8 +358,8 @@ const createOptions = (
 ): ModalSdk.SandboxCreateParams => {
   const value = duration(input?.timeout ?? options.timeout);
   const idle = duration(options.idleTimeout);
+  const tags = { ...options.tags, ...input?.metadata };
   const output: ModalSdk.SandboxCreateParams = {
-    ...options.options,
     encryptedPorts: [...ports],
     env: environment,
     workdir: cwd,
@@ -385,6 +387,7 @@ const createOptions = (
   set(output, "readinessProbe", options.readinessProbe);
   set(output, "regions", options.regions);
   set(output, "secrets", options.secrets);
+  set(output, "tags", Object.keys(tags).length === 0 ? undefined : tags);
   set(output, "timeoutMs", value);
   set(output, "unencryptedPorts", options.unencryptedPorts);
   set(output, "verbose", options.verbose);
@@ -661,7 +664,7 @@ const createSandbox = (
  *
  * filesystem snapshots return an image id for a new sandbox through the shared snapshot create option. Modal does not persist arbitrary snapshot names, so call `snapshots.create()` without a name. in-place restore and normalized background process handles are unavailable
  *
- * use Modal create options and `sandbox.raw` for provider-specific private tunnels and direct TCP controls
+ * use typed Modal adapter options and `sandbox.raw` for provider-specific private tunnels and direct TCP controls
  */
 export const modal = (options: Modal = {}): Adapter<Raw> => ({
   capabilities,
@@ -691,10 +694,6 @@ export const modal = (options: Modal = {}): Adapter<Raw> => ({
     if (input.id === undefined) {
       try {
         await raw.filesystem.makeDirectory(cwd, { createParents: true });
-        const tags = { ...options.tags, ...input.metadata };
-        if (Object.keys(tags).length > 0) {
-          await raw.setTags(tags);
-        }
       } catch (error) {
         await raw.terminate().catch(() => null);
         throw error;

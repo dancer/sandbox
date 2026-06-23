@@ -2689,11 +2689,6 @@ export type Modal = Readonly<
     name?: CreateParams["name"];
     /** published Modal image name, optionally including a tag; cannot be combined with image */
     namedImage?: string;
-    /** modal sandbox create options forwarded to the native sdk */
-    options?: Omit<
-      ModalSdk.SandboxCreateParams,
-      "encryptedPorts" | "env" | "timeoutMs" | "workdir"
-    >;
     /** outbound CIDR allowlist for sandbox network access */
     outboundCidrAllowlist?: CreateParams["outboundCidrAllowlist"];
     /** outbound domain allowlist with optional wildcard prefixes such as *.example.com */
@@ -2720,7 +2715,7 @@ export type Modal = Readonly<
     snapshotTtl?: number | null;
     /** stop behavior used by `sandbox.stop` */
     stop?: "detach" | "terminate";
-    /** default tags attached to new sandboxes */
+    /** default tags for new sandboxes; create metadata overrides same-name defaults */
     tags?: Readonly<Record<string, string>>;
     /** sandbox lifetime timeout in milliseconds */
     timeout?: number;
@@ -2742,7 +2737,7 @@ create a Modal sandbox adapter with normalized file, command, port, and filesyst
 
 filesystem snapshots return an image id for a new sandbox through the shared snapshot create option. Modal does not persist arbitrary snapshot names, so call `snapshots.create()` without a name. in-place restore and normalized background process handles are unavailable
 
-use Modal create options and `sandbox.raw` for provider-specific private tunnels and direct TCP controls
+use typed Modal adapter options and `sandbox.raw` for provider-specific private tunnels and direct TCP controls
 
 ```ts
 export declare const modal: (options?: Modal) => Adapter<Raw>;
