@@ -861,9 +861,13 @@ test("portOptions rejects unsupported preview settings", () => {
   expect(() => portOptions("test", { token: "private" }, "https")).toThrow(
     SandboxError
   );
-  expect(() => portOptions("test", { protocol: "tcp" }, "https")).toThrow(
-    SandboxError
-  );
+  expect(() =>
+    Reflect.apply(portOptions, undefined, [
+      "test",
+      { protocol: "tcp" },
+      "https",
+    ])
+  ).toThrow(SandboxError);
   expect(() =>
     portOptions("test", { protocol: "https" }, "https")
   ).not.toThrow();

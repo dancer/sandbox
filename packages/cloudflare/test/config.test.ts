@@ -719,7 +719,6 @@ test("cloudflare rejects unsupported normalized tunnel options", async () => {
   try {
     for (const options of [
       { protocol: "http" as const },
-      { protocol: "tcp" as const },
       { token: "verify" },
     ]) {
       await expect(sandbox.ports.expose(8080, options)).rejects.toMatchObject({
@@ -727,6 +726,15 @@ test("cloudflare rejects unsupported normalized tunnel options", async () => {
         provider: "cloudflare",
       });
     }
+    await expect(
+      Reflect.apply(sandbox.ports.expose, sandbox.ports, [
+        8080,
+        { protocol: "tcp" },
+      ])
+    ).rejects.toMatchObject({
+      code: "unsupported",
+      provider: "cloudflare",
+    });
     expect(tunnelCalls).toBe(0);
   } finally {
     await sandbox.stop();

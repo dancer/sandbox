@@ -20,7 +20,6 @@ import type {
   Entry,
   Exec,
   Input,
-  Port,
   Result,
   Running,
   Sandbox,
@@ -270,16 +269,23 @@ const url = (host: string): string =>
     ? host
     : `https://${host}`;
 
+const previewProtocol = (value: unknown): "http" | "https" | undefined => {
+  if (value === undefined || value === "http" || value === "https") {
+    return value;
+  }
+  if (value === "tcp") {
+    unsupported(provider, "tcp previews");
+  }
+  unsupported(provider, "the requested preview protocol");
+};
+
 const previewUrl = (
   raw: CodeSandboxRaw,
   value: number,
-  protocol: NonNullable<Port["protocol"]> | undefined,
+  scheme: "http" | "https" | undefined,
   token: string | undefined,
   fallback: string
 ): string => {
-  if (protocol === "tcp") {
-    unsupported(provider, "tcp previews");
-  }
   if (token !== undefined) {
     if (raw.sdk.hosts === undefined) {
       unsupported(provider, "manual preview tokens");
@@ -287,12 +293,12 @@ const previewUrl = (
     return raw.sdk.hosts.getUrl(
       { sandboxId: raw.sandbox.id, token },
       value,
-      protocol
+      scheme
     );
   }
   return raw.client.hosts === undefined
     ? url(fallback)
-    : raw.client.hosts.getUrl(value, protocol);
+    : raw.client.hosts.getUrl(value, scheme);
 };
 
 const spawn = async (
@@ -536,12 +542,13 @@ const createSandbox = (
       if ("host" in options) {
         unsupported(provider, "custom preview hosts");
       }
+      const scheme = previewProtocol(options.protocol);
       const endpoint = await wrap(
         () => raw.client.ports.waitForPort(target),
         "port exposure"
       );
       return preview(
-        previewUrl(raw, target, options.protocol, options.token, endpoint.host),
+        previewUrl(raw, target, scheme, options.token, endpoint.host),
         target,
         { provider }
       );

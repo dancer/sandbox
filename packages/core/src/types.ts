@@ -295,8 +295,8 @@ export type Spawn = Exec;
  * adapters reject unsupported values instead of silently ignoring them. custom domains and other provider-specific preview controls stay on adapter options or `sandbox.raw`
  */
 export type Port = Readonly<{
-  /** preview protocol preference when the provider supports it */
-  protocol?: "http" | "https" | "tcp";
+  /** preview http(s) protocol preference when supported, use typed provider options or `sandbox.raw` for tcp tunnels */
+  protocol?: "http" | "https";
   /** provider-issued preview URL token when the adapter supports it; treat it as a bearer credential */
   token?: string;
 }>;

@@ -510,6 +510,15 @@ test("codesandbox maps create options and normalized operations", async () => {
   });
   expect(hostSeen).toEqual({ port: 3000, protocol: "http" });
   await expect(
+    Reflect.apply(current.ports.expose, current.ports, [
+      3000,
+      { protocol: "tcp" },
+    ])
+  ).rejects.toMatchObject({
+    code: "unsupported",
+    provider: "codesandbox",
+  });
+  await expect(
     current.ports.expose(3000, { token: "private" })
   ).resolves.toEqual({
     port: 3000,
