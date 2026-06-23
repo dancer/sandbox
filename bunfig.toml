@@ -1,2 +1,5 @@
+[install]
+minimumReleaseAge = 172800
+
 [env]
 file = false

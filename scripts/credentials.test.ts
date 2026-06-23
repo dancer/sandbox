@@ -259,9 +259,10 @@ describe("credentialRows", () => {
 });
 
 test("verification commands load credentials explicitly", () => {
-  expect(readFileSync(resolve(root, "bunfig.toml"), "utf-8")).toContain(
-    "[env]\nfile = false"
-  );
+  const config = readFileSync(resolve(root, "bunfig.toml"), "utf-8");
+
+  expect(config).toContain("[env]\nfile = false");
+  expect(config).toContain("[install]\nminimumReleaseAge = 172800");
 
   const verification = Object.entries(manifest.scripts).filter(([name]) =>
     name.startsWith("verify:")
