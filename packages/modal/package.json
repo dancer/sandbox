@@ -20,7 +20,8 @@
     "directory": "packages/modal"
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md"
   ],
   "type": "module",
   "sideEffects": false,

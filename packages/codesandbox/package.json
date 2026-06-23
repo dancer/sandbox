@@ -20,7 +20,8 @@
     "directory": "packages/codesandbox"
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md"
   ],
   "type": "module",
   "sideEffects": false,
