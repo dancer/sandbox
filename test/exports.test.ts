@@ -10,7 +10,7 @@ import {
   updateTtl,
 } from "@sandbox-sdk/blaxel";
 import { cloudflare, cloudflareBridge } from "@sandbox-sdk/cloudflare";
-import { codesandbox } from "@sandbox-sdk/codesandbox";
+import { CodeSandboxClient, codesandbox } from "@sandbox-sdk/codesandbox";
 import {
   abort,
   bytes,
@@ -38,10 +38,10 @@ import {
   unsupported,
   withSandbox,
 } from "@sandbox-sdk/core";
-import { daytona } from "@sandbox-sdk/daytona";
+import { DaytonaClient, daytona } from "@sandbox-sdk/daytona";
 import { e2b } from "@sandbox-sdk/e2b";
 import { local } from "@sandbox-sdk/local";
-import { modal } from "@sandbox-sdk/modal";
+import { ModalClient, modal } from "@sandbox-sdk/modal";
 import {
   defineVercelSandboxProxy,
   vercel,
@@ -56,6 +56,9 @@ import {
 } from "@sandbox-sdk/vercel";
 
 const entrypoints = {
+  CodeSandboxClient,
+  DaytonaClient,
+  ModalClient,
   SandboxError,
   VercelAPIError,
   VercelCommand,

@@ -40,6 +40,8 @@ import type {
   Sandbox,
 } from "@sandbox-sdk/core";
 
+export { Daytona as DaytonaClient } from "@daytona/sdk";
+
 /**
  * native Daytona sandbox object exposed as `sandbox.raw`
  *
@@ -61,6 +63,8 @@ export type Daytona = Omit<DaytonaConfig, "serverUrl"> &
     autoDeleteInterval?: number;
     /** stop an idle sandbox after this many minutes; use 0 to disable */
     autoStopInterval?: number;
+    /** existing native Daytona client for advanced service access, custom transport, or credential reuse and takes precedence over Daytona connection options */
+    client?: DaytonaClient;
     /** default working directory for normalized file and process operations */
     cwd?: string;
     /** delete the Daytona sandbox instead of stopping it during cleanup */
@@ -281,6 +285,9 @@ const validate = (options: Daytona): void => {
       "configuration"
     );
   }
+  if (options.client !== undefined) {
+    return;
+  }
   const apiKey = first(options.apiKey, env("DAYTONA_API_KEY"));
   const jwtToken = first(options.jwtToken, env("DAYTONA_JWT_TOKEN"));
   const organizationId = first(
@@ -336,6 +343,9 @@ const config = (options: Daytona): DaytonaConfig => {
       : { _experimental: options._experimental }),
   };
 };
+
+const nativeClient = (options: Daytona): DaytonaClient =>
+  options.client ?? new DaytonaClient(config(options));
 
 const baseParams = (
   options: Daytona,
@@ -824,21 +834,21 @@ export const daytona = (options: Daytona = {}): Adapter<Raw> => ({
   capabilities,
   async create(input = {}) {
     validate(options);
-    const client = new DaytonaClient(config(options));
+    const native = nativeClient(options);
     const owned = input.id === undefined;
     const raw = owned
-      ? await client.create(
+      ? await native.create(
           params(options, input),
           createSettings(options, input)
         )
-      : await client.get(input.id);
+      : await native.get(input.id);
     try {
       const cwd =
         input.cwd ?? options.cwd ?? (await raw.getWorkDir()) ?? "/home/daytona";
 
       await wrap(() => raw.fs.createFolder(cwd, "755"), "mkdir");
 
-      return createSandbox(raw, cwd, options, client);
+      return createSandbox(raw, cwd, options, native);
     } catch (error) {
       if (owned) {
         await raw.delete().catch(() => null);

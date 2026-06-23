@@ -111,6 +111,91 @@ test("daytona accepts api key config without target", async () => {
   }
 });
 
+test("daytona uses an injected native client without environment credentials", async () => {
+  type Client = InstanceType<typeof DaytonaClient>;
+  type Create = Client["create"];
+
+  const apiKey = process.env.DAYTONA_API_KEY;
+  const jwtToken = process.env.DAYTONA_JWT_TOKEN;
+  const organizationId = process.env.DAYTONA_ORGANIZATION_ID;
+  const target = process.env.DAYTONA_TARGET;
+  const native = new DaytonaClient({ apiKey: "native-key" });
+  const original = native.create;
+  const raw = {
+    fs: {
+      createFolder: () => Promise.resolve(),
+    },
+    getWorkDir: () => Promise.resolve("/workspace"),
+    id: "sandbox",
+    stop: () => Promise.resolve(),
+  };
+  let calls = 0;
+
+  native.create = (() => {
+    calls += 1;
+    return Promise.resolve(raw);
+  }) as Create;
+  process.env.DAYTONA_API_KEY = "";
+  process.env.DAYTONA_JWT_TOKEN = "";
+  process.env.DAYTONA_ORGANIZATION_ID = "";
+  process.env.DAYTONA_TARGET = "";
+
+  try {
+    const sandbox = await create({ adapter: daytona({ client: native }) });
+
+    expect(sandbox.id).toBe("sandbox");
+    expect(sandbox.raw).toBe(raw);
+    expect(calls).toBe(1);
+  } finally {
+    native.create = original;
+    restore("DAYTONA_API_KEY", apiKey);
+    restore("DAYTONA_JWT_TOKEN", jwtToken);
+    restore("DAYTONA_ORGANIZATION_ID", organizationId);
+    restore("DAYTONA_TARGET", target);
+  }
+});
+
+test("daytona uses an injected native client for snapshot deletion", async () => {
+  type Client = InstanceType<typeof DaytonaClient>;
+  type Create = Client["create"];
+  type Snapshots = Pick<Client["snapshot"], "delete" | "get">;
+
+  const native = new DaytonaClient({ apiKey: "native-key" });
+  const snapshots = native.snapshot as Snapshots;
+  const originalCreate = native.create;
+  const originalDelete = snapshots.delete;
+  const originalGet = snapshots.get;
+  const raw = {
+    fs: {
+      createFolder: () => Promise.resolve(),
+    },
+    getWorkDir: () => Promise.resolve("/workspace"),
+    id: "sandbox",
+    stop: () => Promise.resolve(),
+  };
+  const snapshot = { name: "snapshot" };
+  let deleted: unknown;
+
+  native.create = (() => Promise.resolve(raw)) as Create;
+  snapshots.get = (() => Promise.resolve(snapshot)) as Snapshots["get"];
+  snapshots.delete = ((value: unknown) => {
+    deleted = value;
+    return Promise.resolve();
+  }) as Snapshots["delete"];
+
+  try {
+    const sandbox = await create({ adapter: daytona({ client: native }) });
+
+    await sandbox.snapshots.delete("snapshot");
+
+    expect(deleted).toBe(snapshot);
+  } finally {
+    native.create = originalCreate;
+    snapshots.delete = originalDelete;
+    snapshots.get = originalGet;
+  }
+});
+
 test("daytona rejects provider credentials in sandbox env before provider calls", async () => {
   type Client = InstanceType<typeof DaytonaClient>;
   type Create = Client["create"];

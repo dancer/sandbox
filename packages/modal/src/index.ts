@@ -23,6 +23,8 @@ import type {
 } from "@sandbox-sdk/core";
 import * as ModalSdk from "modal";
 
+export { ModalClient } from "modal";
+
 /** native Modal sandbox object exposed as `sandbox.raw` */
 export type ModalRaw = ModalSdk.Sandbox;
 
@@ -41,7 +43,7 @@ export type Modal = Readonly<
     cloudBucketMounts?: CreateParams["cloudBucketMounts"];
     /** entrypoint command for the sandbox main process */
     command?: CreateParams["command"];
-    /** existing modal client for custom transport, tests, or advanced auth */
+    /** existing native Modal client for advanced service access, custom transport, or credential reuse and takes precedence over Modal connection options */
     client?: ModalSdk.ModalClient;
     /** create the modal app if it does not exist */
     createAppIfMissing?: boolean;

@@ -1939,6 +1939,24 @@ use `sandbox.raw.previews` for private previews, preview tokens, URL prefixes, a
 export declare const blaxel: (options?: Blaxel) => Adapter<Raw>;
 ```
 
+### provider exports
+
+#### `SandboxLifecycle`
+
+re-exported from `@blaxel/core`
+
+```ts
+export type { SandboxLifecycle } from "@blaxel/core";
+```
+
+#### `SandboxUpdateNetwork`
+
+re-exported from `@blaxel/core`
+
+```ts
+export type { SandboxUpdateNetwork } from "@blaxel/core";
+```
+
 ## @sandbox-sdk/cloudflare
 
 Cloudflare Sandbox adapter for Sandbox SDK
@@ -2341,6 +2359,16 @@ export declare const cloudflare: <
 ) => Adapter<ProviderRaw>;
 ```
 
+### provider exports
+
+#### `CloudflareSandbox`
+
+re-exported from `@cloudflare/sandbox`
+
+```ts
+export type { Sandbox as CloudflareSandbox } from "@cloudflare/sandbox";
+```
+
 ## @sandbox-sdk/codesandbox
 
 CodeSandbox adapter for Sandbox SDK
@@ -2376,7 +2404,7 @@ pass a native CodeSandbox client when reusing an existing client or custom fetch
 export type CodeSandbox = Readonly<{
   /** wakeup behavior for hibernated CodeSandbox VMs */
   automaticWakeupConfig?: CreateOptions["automaticWakeupConfig"];
-  /** existing native CodeSandbox sdk client for dependency injection or custom fetch transport */
+  /** existing native CodeSandbox client for advanced service access, custom transport, or credential reuse and takes precedence over token and clientOptions */
   client?: CodeSandboxRaw["sdk"];
   /** options forwarded to the codesandbox sdk constructor */
   clientOptions?: ClientOptions;
@@ -2433,6 +2461,16 @@ export declare const codesandbox: (
 ) => Adapter<CodeSandboxRaw>;
 ```
 
+### provider exports
+
+#### `CodeSandboxClient`
+
+re-exported from `@codesandbox/sdk`
+
+```ts
+export { CodeSandbox as CodeSandboxClient } from "@codesandbox/sdk";
+```
+
 ## @sandbox-sdk/daytona
 
 Daytona adapter for Sandbox SDK
@@ -2470,6 +2508,8 @@ export type Daytona = Omit<DaytonaConfig, "serverUrl"> &
     autoDeleteInterval?: number;
     /** stop an idle sandbox after this many minutes; use 0 to disable */
     autoStopInterval?: number;
+    /** existing native Daytona client for advanced service access, custom transport, or credential reuse and takes precedence over Daytona connection options */
+    client?: DaytonaClient;
     /** default working directory for normalized file and process operations */
     cwd?: string;
     /** delete the Daytona sandbox instead of stopping it during cleanup */
@@ -2523,6 +2563,16 @@ standard private previews work through `preview.request()`, which retains Dayton
 
 ```ts
 export declare const daytona: (options?: Daytona) => Adapter<Raw>;
+```
+
+### provider exports
+
+#### `DaytonaClient`
+
+re-exported from `@daytona/sdk`
+
+```ts
+export { Daytona as DaytonaClient } from "@daytona/sdk";
 ```
 
 ## @sandbox-sdk/e2b
@@ -2644,7 +2694,7 @@ export type Modal = Readonly<
     cloudBucketMounts?: CreateParams["cloudBucketMounts"];
     /** entrypoint command for the sandbox main process */
     command?: CreateParams["command"];
-    /** existing modal client for custom transport, tests, or advanced auth */
+    /** existing native Modal client for advanced service access, custom transport, or credential reuse and takes precedence over Modal connection options */
     client?: ModalSdk.ModalClient;
     /** create the modal app if it does not exist */
     createAppIfMissing?: boolean;
@@ -2736,6 +2786,16 @@ use typed Modal adapter options and `sandbox.raw` for provider-specific private 
 
 ```ts
 export declare const modal: (options?: Modal) => Adapter<Raw>;
+```
+
+### provider exports
+
+#### `ModalClient`
+
+re-exported from `modal`
+
+```ts
+export { ModalClient } from "modal";
 ```
 
 ## @sandbox-sdk/vercel
@@ -2941,4 +3001,198 @@ Vercel does not persist arbitrary snapshot names, so call `snapshots.create()` w
 
 ```ts
 export declare const vercel: (options?: Vercel) => Adapter<Raw>;
+```
+
+### provider exports
+
+#### `VercelAPIError`
+
+re-exported from `@vercel/sandbox`
+
+```ts
+export { APIError as VercelAPIError } from "@vercel/sandbox";
+```
+
+#### `VercelCommand`
+
+re-exported from `@vercel/sandbox`
+
+```ts
+export { Command as VercelCommand } from "@vercel/sandbox";
+```
+
+#### `VercelCommandFinished`
+
+re-exported from `@vercel/sandbox`
+
+```ts
+export { CommandFinished as VercelCommandFinished } from "@vercel/sandbox";
+```
+
+#### `VercelFileSystem`
+
+re-exported from `@vercel/sandbox`
+
+```ts
+export { FileSystem as VercelFileSystem } from "@vercel/sandbox";
+```
+
+#### `VercelSandbox`
+
+re-exported from `@vercel/sandbox`
+
+```ts
+export { Sandbox as VercelSandbox } from "@vercel/sandbox";
+```
+
+#### `VercelSession`
+
+re-exported from `@vercel/sandbox`
+
+```ts
+export { Session as VercelSession } from "@vercel/sandbox";
+```
+
+#### `VercelSnapshot`
+
+re-exported from `@vercel/sandbox`
+
+```ts
+export { Snapshot as VercelSnapshot } from "@vercel/sandbox";
+```
+
+#### `VercelStreamError`
+
+re-exported from `@vercel/sandbox`
+
+```ts
+export { StreamError as VercelStreamError } from "@vercel/sandbox";
+```
+
+#### `defineVercelSandboxProxy`
+
+re-exported from `@vercel/sandbox`
+
+```ts
+export { defineSandboxProxy as defineVercelSandboxProxy } from "@vercel/sandbox";
+```
+
+#### `VercelCommandOutput`
+
+re-exported from `@vercel/sandbox`
+
+```ts
+export type { CommandOutput as VercelCommandOutput } from "@vercel/sandbox";
+```
+
+#### `VercelInvalidRequestProxyHandler`
+
+re-exported from `@vercel/sandbox`
+
+```ts
+export type { InvalidRequestProxyHandler as VercelInvalidRequestProxyHandler } from "@vercel/sandbox";
+```
+
+#### `VercelNetworkPolicy`
+
+re-exported from `@vercel/sandbox`
+
+```ts
+export type { NetworkPolicy as VercelNetworkPolicy } from "@vercel/sandbox";
+```
+
+#### `VercelNetworkPolicyKeyValueMatcher`
+
+re-exported from `@vercel/sandbox`
+
+```ts
+export type { NetworkPolicyKeyValueMatcher as VercelNetworkPolicyKeyValueMatcher } from "@vercel/sandbox";
+```
+
+#### `VercelNetworkPolicyMatch`
+
+re-exported from `@vercel/sandbox`
+
+```ts
+export type { NetworkPolicyMatch as VercelNetworkPolicyMatch } from "@vercel/sandbox";
+```
+
+#### `VercelNetworkPolicyMatcher`
+
+re-exported from `@vercel/sandbox`
+
+```ts
+export type { NetworkPolicyMatcher as VercelNetworkPolicyMatcher } from "@vercel/sandbox";
+```
+
+#### `VercelNetworkPolicyRule`
+
+re-exported from `@vercel/sandbox`
+
+```ts
+export type { NetworkPolicyRule as VercelNetworkPolicyRule } from "@vercel/sandbox";
+```
+
+#### `VercelNetworkTransformer`
+
+re-exported from `@vercel/sandbox`
+
+```ts
+export type { NetworkTransformer as VercelNetworkTransformer } from "@vercel/sandbox";
+```
+
+#### `SerializedVercelCommand`
+
+re-exported from `@vercel/sandbox`
+
+```ts
+export type { SerializedCommand as SerializedVercelCommand } from "@vercel/sandbox";
+```
+
+#### `SerializedVercelCommandFinished`
+
+re-exported from `@vercel/sandbox`
+
+```ts
+export type { SerializedCommandFinished as SerializedVercelCommandFinished } from "@vercel/sandbox";
+```
+
+#### `VercelProxyHandler`
+
+re-exported from `@vercel/sandbox`
+
+```ts
+export type { ProxyHandler as VercelProxyHandler } from "@vercel/sandbox";
+```
+
+#### `VercelProxyMeta`
+
+re-exported from `@vercel/sandbox`
+
+```ts
+export type { ProxyMeta as VercelProxyMeta } from "@vercel/sandbox";
+```
+
+#### `SerializedVercelSandbox`
+
+re-exported from `@vercel/sandbox`
+
+```ts
+export type { SerializedSandbox as SerializedVercelSandbox } from "@vercel/sandbox";
+```
+
+#### `SerializedVercelSnapshot`
+
+re-exported from `@vercel/sandbox`
+
+```ts
+export type { SerializedSnapshot as SerializedVercelSnapshot } from "@vercel/sandbox";
+```
+
+#### `VercelSnapshotTreeNodeData`
+
+re-exported from `@vercel/sandbox`
+
+```ts
+export type { SnapshotTreeNodeData as VercelSnapshotTreeNodeData } from "@vercel/sandbox";
 ```

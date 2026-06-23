@@ -65,7 +65,11 @@ import type {
   CloudflareRaw,
   CloudflareSandbox,
 } from "@sandbox-sdk/cloudflare";
-import type { CodeSandbox, CodeSandboxRaw } from "@sandbox-sdk/codesandbox";
+import type {
+  CodeSandbox,
+  CodeSandboxClient,
+  CodeSandboxRaw,
+} from "@sandbox-sdk/codesandbox";
 import type {
   Adapter,
   Capabilities,
@@ -98,10 +102,10 @@ import type {
   Timer,
   Url,
 } from "@sandbox-sdk/core";
-import type { Daytona, DaytonaRaw } from "@sandbox-sdk/daytona";
+import type { Daytona, DaytonaClient, DaytonaRaw } from "@sandbox-sdk/daytona";
 import type { E2B, E2BRaw } from "@sandbox-sdk/e2b";
 import type { Local } from "@sandbox-sdk/local";
-import type { Modal, ModalRaw } from "@sandbox-sdk/modal";
+import type { Modal, ModalClient, ModalRaw } from "@sandbox-sdk/modal";
 import type {
   Fork,
   KeepLastSnapshots,
@@ -190,7 +194,9 @@ export type EntrypointTypes = Readonly<{
   cloudflareSandbox: CloudflareSandbox;
   code: Code;
   codesandbox: CodeSandbox;
+  codesandboxClient: InstanceType<typeof CodeSandboxClient>;
   codesandboxRaw: CodeSandboxRaw;
+  daytonaClient: InstanceType<typeof DaytonaClient>;
   daytona: Daytona;
   daytonaRaw: DaytonaRaw;
   e2b: E2B;
@@ -201,6 +207,7 @@ export type EntrypointTypes = Readonly<{
   input: Input;
   local: Local;
   modal: Modal;
+  modalClient: InstanceType<typeof ModalClient>;
   modalRaw: ModalRaw;
   mode: Mode;
   openai: OpenAI;

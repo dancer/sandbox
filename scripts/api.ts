@@ -5,7 +5,7 @@ import * as ts from "typescript";
 
 type Entry = Readonly<{
   docs: Documentation;
-  kind: "classes" | "functions" | "types";
+  kind: "classes" | "exports" | "functions" | "types";
   members: readonly string[];
   name: string;
   signature: string;
@@ -204,6 +204,39 @@ const localNames = (
   );
 };
 
+const external = (statement: ts.ExportDeclaration): Entry[] => {
+  if (
+    statement.moduleSpecifier === undefined ||
+    !ts.isStringLiteral(statement.moduleSpecifier) ||
+    statement.exportClause === undefined ||
+    !ts.isNamedExports(statement.exportClause)
+  ) {
+    return [];
+  }
+  const source = statement.moduleSpecifier.text;
+  if (source.startsWith(".")) {
+    return [];
+  }
+  return statement.exportClause.elements.map((element) => {
+    const original = element.propertyName?.text ?? element.name.text;
+    const value =
+      original === element.name.text
+        ? original
+        : `${original} as ${element.name.text}`;
+    const modifier = statement.isTypeOnly || element.isTypeOnly ? " type" : "";
+    return {
+      docs: {
+        description: `re-exported from \`${source}\``,
+        examples: [],
+      },
+      kind: "exports",
+      members: [],
+      name: element.name.text,
+      signature: `export${modifier} { ${value} } from "${source}";`,
+    };
+  });
+};
+
 const parseFile = async (
   file: string,
   parseStatement: (
@@ -318,7 +351,7 @@ const entry = async (
         `unable to resolve local API export from ${source.fileName}`
       );
     }
-    return [];
+    return external(statement);
   }
   if (!exported(statement)) {
     return [];
@@ -365,14 +398,19 @@ const title = (value: Entry["kind"]): string => {
   if (value === "functions") {
     return "functions";
   }
+  if (value === "exports") {
+    return "provider exports";
+  }
   return "classes";
 };
 
 const validate = (packageName: string, entries: readonly Entry[]): void => {
-  const missing = entries.flatMap((item) => [
-    ...(item.docs.description === "" ? [item.name] : []),
-    ...item.members,
-  ]);
+  const missing = entries
+    .filter((item) => item.kind !== "exports")
+    .flatMap((item) => [
+      ...(item.docs.description === "" ? [item.name] : []),
+      ...item.members,
+    ]);
   if (missing.length > 0) {
     throw new Error(
       `public API JSDoc missing from ${packageName}: ${missing.join(", ")}`
@@ -381,7 +419,7 @@ const validate = (packageName: string, entries: readonly Entry[]): void => {
 };
 
 const render = (entries: readonly Entry[]): string =>
-  (["types", "classes", "functions"] as const)
+  (["types", "classes", "functions", "exports"] as const)
     .map((kind) => {
       const items = entries.filter((item) => item.kind === kind);
       if (items.length === 0) {

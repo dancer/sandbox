@@ -35,6 +35,7 @@ import type {
   SessionOptions,
 } from "./types.js";
 
+export { CodeSandbox as CodeSandboxClient } from "@codesandbox/sdk";
 export type { CodeSandboxRaw } from "./types.js";
 
 /**
@@ -45,7 +46,7 @@ export type { CodeSandboxRaw } from "./types.js";
 export type CodeSandbox = Readonly<{
   /** wakeup behavior for hibernated CodeSandbox VMs */
   automaticWakeupConfig?: CreateOptions["automaticWakeupConfig"];
-  /** existing native CodeSandbox sdk client for dependency injection or custom fetch transport */
+  /** existing native CodeSandbox client for advanced service access, custom transport, or credential reuse and takes precedence over token and clientOptions */
   client?: CodeSandboxRaw["sdk"];
   /** options forwarded to the codesandbox sdk constructor */
   clientOptions?: ClientOptions;
