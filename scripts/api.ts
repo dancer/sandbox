@@ -406,7 +406,7 @@ const render = (entries: readonly Entry[]): string =>
     .filter(Boolean)
     .join("\n\n");
 
-const main = async (): Promise<void> => {
+export const generate = async (destination = output): Promise<void> => {
   const packages = await Promise.all(folders.map(read));
   const sections = await Promise.all(
     packages.flatMap((item) =>
@@ -427,8 +427,10 @@ const main = async (): Promise<void> => {
     "",
   ].join("\n\n");
 
-  await mkdir(dirname(output), { recursive: true });
-  await writeFile(output, text);
+  await mkdir(dirname(destination), { recursive: true });
+  await writeFile(destination, text);
 };
 
-await main();
+if (import.meta.main) {
+  await generate();
+}
