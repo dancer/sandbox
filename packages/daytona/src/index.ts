@@ -55,11 +55,11 @@ export type DaytonaRaw = DaytonaSandbox;
 /** Daytona adapter configuration */
 export type Daytona = DaytonaConfig &
   Readonly<{
-    /** archive idle sandbox after this many minutes when supported by Daytona */
+    /** archive a stopped sandbox after this many minutes; Daytona requires a non-negative integer */
     autoArchiveInterval?: number;
-    /** delete archived sandbox after this many minutes when supported by Daytona */
+    /** delete a stopped sandbox after this many minutes; use -1 to disable or 0 to delete immediately */
     autoDeleteInterval?: number;
-    /** stop idle sandbox after this many minutes when supported by Daytona */
+    /** stop an idle sandbox after this many minutes; use 0 to disable */
     autoStopInterval?: number;
     /** default working directory for normalized file and process operations */
     cwd?: string;
@@ -67,7 +67,7 @@ export type Daytona = DaytonaConfig &
     deleteOnStop?: boolean;
     /** default environment variables for new sandboxes; rejects DAYTONA_API_KEY and DAYTONA_JWT_TOKEN to prevent credential forwarding */
     env?: Readonly<Record<string, string>>;
-    /** make the Daytona sandbox ephemeral so stopping it deletes it */
+    /** make the Daytona sandbox ephemeral; Daytona forces autoDeleteInterval to 0 */
     ephemeral?: boolean;
     /** image name or Daytona Image used to create the sandbox */
     image?: string | Image;
@@ -75,7 +75,7 @@ export type Daytona = DaytonaConfig &
     labels?: Readonly<Record<string, string>>;
     /** Daytona code language label for created sandboxes */
     language?: CodeLanguage | string;
-    /** existing ephemeral sandbox id or name used for runner co-location */
+    /** existing ephemeral sandbox id or name used for runner co-location; requires ephemeral: true */
     linkedSandbox?: string;
     /** stable Daytona sandbox name used when create input omits id */
     name?: string;
@@ -248,7 +248,29 @@ const streams = (): Readonly<{
   };
 };
 
+const lifecycle = (
+  name: "autoArchiveInterval" | "autoStopInterval",
+  value: number | undefined
+): void => {
+  if (value !== undefined && (!Number.isInteger(value) || value < 0)) {
+    throw sandboxError(
+      provider,
+      `${name} must be a non-negative integer`,
+      "configuration"
+    );
+  }
+};
+
 const validate = (options: Daytona): void => {
+  lifecycle("autoArchiveInterval", options.autoArchiveInterval);
+  lifecycle("autoStopInterval", options.autoStopInterval);
+  if (options.linkedSandbox !== undefined && options.ephemeral !== true) {
+    throw sandboxError(
+      provider,
+      "linkedSandbox requires ephemeral: true",
+      "configuration"
+    );
+  }
   const apiKey = first(options.apiKey, env("DAYTONA_API_KEY"));
   const jwtToken = first(options.jwtToken, env("DAYTONA_JWT_TOKEN"));
   const organizationId = first(

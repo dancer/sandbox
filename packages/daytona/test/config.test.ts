@@ -206,6 +206,60 @@ test("daytona rejects invalid create timeouts before provider calls", async () =
   }
 });
 
+test("daytona validates lifecycle options before provider calls", async () => {
+  type Client = InstanceType<typeof DaytonaClient>;
+  type Create = Client["create"];
+
+  const client = DaytonaClient.prototype as Client;
+  const original = client.create;
+  let called = false;
+
+  client.create = (() => {
+    called = true;
+    return Promise.reject(new Error("provider called"));
+  }) as Create;
+
+  try {
+    const invalid = [
+      {
+        message: "autoStopInterval must be a non-negative integer",
+        options: { autoStopInterval: -1 },
+      },
+      {
+        message: "autoStopInterval must be a non-negative integer",
+        options: { autoStopInterval: 1.5 },
+      },
+      {
+        message: "autoArchiveInterval must be a non-negative integer",
+        options: { autoArchiveInterval: -1 },
+      },
+      {
+        message: "autoArchiveInterval must be a non-negative integer",
+        options: { autoArchiveInterval: 1.5 },
+      },
+      {
+        message: "linkedSandbox requires ephemeral: true",
+        options: { linkedSandbox: "source-sandbox" },
+      },
+    ] as const;
+
+    for (const { message, options } of invalid) {
+      await expect(
+        create({
+          adapter: daytona({ apiKey: "key", ...options }),
+        })
+      ).rejects.toMatchObject({
+        code: "configuration",
+        message,
+        provider: "daytona",
+      });
+    }
+    expect(called).toBe(false);
+  } finally {
+    client.create = original;
+  }
+});
+
 test("daytona cleans up a created sandbox when workspace setup fails", async () => {
   type Client = InstanceType<typeof DaytonaClient>;
   type Create = Client["create"];
