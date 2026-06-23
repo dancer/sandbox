@@ -64,6 +64,7 @@ export type Blaxel = Readonly<
       | "network"
       | "ports"
       | "region"
+      | "snapshotEnabled"
       | "ttl"
       | "volumes"
     >;

@@ -464,6 +464,7 @@ test("blaxel maps create options and normalized operations", async () => {
         },
         ports: [3000],
         safe: true,
+        snapshotEnabled: true,
         volumes: [{ mountPath: "/cache", name: "cache", readOnly: true }],
         workspace: "workspace",
       }),
@@ -495,6 +496,7 @@ test("blaxel maps create options and normalized operations", async () => {
         },
       },
       ports: [{ protocol: "HTTP", target: 8080 }],
+      snapshotEnabled: true,
       ttl: "5s",
       volumes: [{ mountPath: "/cache", name: "cache", readOnly: true }],
     });
