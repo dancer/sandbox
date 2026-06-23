@@ -1,5 +1,4 @@
 import type {
-  AgentSandbox,
   AisdkOptions,
   BinaryFileWrite,
   Command,
@@ -23,7 +22,6 @@ import type {
   SandboxProcess,
   SandboxSession,
   Schema,
-  SchemaResult,
   TextFile,
   TextFileWrite,
   TextResult,
@@ -132,7 +130,6 @@ import type {
 
 export type EntrypointTypes = Readonly<{
   adapter: Adapter;
-  agentSandbox: AgentSandbox;
   aiBinaryFileWrite: BinaryFileWrite;
   aiCommand: Command;
   aiCommandResult: CommandResult;
@@ -155,7 +152,6 @@ export type EntrypointTypes = Readonly<{
   aiSandboxProcess: SandboxProcess;
   aiSandboxSession: SandboxSession;
   aiSchema: Schema;
-  aiSchemaResult: SchemaResult;
   aiTextFile: TextFile;
   aiTextFileWrite: TextFileWrite;
   aiTextResult: TextResult;

@@ -1048,14 +1048,6 @@ export type Schema<Input = unknown> = Readonly<{
 }>;
 ```
 
-#### `SchemaResult`
-
-result returned when the AI SDK resolves a schema
-
-```ts
-export type SchemaResult<Input = unknown> = Schema<Input>;
-```
-
 #### `Tool`
 
 provider-agnostic tool shape compatible with supported AI SDK versions
@@ -1260,14 +1252,6 @@ export type NetworkSandboxSession<Raw = unknown> = SandboxSession &
     /** return the bare AI SDK sandbox session without host-owned infrastructure */
     restricted(): SandboxSession;
   }>;
-```
-
-#### `AgentSandbox`
-
-compatibility alias for older sandbox-sdk consumers
-
-```ts
-export type AgentSandbox = SandboxSession;
 ```
 
 #### `SandboxProcess`
@@ -2954,12 +2938,4 @@ Vercel does not persist arbitrary snapshot names, so call `snapshots.create()` w
 
 ```ts
 export declare const vercel: (options?: Vercel) => Adapter<Raw>;
-```
-
-#### `vercelSandbox`
-
-alias for users who prefer the explicit provider name
-
-```ts
-export declare const vercelSandbox: (options?: Vercel) => Adapter<Raw>;
 ```

@@ -1061,6 +1061,3 @@ export const vercel = (options: Vercel = {}): Adapter<Raw> => ({
   },
   provider,
 });
-
-/** alias for users who prefer the explicit provider name */
-export const vercelSandbox = vercel;

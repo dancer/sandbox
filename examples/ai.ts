@@ -6,7 +6,6 @@ import type {
   Preview,
   PreviewResult,
   Schema,
-  SchemaResult,
   Tool,
 } from "@sandbox-sdk/ai";
 import { claude } from "@sandbox-sdk/ai/claude";
@@ -48,5 +47,4 @@ export type AiTypes = Readonly<{
   preview: Preview;
   previewResult: PreviewResult;
   schema: Schema<Exec>;
-  schemaResult: SchemaResult<Exec>;
 }>;

@@ -50,7 +50,6 @@ import {
   VercelCommandFinished,
   VercelFileSystem,
   VercelSandbox,
-  vercelSandbox,
   VercelSession,
   VercelSnapshot,
   VercelStreamError,
@@ -114,5 +113,4 @@ test("packages expose stable entrypoints", () => {
   for (const entrypoint of Object.values(entrypoints)) {
     expect(typeof entrypoint).toBe("function");
   }
-  expect(vercelSandbox).toBe(vercel);
 });

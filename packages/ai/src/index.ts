@@ -49,9 +49,6 @@ export type Schema<Input = unknown> = Readonly<{
   }>;
 }>;
 
-/** result returned when the AI SDK resolves a schema */
-export type SchemaResult<Input = unknown> = Schema<Input>;
-
 /** provider-agnostic tool shape compatible with supported AI SDK versions */
 export type Tool<Input, Output> = Readonly<{
   /** prompt-facing tool description */
@@ -217,9 +214,6 @@ export type NetworkSandboxSession<Raw = unknown> = SandboxSession &
     /** return the bare AI SDK sandbox session without host-owned infrastructure */
     restricted(): SandboxSession;
   }>;
-
-/** compatibility alias for older sandbox-sdk consumers */
-export type AgentSandbox = SandboxSession;
 
 /**
  * streaming process handle compatible with the current AI SDK sandbox contract
