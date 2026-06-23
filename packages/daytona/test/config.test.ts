@@ -60,6 +60,20 @@ test("daytona reports incomplete jwt config", async () => {
   });
 });
 
+test("daytona rejects the deprecated serverUrl option", async () => {
+  await expect(
+    create({
+      adapter: Reflect.apply(daytona, undefined, [
+        { serverUrl: "https://daytona.example.com" },
+      ]),
+    })
+  ).rejects.toMatchObject({
+    code: "configuration",
+    message: "Daytona serverUrl is not supported. Use apiUrl.",
+    provider: "daytona",
+  });
+});
+
 test("daytona accepts api key config without target", async () => {
   type Client = InstanceType<typeof DaytonaClient>;
   type Create = Client["create"];

@@ -53,7 +53,7 @@ import type {
 export type DaytonaRaw = DaytonaSandbox;
 
 /** Daytona adapter configuration */
-export type Daytona = DaytonaConfig &
+export type Daytona = Omit<DaytonaConfig, "serverUrl"> &
   Readonly<{
     /** archive a stopped sandbox after this many minutes; Daytona requires a non-negative integer */
     autoArchiveInterval?: number;
@@ -261,6 +261,13 @@ const lifecycle = (
 };
 
 const validate = (options: Daytona): void => {
+  if ("serverUrl" in options) {
+    throw sandboxError(
+      provider,
+      "Daytona serverUrl is not supported. Use apiUrl.",
+      "configuration"
+    );
+  }
   lifecycle("autoArchiveInterval", options.autoArchiveInterval);
   lifecycle("autoStopInterval", options.autoStopInterval);
   if (
@@ -323,7 +330,6 @@ const config = (options: Daytona): DaytonaConfig => {
     ...(options.otelEnabled === undefined
       ? {}
       : { otelEnabled: options.otelEnabled }),
-    ...(present(options.serverUrl) ? { serverUrl: options.serverUrl } : {}),
     ...(target === undefined ? {} : { target }),
     ...(options._experimental === undefined
       ? {}

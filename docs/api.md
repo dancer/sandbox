@@ -2464,7 +2464,7 @@ export type DaytonaRaw = DaytonaSandbox;
 Daytona adapter configuration
 
 ```ts
-export type Daytona = DaytonaConfig &
+export type Daytona = Omit<DaytonaConfig, "serverUrl"> &
   Readonly<{
     /** archive a stopped sandbox after this many minutes; Daytona requires a non-negative integer */
     autoArchiveInterval?: number;
