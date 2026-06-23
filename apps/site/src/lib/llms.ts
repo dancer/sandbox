@@ -3,7 +3,7 @@ export const site = {
   github: "https://github.com/dancer/sandbox",
   name: "Sandbox SDK",
   summary:
-    "One TypeScript API for agent sandboxes. Files, commands, ports, snapshots, and a typed escape hatch, across every major provider.",
+    "One TypeScript API for agent sandboxes. Files, commands, ports, snapshots, and a typed escape hatch across supported providers.",
 } as const;
 
 export type Doc = Readonly<{
