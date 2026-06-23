@@ -267,6 +267,22 @@ const daytonaSnapshotDeleteRow = (context: Context): Row =>
         )
   );
 
+const e2bRow = (context: Context): Row => {
+  if (has("E2B_ACCESS_TOKEN", context)) {
+    return row(
+      "e2b",
+      "bun run verify:e2b",
+      partial("remove E2B_ACCESS_TOKEN and use E2B_API_KEY only")
+    );
+  }
+  return complete(
+    "e2b",
+    "bun run verify:e2b",
+    ["E2B_API_KEY"],
+    has("E2B_API_KEY", context)
+  );
+};
+
 const modalRow = (context: Context): Row => {
   const modalTokens = all(["MODAL_TOKEN_ID", "MODAL_TOKEN_SECRET"], context);
   const modalPartial = any(["MODAL_TOKEN_ID", "MODAL_TOKEN_SECRET"], context);
@@ -336,12 +352,7 @@ const allRows = (context: Context): readonly Row[] => [
     has("CSB_API_KEY", context)
   ),
   daytonaRow(context),
-  complete(
-    "e2b",
-    "bun run verify:e2b",
-    ["E2B_API_KEY", "E2B_ACCESS_TOKEN"],
-    any(["E2B_API_KEY", "E2B_ACCESS_TOKEN"], context)
-  ),
+  e2bRow(context),
   modalRow(context),
   vercelRow(context),
 ];

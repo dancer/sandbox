@@ -11,9 +11,7 @@ import { requestPreview } from "../../../test/preview";
 import { workflow } from "../../../test/workflow";
 import { e2b } from "../src/index";
 
-const enabled = Boolean(
-  process.env.E2B_API_KEY || process.env.E2B_ACCESS_TOKEN
-);
+const enabled = Boolean(process.env.E2B_API_KEY);
 const live = enabled ? test : test.skip;
 
 const withTimeout = async <Value>(

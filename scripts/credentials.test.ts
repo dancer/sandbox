@@ -104,6 +104,29 @@ describe("credentialRows", () => {
     });
   });
 
+  test("requires E2B API keys without legacy access tokens", () => {
+    expect(
+      row("e2b", {
+        E2B_API_KEY: "key",
+      })
+    ).toMatchObject({
+      details: "ready",
+      status: "ready",
+    });
+    expect(
+      row("e2b", {
+        E2B_ACCESS_TOKEN: "legacy",
+      })
+    ).toMatchObject({
+      details: "remove E2B_ACCESS_TOKEN and use E2B_API_KEY only",
+      status: "partial",
+    });
+    expect(row("e2b", {})).toMatchObject({
+      details: "E2B_API_KEY",
+      status: "missing",
+    });
+  });
+
   test("keeps Cloudflare bridge verification opt-in", () => {
     const rows = credentialRows({
       env: {},

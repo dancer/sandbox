@@ -117,7 +117,7 @@ Daytona dev environments via \`@daytona/sdk\`. Spins up a workspace from the giv
 E2B microVM sandboxes via \`e2b\`. Can pin a template at construction and threads writes, commands, ports, and snapshots through the E2B SDK. E2B snapshots capture filesystem and memory state, briefly pausing the source sandbox and dropping active command, PTY, and WebSocket connections. Use the shared \`snapshot\` create option to start a fresh sandbox from a snapshot id. Named snapshots return E2B's persisted canonical name, which can include a namespace and tag. \`ports.expose()\` returns E2B's derived HTTP or HTTPS URL. When \`network.allowPublicTraffic\` is false, \`preview.request()\` retains E2B's traffic access header.
 
 - \`template\`, \`apiKey\`, \`apiHeaders\`, \`proxy\`, \`integration\`, \`validateApiKey\`, \`timeout\`.
-- Credentials: \`E2B_API_KEY\` or \`E2B_ACCESS_TOKEN\`.
+- Credentials: \`E2B_API_KEY\`.
 
 ## Modal (@sandbox-sdk/modal)
 

@@ -20,11 +20,66 @@ test("e2b reports missing credentials before provider calls", async () => {
     await expect(create({ adapter: e2b() })).rejects.toMatchObject({
       code: "configuration",
       message:
-        "E2B credentials missing. Set E2B_API_KEY or E2B_ACCESS_TOKEN, or pass apiKey or accessToken to e2b().",
+        "E2B credentials missing. Set E2B_API_KEY or pass apiKey to e2b().",
       provider: "e2b",
     });
   } finally {
     restore("E2B_API_KEY", apiKey);
+    restore("E2B_ACCESS_TOKEN", accessToken);
+  }
+});
+
+test("e2b rejects deprecated access tokens before provider calls", async () => {
+  const original = E2BSandbox.create;
+  let called = false;
+
+  E2BSandbox.create = (() => {
+    called = true;
+    return Promise.reject(new Error("provider called"));
+  }) as typeof E2BSandbox.create;
+
+  try {
+    await expect(
+      create({
+        adapter: Reflect.apply(e2b, undefined, [{ accessToken: "legacy" }]),
+      })
+    ).rejects.toMatchObject({
+      code: "configuration",
+      message:
+        "E2B accessToken is not supported. Remove it and use apiKey or E2B_API_KEY.",
+      provider: "e2b",
+    });
+    expect(called).toBe(false);
+  } finally {
+    E2BSandbox.create = original;
+  }
+});
+
+test("e2b rejects deprecated access token env before provider calls", async () => {
+  const accessToken = process.env.E2B_ACCESS_TOKEN;
+  const original = E2BSandbox.create;
+  let called = false;
+
+  process.env.E2B_ACCESS_TOKEN = "legacy";
+  E2BSandbox.create = (() => {
+    called = true;
+    return Promise.reject(new Error("provider called"));
+  }) as typeof E2BSandbox.create;
+
+  try {
+    await expect(
+      create({
+        adapter: e2b({ apiKey: "key" }),
+      })
+    ).rejects.toMatchObject({
+      code: "configuration",
+      message:
+        "E2B_ACCESS_TOKEN is not supported. Remove it and use E2B_API_KEY.",
+      provider: "e2b",
+    });
+    expect(called).toBe(false);
+  } finally {
+    E2BSandbox.create = original;
     restore("E2B_ACCESS_TOKEN", accessToken);
   }
 });
@@ -81,7 +136,6 @@ test("e2b ignores empty explicit credentials when env credentials exist", async 
     await expect(
       create({
         adapter: e2b({
-          accessToken: "",
           apiKey: "",
         }),
       })

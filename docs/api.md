@@ -2550,8 +2550,6 @@ e2b adapter configuration
 
 ```ts
 export type E2B = Readonly<{
-  /** e2b access token, usually used for template and account operations */
-  accessToken?: string;
   /** additional headers sent to the E2B control plane */
   apiHeaders?: Readonly<Record<string, string>>;
   /** allow outbound internet access for the sandbox */

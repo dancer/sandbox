@@ -41,8 +41,6 @@ export type E2BRaw = E2BSandbox;
 
 /** e2b adapter configuration */
 export type E2B = Readonly<{
-  /** e2b access token, usually used for template and account operations */
-  accessToken?: string;
   /** additional headers sent to the E2B control plane */
   apiHeaders?: Readonly<Record<string, string>>;
   /** allow outbound internet access for the sandbox */
@@ -158,26 +156,35 @@ const validate = (options: E2B): void => {
       "configuration"
     );
   }
-  if (
-    first(options.apiKey, env("E2B_API_KEY")) !== undefined ||
-    first(options.accessToken, env("E2B_ACCESS_TOKEN")) !== undefined
-  ) {
+  if ("accessToken" in options) {
+    throw sandboxError(
+      provider,
+      "E2B accessToken is not supported. Remove it and use apiKey or E2B_API_KEY.",
+      "configuration"
+    );
+  }
+  if (present(env("E2B_ACCESS_TOKEN"))) {
+    throw sandboxError(
+      provider,
+      "E2B_ACCESS_TOKEN is not supported. Remove it and use E2B_API_KEY.",
+      "configuration"
+    );
+  }
+  if (first(options.apiKey, env("E2B_API_KEY")) !== undefined) {
     return;
   }
 
   throw sandboxError(
     provider,
-    "E2B credentials missing. Set E2B_API_KEY or E2B_ACCESS_TOKEN, or pass apiKey or accessToken to e2b().",
+    "E2B credentials missing. Set E2B_API_KEY or pass apiKey to e2b().",
     "configuration"
   );
 };
 
 const connection = (options: E2B): SandboxConnectOpts => {
   const request = duration(options.requestTimeout, provider, "requestTimeout");
-  const accessToken = first(options.accessToken, env("E2B_ACCESS_TOKEN"));
   const apiKey = first(options.apiKey, env("E2B_API_KEY"));
   return {
-    ...(accessToken === undefined ? {} : { accessToken }),
     ...(options.apiHeaders === undefined
       ? {}
       : { apiHeaders: { ...options.apiHeaders } }),

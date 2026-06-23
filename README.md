@@ -461,7 +461,7 @@ CodeSandbox config and replay tests.
 - Cloudflare: deploy `apps/cloudflare` and set `CLOUDFLARE_SANDBOX_WORKER_URL` and `CLOUDFLARE_SANDBOX_TOKEN`
 - CodeSandbox: `CSB_API_KEY`
 - Daytona: `DAYTONA_API_KEY`; include `delete:snapshots` when using `snapshots.delete()`
-- E2B: `E2B_API_KEY` or `E2B_ACCESS_TOKEN`
+- E2B: `E2B_API_KEY`
 - Modal: `MODAL_TOKEN_ID` and `MODAL_TOKEN_SECRET`, or Modal CLI config
 - Vercel: `VERCEL_OIDC_TOKEN`, or `VERCEL_TOKEN`, `VERCEL_TEAM_ID`, and `VERCEL_PROJECT_ID`
 
