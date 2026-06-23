@@ -601,6 +601,49 @@ test("fromSandboxRuntime preserves ports snapshots raw and stop", async () => {
   expect(stopped).toBe(1);
 });
 
+test("fromSandboxRuntime keeps preview headers private", async () => {
+  const server = Bun.serve({
+    fetch: (request) =>
+      request.headers.get("x-preview-token") === "provider-token"
+        ? new Response("ok")
+        : new Response("unauthorized", { status: 401 }),
+    hostname: "127.0.0.1",
+    port: 0,
+  });
+
+  try {
+    const current = fromSandboxRuntime({
+      ...sandbox({ ports: "dynamic" }),
+      files: {
+        exists: () => Promise.reject(new Error("not used")),
+        list: () => Promise.reject(new Error("not used")),
+        mkdir: () => Promise.reject(new Error("not used")),
+        read: () => Promise.reject(new Error("not used")),
+        remove: () => Promise.reject(new Error("not used")),
+        write: () => Promise.reject(new Error("not used")),
+      },
+      ports: {
+        expose: (value) =>
+          Promise.resolve({
+            headers: { "x-preview-token": "provider-token" },
+            port: value,
+            url: `http://127.0.0.1:${server.port}`,
+          }),
+      },
+      process: {},
+    } satisfies SandboxRuntime);
+
+    const endpoint = await current.ports.expose(server.port);
+
+    expect(Object.keys(endpoint)).toEqual(["port", "url"]);
+    expect(JSON.stringify(endpoint)).not.toContain("provider-token");
+    await expect(fetch(endpoint.url)).resolves.toMatchObject({ status: 401 });
+    await expect(endpoint.request()).resolves.toMatchObject({ status: 200 });
+  } finally {
+    server.stop(true);
+  }
+});
+
 test("preview requests same-origin paths without serializing provider access", async () => {
   const server = Bun.serve({
     fetch: (request) => {

@@ -304,6 +304,19 @@ export type Url = Readonly<{
 }>;
 ```
 
+#### `SandboxRuntimePreview`
+
+preview endpoint returned by a low-level adapter before public wrapping
+
+```ts
+export type SandboxRuntimePreview = Readonly<
+  Url & {
+    /** provider headers attached only through `Preview.request()` and never exposed on the public preview object */
+    headers?: Readonly<Record<string, string>>;
+  }
+>;
+```
+
 #### `PreviewOptions`
 
 private provider options used by the `preview()` helper
@@ -484,8 +497,8 @@ preview url contract for low-level provider adapters
 
 ```ts
 export type SandboxRuntimePorts = Readonly<{
-  /** expose a sandbox port and return a serializable provider url */
-  expose(port: number, options?: Port): Promise<Url>;
+  /** expose a sandbox port and keep provider access headers inside the public preview request wrapper */
+  expose(port: number, options?: Port): Promise<SandboxRuntimePreview>;
 }>;
 ```
 

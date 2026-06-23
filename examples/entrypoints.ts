@@ -93,6 +93,7 @@ import type {
   SandboxRuntimeFiles,
   SandboxRuntimePorts,
   SandboxRuntimeProcess,
+  SandboxRuntimePreview,
   Snapshot,
   Snapshots,
   Spawn,
@@ -222,6 +223,7 @@ export type EntrypointTypes = Readonly<{
   runtimePorts: SandboxRuntimePorts;
   runtimeProcess: SandboxRuntimeProcess;
   runtimeSandbox: SandboxRuntime;
+  runtimePreview: SandboxRuntimePreview;
   snapshot: Snapshot;
   snapshots: Snapshots;
   spawn: Spawn;

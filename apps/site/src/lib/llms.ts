@@ -441,7 +441,7 @@ Use \`SandboxRuntime<Raw>\` with \`fromSandboxRuntime()\` for adapters that can 
 - Implement \`files.read()\` as \`ReadableStream<Uint8Array>\` when the provider exposes a native stream. The helper derives \`files.read()\`, \`files.text()\`, and \`files.stream()\` from that stream. When an SDK only returns a complete file, advertise \`fileStreaming: "buffered"\` rather than implying incremental delivery.
 - Resolve relative paths before calling low-level file methods when the provider needs a concrete working directory. \`fromSandboxRuntime()\` preserves runtime paths unchanged; \`sandboxPath(cwd, path)\` is the shared resolver, not a security boundary.
 - Provide direct bounded \`process.exec()\` and \`process.shell()\` results when the provider has one-shot command APIs. Provide \`spawn()\` and \`spawnShell()\` only when the provider can return a real \`Running\` handle with output, a final result, and lifecycle-safe \`kill()\` behavior.
-- Return only serializable URLs from low-level \`ports.expose()\`. Adapters with provider-authenticated previews should create the higher-level preview directly so authorization headers remain private.
+- Return a serializable URL from low-level \`ports.expose()\`, with optional provider headers when preview access requires them. \`fromSandboxRuntime()\` keeps those headers inside the public non-enumerable \`Preview.request()\` wrapper, so they never appear in preview URLs or serialized data.
 - Expose the native client as \`raw\` with its actual provider type. Do not erase it to \`unknown\` or accept arbitrary structural test doubles as a public raw client.
 
 ## Advertise capability truthfully
@@ -485,7 +485,7 @@ Every method lives on the \`Sandbox\` instance returned by \`create()\`. The uni
 - \`fromSandboxRuntime(runtime)\` lifts a low-level \`SandboxRuntime\` into the public \`Sandbox\` API, deriving \`files.text()\` and \`files.read()\` from streams. Adapters can provide direct bounded \`process.exec()\` and \`process.shell()\` results, or provide stream-first spawn handles and let the helper derive those one-shot methods.
 - Read the complete adapter-authoring guide at https://sandbox-sdk.sh/adapter-authoring.md.
 
-Core types include \`Sandbox\`, \`Capabilities\`, \`Capability\`, \`Mode\`, \`Files\`, \`Process\`, \`Running\`, \`Ports\`, \`Snapshots\`, \`Result\`, \`Entry\`, \`Input\`, \`Options\`, \`Adapter\`, \`SandboxRuntime\`, and \`Code\`.`;
+Core types include \`Sandbox\`, \`Capabilities\`, \`Capability\`, \`Mode\`, \`Files\`, \`Process\`, \`Running\`, \`Ports\`, \`Snapshots\`, \`Result\`, \`Entry\`, \`Input\`, \`Options\`, \`Adapter\`, \`SandboxRuntime\`, \`SandboxRuntimePreview\`, and \`Code\`.`;
 
 export const docs: readonly Doc[] = [
   {

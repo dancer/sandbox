@@ -68,6 +68,9 @@ low-level shape first:
 - let `fromSandboxRuntime()` derive `files.text()`, `files.read()`,
   `process.exec()`, and `process.shell()` from stream-first spawn methods when
   direct results are unavailable
+- return provider preview headers through `SandboxRuntimePorts.expose()` so
+  `Preview.request()` can authenticate without serializing credentials into the
+  preview URL or public object
 
 If a low-level process result already includes `stdout` or `stderr`, the core
 helper preserves those fields. It only falls back to buffered process output

@@ -43,6 +43,7 @@ export type {
   SandboxRuntimeFiles,
   SandboxRuntimeProcess,
   SandboxRuntimePorts,
+  SandboxRuntimePreview,
   SandboxRuntime,
   Snapshot,
   Snapshots,
@@ -543,7 +544,10 @@ export const fromSandboxRuntime = <Raw = unknown>(
       const exposed = await guarded(input, "ports", "ports.expose", () =>
         input.ports.expose(port(value, input.provider), options)
       );
-      return preview(exposed.url, exposed.port, { provider: input.provider });
+      return preview(exposed.url, exposed.port, {
+        ...(exposed.headers === undefined ? {} : { headers: exposed.headers }),
+        provider: input.provider,
+      });
     },
   },
   process: {
