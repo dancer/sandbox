@@ -272,3 +272,9 @@ test("verification commands load credentials explicitly", () => {
     expect(command).toContain("--env-file=.env.local");
   }
 });
+
+test("daytona snapshot deletion verification targets one destructive test", () => {
+  expect(manifest.scripts["verify:daytona:snapshot-delete"]).toContain(
+    "--test-name-pattern 'daytona deletes a durable snapshot'"
+  );
+});
