@@ -1232,10 +1232,6 @@ export type SandboxSession = Readonly<{
   writeBinaryFile(input: BinaryFileWrite): PromiseLike<void>;
   /** write one text file */
   writeTextFile(input: TextFileWrite): PromiseLike<void>;
-  /** compatibility alias for older integrations that expect `executeCommand` */
-  executeCommand(input: Command): Promise<CommandResult>;
-  /** compatibility alias for older integrations that expect `runCommand` */
-  runCommand(input: Command): PromiseLike<CommandResult>;
 }>;
 ```
 

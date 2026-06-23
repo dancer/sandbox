@@ -189,30 +189,14 @@ test("tools expose an ai sdk sandbox shape", async () => {
     env: { SANDBOX_VALUE: "ai" },
     workingDirectory: "/workspace",
   });
-  const command = await kit.sandbox.runCommand({
-    command: "printf run",
-    workingDirectory: "/workspace",
-  });
-  const compatibility = await kit.sandbox.executeCommand({
-    command: "printf compat",
-    workingDirectory: "/workspace",
-  });
 
   expect(output).toEqual({
     exitCode: 0,
     stderr: "",
     stdout: "ai",
   });
-  expect(command).toEqual({
-    exitCode: 0,
-    stderr: "",
-    stdout: "run",
-  });
-  expect(compatibility).toEqual({
-    exitCode: 0,
-    stderr: "",
-    stdout: "compat",
-  });
+  expect("executeCommand" in kit.sandbox).toBe(false);
+  expect("runCommand" in kit.sandbox).toBe(false);
   expect(ai).toEqual({
     experimental_sandbox: kit.sandbox,
     instructions: kit.description,
@@ -885,13 +869,13 @@ test("agent command execution uses exec policy", async () => {
   });
 
   await expect(
-    kit.sandbox.executeCommand({
+    kit.sandbox.run({
       command: "printf blocked",
       workingDirectory: "/workspace",
     })
   ).rejects.toThrow("agent blocked");
 
-  const output = await kit.sandbox.executeCommand({
+  const output = await kit.sandbox.run({
     command: "printf allowed",
     workingDirectory: "/workspace",
   });
