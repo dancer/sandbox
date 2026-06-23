@@ -296,6 +296,26 @@ test("cloudflare enables configured R2 backup snapshots", async () => {
   }
 });
 
+test("cloudflare preserves an explicit false useGitignore option", async () => {
+  backupSeen = undefined;
+  const sandbox = await create({
+    adapter: cloudflare({
+      backups: { useGitignore: false },
+      binding,
+    }),
+  });
+
+  try {
+    await sandbox.snapshots.create();
+    expect(backupSeen).toMatchObject({
+      dir: "/workspace",
+      gitignore: false,
+    });
+  } finally {
+    await sandbox.stop();
+  }
+});
+
 test("cloudflare rejects the legacy native backup gitignore option", async () => {
   getSeen = undefined;
   await expect(
