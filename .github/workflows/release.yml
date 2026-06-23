@@ -40,4 +40,4 @@ jobs:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: update production branch
         if: steps.changesets.outputs.published == 'true'
-        run: git push origin HEAD:production --force
+        run: git push origin HEAD:production

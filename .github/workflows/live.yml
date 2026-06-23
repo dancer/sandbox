@@ -26,7 +26,6 @@ jobs:
           CLOUDFLARE_SANDBOX_WORKER_URL: ${{ secrets.CLOUDFLARE_SANDBOX_WORKER_URL }}
           CSB_API_KEY: ${{ secrets.CSB_API_KEY }}
           DAYTONA_API_KEY: ${{ secrets.DAYTONA_API_KEY }}
-          E2B_ACCESS_TOKEN: ${{ secrets.E2B_ACCESS_TOKEN }}
           E2B_API_KEY: ${{ secrets.E2B_API_KEY }}
           MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
           MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
