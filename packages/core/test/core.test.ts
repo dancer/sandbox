@@ -943,6 +943,27 @@ test("timeout exposes an abort signal and clear hook", async () => {
   deadline.clear();
 });
 
+test("timeout follows an already aborted parent signal", () => {
+  const parent = new AbortController();
+  parent.abort("cancelled");
+
+  const deadline = timeout(60_000, parent.signal);
+
+  expect(deadline.signal?.aborted).toBe(true);
+  expect(deadline.aborted()).toBe(false);
+  deadline.clear();
+});
+
+test("timeout stops observing a parent signal after clear", () => {
+  const parent = new AbortController();
+  const deadline = timeout(60_000, parent.signal);
+
+  deadline.clear();
+  parent.abort();
+
+  expect(deadline.signal?.aborted).toBe(false);
+});
+
 test("timeout rejects invalid duration values", () => {
   expect(() => timeout(-1, undefined, "test")).toThrow(SandboxError);
   try {

@@ -648,22 +648,26 @@ export const timeout = (
 
   let aborted = false;
   const controller = new AbortController();
+  const cancel = (): void => {
+    aborted = false;
+    controller.abort(signal?.reason);
+  };
   const timer: Timer = setTimeout(() => {
     aborted = true;
     controller.abort();
   }, delay);
-  signal?.addEventListener(
-    "abort",
-    () => {
-      aborted = false;
-      controller.abort();
-    },
-    { once: true }
-  );
+  if (signal?.aborted) {
+    cancel();
+  } else {
+    signal?.addEventListener("abort", cancel, { once: true });
+  }
 
   return {
     aborted: () => aborted,
-    clear: () => clearTimeout(timer),
+    clear: () => {
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", cancel);
+    },
     signal: controller.signal,
   };
 };

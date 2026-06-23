@@ -738,6 +738,12 @@ const parent = (path: string): string | undefined => {
   return directory === "." || directory === "/" ? undefined : directory;
 };
 
+const check = (signal?: AbortSignal): void => {
+  if (signal?.aborted) {
+    abort(provider, signal.reason);
+  }
+};
+
 const execute = async (
   raw: Raw,
   cwd: string,
@@ -746,6 +752,7 @@ const execute = async (
   args: readonly string[],
   options: Exec
 ): Promise<Result> => {
+  check(options.signal);
   const deadline = timeout(options.timeout, options.signal, provider);
   const signals =
     deadline.signal === undefined ? {} : { signal: deadline.signal };
@@ -820,6 +827,7 @@ const spawn = async (
   args: readonly string[],
   options: Exec
 ): Promise<Running> => {
+  check(options.signal);
   const deadline = timeout(options.timeout, options.signal, provider);
   const signals =
     deadline.signal === undefined ? {} : { signal: deadline.signal };

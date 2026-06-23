@@ -686,6 +686,53 @@ test("vercel forwards execution timeouts to the provider", async () => {
   }
 });
 
+test("vercel rejects already aborted commands before provider calls", async () => {
+  const original = VercelSandbox.create;
+  let calls = 0;
+  const raw = {
+    fs: {
+      mkdir: () => Promise.resolve(),
+    },
+    name: "sandbox",
+    runCommand: () => {
+      calls += 1;
+      return Promise.reject(new Error("provider called"));
+    },
+    stop: () => Promise.resolve(),
+  } as unknown as VercelSandbox;
+  const controller = new AbortController();
+  controller.abort("cancelled");
+
+  VercelSandbox.create = (() =>
+    Promise.resolve(raw)) as typeof VercelSandbox.create;
+
+  try {
+    const sandbox = await create({
+      adapter: vercel({
+        projectId: "project",
+        teamId: "team",
+        token: "token",
+      }),
+    });
+
+    await expect(
+      sandbox.process.exec("echo", ["hello"], { signal: controller.signal })
+    ).rejects.toMatchObject({
+      code: "aborted",
+      provider: "vercel",
+    });
+    await expect(
+      sandbox.process.spawn("echo", ["hello"], { signal: controller.signal })
+    ).rejects.toMatchObject({
+      code: "aborted",
+      provider: "vercel",
+    });
+    expect(calls).toBe(0);
+  } finally {
+    VercelSandbox.create = original;
+  }
+});
+
 test("vercel exposes separate process streams", async () => {
   const original = VercelSandbox.create;
   const raw = {
