@@ -10,3 +10,5 @@ package releases at the same version
 
 production docs should deploy from the `production` branch, not from `main`
 the release workflow updates `production` only after packages publish
+
+run `bun run verify` before opening or merging the version pull request

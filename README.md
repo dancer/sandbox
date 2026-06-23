@@ -430,10 +430,14 @@ bun run docs:api
 ```bash
 bun run verify:env
 bun run test
+bun run verify
 bun run verify:providers
 bun run verify:e2b
 bun run verify:daytona:snapshot-delete
 ```
+
+`bun run verify` is the deterministic release gate. It runs tests, generated
+API docs, linting, typechecking, package dry-runs, and the production build.
 
 The default test suite never loads `.env.local`, even when it exists. It covers
 core behavior, the local adapter, AI tool execution, package exports, config

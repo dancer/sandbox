@@ -408,6 +408,8 @@ bun run verify:env
 
 bun run test
 
+bun run verify
+
 # run the full live suite across every provider
 bun run verify:providers
 
