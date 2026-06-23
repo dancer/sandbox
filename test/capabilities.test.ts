@@ -68,7 +68,6 @@ test("adapters expose capability-honest feature modes", () => {
     snapshotDelete: true,
     snapshotRestore: "disk",
     snapshotSource: "create-time",
-    snapshots: "disk",
   });
 
   expect(

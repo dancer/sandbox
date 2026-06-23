@@ -27,7 +27,6 @@ export type Capability =
   | "snapshotDelete"
   | "snapshotRestore"
   | "snapshotSource"
-  | "snapshots"
   | "streaming";
 ```
 
@@ -111,8 +110,6 @@ export type CapabilityModes = Readonly<{
   snapshotRestore: boolean | "disk" | "filesystem" | "memory" | "volume";
   /** fresh sandbox creation from a snapshot behavior */
   snapshotSource: boolean | "create-time";
-  /** normalized snapshot namespace support */
-  snapshots: boolean | "disk" | "filesystem" | "memory" | "volume";
   /** background process output stream behavior */
   streaming: boolean | "combined" | "separate";
 }>;

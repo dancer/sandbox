@@ -264,7 +264,6 @@ export const bridgeCapabilities: Capabilities = {
   snapshotCreate: false,
   snapshotDelete: false,
   snapshotRestore: false,
-  snapshots: false,
   streaming: "separate",
 };
 

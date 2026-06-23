@@ -260,7 +260,6 @@ const capabilities: Capabilities = {
   snapshotDelete: true,
   snapshotRestore: "disk",
   snapshotSource: "create-time",
-  snapshots: "disk",
   streaming: "separate",
 };
 

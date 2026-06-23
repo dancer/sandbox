@@ -73,6 +73,7 @@ export type CapabilityTypeChecks = Readonly<{
   processSpawn: Assert<
     Equal<Extract<Capabilities["processSpawn"], "combined">, never>
   >;
+  snapshotAggregate: Assert<Equal<Extract<Capability, "snapshots">, never>>;
   streaming: Assert<
     Equal<Extract<Capabilities["streaming"], "combined">, "combined">
   >;

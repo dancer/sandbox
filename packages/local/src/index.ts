@@ -497,7 +497,6 @@ export const local = (options: Local = {}): Adapter<Raw> => ({
     snapshotCreate: "filesystem",
     snapshotDelete: true,
     snapshotRestore: "filesystem",
-    snapshots: "filesystem",
     streaming: "separate",
   },
   async create(input = {}) {

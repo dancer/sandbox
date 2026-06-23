@@ -43,7 +43,6 @@ const workflow: Workflow = {
     snapshotDelete: true,
     snapshotRestore: false,
     snapshotSource: "create-time",
-    snapshots: false,
     streaming: "separate",
   },
   content: "hello from e2b",

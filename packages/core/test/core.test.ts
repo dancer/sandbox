@@ -765,7 +765,6 @@ test("capability helpers handle boolean and mode capabilities", () => {
     snapshotDelete: true,
     snapshotRestore: false,
     snapshotSource: "create-time",
-    snapshots: false,
   });
 
   expect(supports(current, "files")).toBe(true);
@@ -779,7 +778,6 @@ test("capability helpers handle boolean and mode capabilities", () => {
   expect(supports(current, "snapshotDelete")).toBe(true);
   expect(supports(current, "snapshotRestore")).toBe(false);
   expect(supports(current, "snapshotSource")).toBe(true);
-  expect(supports(current, "snapshots")).toBe(false);
   expect(supportsRaw(current, "desktop")).toBe(true);
   expect(rawCapabilityMode(current, "desktop")).toBe(true);
   expect(requireRawCapability(current, "desktop")).toBe(true);

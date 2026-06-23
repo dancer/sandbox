@@ -37,7 +37,6 @@ const workflow: Workflow = {
     snapshotDelete: false,
     snapshotRestore: false,
     snapshotSource: false,
-    snapshots: false,
     streaming: "separate",
   },
   content: "hello from blaxel",

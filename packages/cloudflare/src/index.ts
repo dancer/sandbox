@@ -134,7 +134,6 @@ const capabilities = (backups: boolean): Capabilities => ({
   snapshotCreate: backups ? "filesystem" : false,
   snapshotDelete: false,
   snapshotRestore: backups ? "filesystem" : false,
-  snapshots: backups ? "filesystem" : false,
   streaming: "separate",
 });
 

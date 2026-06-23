@@ -112,7 +112,6 @@ const capabilities: Capabilities = {
   snapshotDelete: false,
   snapshotRestore: false,
   snapshotSource: "create-time",
-  snapshots: false,
   streaming: "combined",
 };
 

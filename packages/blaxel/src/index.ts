@@ -73,7 +73,6 @@ const capabilities: Capabilities = {
   snapshotDelete: false,
   snapshotRestore: false,
   snapshotSource: false,
-  snapshots: false,
   streaming: "separate",
 };
 

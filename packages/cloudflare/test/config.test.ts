@@ -183,7 +183,6 @@ test("cloudflare maps create options before provider calls", async () => {
       snapshotCreate: false,
       snapshotDelete: false,
       snapshotRestore: false,
-      snapshots: false,
     });
     expect(getSeen).toEqual([
       binding,
@@ -265,7 +264,6 @@ test("cloudflare enables configured R2 backup snapshots", async () => {
       snapshotCreate: "filesystem",
       snapshotDelete: false,
       snapshotRestore: "filesystem",
-      snapshots: "filesystem",
     });
     const snapshot = await sandbox.snapshots.create("before-upgrade");
     expect(snapshot).toEqual({

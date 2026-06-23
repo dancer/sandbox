@@ -17,7 +17,6 @@ const source: Source = {
     snapshotDelete: true,
     snapshotRestore: false,
     snapshotSource: "create-time",
-    snapshots: false,
     streaming: "separate",
   },
   file: {
