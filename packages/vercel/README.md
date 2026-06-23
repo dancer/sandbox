@@ -20,9 +20,10 @@ await withSandbox(
 );
 ```
 
-Pass `token`, `teamId`, and `projectId`, or use `VERCEL_OIDC_TOKEN`. Typed
-native controls such as network policy, sessions, snapshots, and forks remain
-available through `sandbox.raw`.
+Pass `token`, `teamId`, and `projectId` for explicit authentication. When they
+are absent, the adapter uses `VERCEL_OIDC_TOKEN`. Typed native controls such as
+network policy, sessions, snapshots, and forks remain available through
+`sandbox.raw`.
 
 Read the [Vercel adapter documentation](https://sandbox-sdk.sh/adapters.md).
 

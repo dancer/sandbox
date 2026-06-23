@@ -273,6 +273,34 @@ test("verification commands load credentials explicitly", () => {
   }
 });
 
+test("live workflow uses durable Vercel credentials", () => {
+  const dollar = "$";
+  const continuous = readFileSync(
+    resolve(root, ".github/workflows/ci.yml"),
+    "utf-8"
+  );
+  const workflow = readFileSync(
+    resolve(root, ".github/workflows/live.yml"),
+    "utf-8"
+  );
+
+  expect(continuous).toContain("permissions:\n  contents: read");
+  expect(workflow).toContain("permissions:\n  contents: read");
+  expect(workflow).toContain(
+    "concurrency:\n  group: live-provider-verification\n  cancel-in-progress: false"
+  );
+  expect(workflow).toContain(
+    `VERCEL_TOKEN: ${dollar}{{ secrets.VERCEL_TOKEN }}`
+  );
+  expect(workflow).toContain(
+    `VERCEL_TEAM_ID: ${dollar}{{ secrets.VERCEL_TEAM_ID }}`
+  );
+  expect(workflow).toContain(
+    `VERCEL_PROJECT_ID: ${dollar}{{ secrets.VERCEL_PROJECT_ID }}`
+  );
+  expect(workflow).not.toContain("VERCEL_OIDC_TOKEN:");
+});
+
 test("daytona snapshot deletion verification targets one destructive test", () => {
   expect(manifest.scripts["verify:daytona:snapshot-delete"]).toContain(
     "--test-name-pattern 'daytona deletes a durable snapshot'"

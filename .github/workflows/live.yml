@@ -3,6 +3,13 @@ name: live
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: live-provider-verification
+  cancel-in-progress: false
+
 jobs:
   providers:
     runs-on: ubuntu-latest
@@ -29,7 +36,6 @@ jobs:
           E2B_API_KEY: ${{ secrets.E2B_API_KEY }}
           MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
           MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
-          VERCEL_OIDC_TOKEN: ${{ secrets.VERCEL_OIDC_TOKEN }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
           VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}

@@ -131,7 +131,7 @@ Modal sandboxes via \`modal\`. Creates sandboxes inside a Modal app, maps file r
 Vercel via \`@vercel/sandbox\`. Backed by Fluid Compute: named, persistent microVMs with snapshots, dynamic ports, network policy, sessions, interactive PTY connections, and provider-native lifecycle controls. Use \`snapshot\` to start from a snapshot id, or \`snapshots.restore()\` to point the current named sandbox at a snapshot. Use \`fork\` to start from a named source sandbox after stopping or snapshotting it when the fork needs its filesystem. Fork inherits the source runtime and cannot be combined with \`runtime\`, \`source\`, \`getOrCreate\`, or create input \`id\`, \`snapshot\`, or \`template\`.
 
 - \`runtime\` (\`node26\`, \`node24\`, \`node22\`, \`python3.13\`), \`name\`, \`getOrCreate\`, \`fork\`, \`teamId\`, \`projectId\`, \`token\`, \`ports\`, \`keepLastSnapshots\`.
-- Credentials: \`VERCEL_OIDC_TOKEN\`, or \`VERCEL_TOKEN\` with team and project ids.`;
+- Credentials: \`VERCEL_TOKEN\` with team and project ids, or \`VERCEL_OIDC_TOKEN\` when access-token configuration is absent.`;
 
 const capabilities = `# Capabilities
 

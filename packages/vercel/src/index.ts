@@ -155,8 +155,8 @@ export type Fork = Readonly<{
 /**
  * Vercel Sandbox adapter configuration
  *
- * authentication uses `VERCEL_OIDC_TOKEN` when present or `token`, `teamId`, and
- * `projectId` together for explicit access-token authentication
+ * authentication prefers `token`, `teamId`, and `projectId`, then falls back to
+ * `VERCEL_OIDC_TOKEN`
  */
 export type Vercel = Readonly<{
   /** default working directory for normalized file and process operations */

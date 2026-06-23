@@ -464,7 +464,7 @@ CodeSandbox config and replay tests.
 - Daytona: `DAYTONA_API_KEY`; include `delete:snapshots` when using `snapshots.delete()`
 - E2B: `E2B_API_KEY`
 - Modal: `MODAL_TOKEN_ID` and `MODAL_TOKEN_SECRET`, or Modal CLI config
-- Vercel: `VERCEL_OIDC_TOKEN`, or `VERCEL_TOKEN`, `VERCEL_TEAM_ID`, and `VERCEL_PROJECT_ID`
+- Vercel: `VERCEL_TOKEN`, `VERCEL_TEAM_ID`, and `VERCEL_PROJECT_ID`, or `VERCEL_OIDC_TOKEN` when the access-token configuration is absent
 
 The default Daytona verifier does not create or delete durable snapshots. To
 verify that destructive path, set `DAYTONA_SNAPSHOT_DELETE_API_KEY` with
