@@ -1,18 +1,14 @@
 import {
   capabilityMode,
   isSandboxError,
+  rawCapabilities,
   requireCapability,
   sandboxError,
   supports,
   supportsRaw,
   unsupported,
 } from "@sandbox-sdk/core";
-import type {
-  RawCapability,
-  Result,
-  Running,
-  Sandbox,
-} from "@sandbox-sdk/core";
+import type { Result, Running, Sandbox } from "@sandbox-sdk/core";
 
 /** json schema payload exposed to the AI SDK */
 export type JsonSchema = Readonly<Record<string, unknown>>;
@@ -698,33 +694,9 @@ const description = (
   maxOutput: number
 ): string => {
   const labels = allowed.length === 0 ? "none" : allowed.join(", ");
-  const raw = (
-    [
-      "backup",
-      "buckets",
-      "codegen",
-      "desktop",
-      "drives",
-      "git",
-      "gpu",
-      "interpreter",
-      "lifecycle",
-      "lsp",
-      "mcp",
-      "metrics",
-      "network",
-      "previews",
-      "pty",
-      "resources",
-      "secrets",
-      "sessions",
-      "ssh",
-      "system",
-      "tunnels",
-      "volumes",
-      "watching",
-    ] as const
-  ).filter((capability: RawCapability) => supportsRaw(sandbox, capability));
+  const raw = rawCapabilities.filter((capability) =>
+    supportsRaw(sandbox, capability)
+  );
   const session = [
     supports(sandbox, "files") ? undefined : "file operations",
     supports(sandbox, "processExec") ? undefined : "command execution",

@@ -733,13 +733,14 @@ test("tools describe provider raw capabilities", async () => {
       ...sandbox.capabilities,
       raw: {
         tunnels: "dynamic",
+        websocket: true,
       },
     },
     provider: "cloudflare",
   });
 
   expect(kit.description).toContain(
-    "Provider-specific raw capabilities: tunnels"
+    "Provider-specific raw capabilities: tunnels, websocket"
   );
 
   await sandbox.stop();

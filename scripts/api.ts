@@ -5,7 +5,7 @@ import * as ts from "typescript";
 
 type Entry = Readonly<{
   docs: Documentation;
-  kind: "classes" | "exports" | "functions" | "types";
+  kind: "classes" | "exports" | "functions" | "types" | "values";
   members: readonly string[];
   name: string;
   signature: string;
@@ -152,7 +152,10 @@ const variable = (
 ): Entry[] =>
   statement.declarationList.declarations.map((item) => ({
     docs: docs(source, statement),
-    kind: "functions",
+    kind:
+      item.type !== undefined && ts.isFunctionTypeNode(item.type)
+        ? "functions"
+        : "values",
     members: [],
     name: ts.isIdentifier(item.name) ? item.name.text : "value",
     signature: code(source, statement),
@@ -398,6 +401,9 @@ const title = (value: Entry["kind"]): string => {
   if (value === "functions") {
     return "functions";
   }
+  if (value === "values") {
+    return "values";
+  }
   if (value === "exports") {
     return "provider exports";
   }
@@ -419,7 +425,7 @@ const validate = (packageName: string, entries: readonly Entry[]): void => {
 };
 
 const render = (entries: readonly Entry[]): string =>
-  (["types", "classes", "functions", "exports"] as const)
+  (["types", "classes", "functions", "values", "exports"] as const)
     .map((kind) => {
       const items = entries.filter((item) => item.kind === kind);
       if (items.length === 0) {

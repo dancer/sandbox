@@ -15,6 +15,7 @@ import {
   portOptions,
   preview,
   rawCapabilityMode,
+  rawCapabilities,
   requireRawCapability,
   requireCapability,
   result,
@@ -788,6 +789,7 @@ test("capability helpers handle boolean and mode capabilities", () => {
   expect(rawCapabilityMode(current, "tunnels")).toBe("dynamic");
   expect(supportsRaw(current, "pty")).toBe(false);
   expect(() => requireRawCapability(current, "pty")).toThrow(SandboxError);
+  expect(rawCapabilities).toContain("websocket");
 });
 
 test("unsupported throws a typed sandbox error", () => {

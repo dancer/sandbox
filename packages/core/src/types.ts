@@ -12,32 +12,36 @@ export type Capability =
   | "snapshotSource"
   | "streaming";
 
+/** provider-specific capability keys available through `sandbox.raw` */
+export const rawCapabilities = [
+  "backup",
+  "buckets",
+  "codegen",
+  "desktop",
+  "drives",
+  "git",
+  "gpu",
+  "interpreter",
+  "lifecycle",
+  "lsp",
+  "mcp",
+  "metrics",
+  "network",
+  "previews",
+  "pty",
+  "resources",
+  "secrets",
+  "sessions",
+  "ssh",
+  "system",
+  "tunnels",
+  "volumes",
+  "watching",
+  "websocket",
+] as const;
+
 /** provider-specific capabilities available through `sandbox.raw` */
-export type RawCapability =
-  | "backup"
-  | "buckets"
-  | "codegen"
-  | "desktop"
-  | "drives"
-  | "git"
-  | "gpu"
-  | "interpreter"
-  | "lifecycle"
-  | "lsp"
-  | "mcp"
-  | "metrics"
-  | "network"
-  | "previews"
-  | "pty"
-  | "resources"
-  | "secrets"
-  | "sessions"
-  | "ssh"
-  | "system"
-  | "tunnels"
-  | "volumes"
-  | "watching"
-  | "websocket";
+export type RawCapability = (typeof rawCapabilities)[number];
 
 /** generic capability mode vocabulary for raw capabilities and custom type composition */
 export type Mode =

@@ -52,6 +52,8 @@ export type {
   Url,
 } from "./types.js";
 
+export { rawCapabilities } from "./types.js";
+
 /**
  * normalized error emitted by public sandbox sdk operations
  *

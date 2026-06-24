@@ -34,31 +34,7 @@ export type Capability =
 provider-specific capabilities available through `sandbox.raw`
 
 ```ts
-export type RawCapability =
-  | "backup"
-  | "buckets"
-  | "codegen"
-  | "desktop"
-  | "drives"
-  | "git"
-  | "gpu"
-  | "interpreter"
-  | "lifecycle"
-  | "lsp"
-  | "mcp"
-  | "metrics"
-  | "network"
-  | "previews"
-  | "pty"
-  | "resources"
-  | "secrets"
-  | "sessions"
-  | "ssh"
-  | "system"
-  | "tunnels"
-  | "volumes"
-  | "watching"
-  | "websocket";
+export type RawCapability = (typeof rawCapabilities)[number];
 ```
 
 #### `Mode`
@@ -938,6 +914,41 @@ export declare const timeout: (
   clear(): void;
   signal?: AbortSignal;
 };
+```
+
+### values
+
+#### `rawCapabilities`
+
+provider-specific capability keys available through `sandbox.raw`
+
+```ts
+export declare const rawCapabilities: readonly [
+  "backup",
+  "buckets",
+  "codegen",
+  "desktop",
+  "drives",
+  "git",
+  "gpu",
+  "interpreter",
+  "lifecycle",
+  "lsp",
+  "mcp",
+  "metrics",
+  "network",
+  "previews",
+  "pty",
+  "resources",
+  "secrets",
+  "sessions",
+  "ssh",
+  "system",
+  "tunnels",
+  "volumes",
+  "watching",
+  "websocket",
+];
 ```
 
 ## @sandbox-sdk/local
