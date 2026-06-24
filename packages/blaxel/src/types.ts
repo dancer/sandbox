@@ -8,6 +8,8 @@ import type {
  * native Blaxel sandbox exposed as `sandbox.raw`
  *
  * use this for provider-specific behavior that does not belong in the normalized contract
+ * client-side session tokens are bearer credentials, so create them on a trusted backend and hand them to a client only when intended
+ * Agent Drive is a private-preview workspace-wide feature, so `drivePath` and `readOnly` mounts are not authorization boundaries for untrusted sandbox code
  */
 export type BlaxelRaw = SandboxInstance;
 

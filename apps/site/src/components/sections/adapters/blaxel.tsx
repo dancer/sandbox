@@ -29,6 +29,14 @@ export const Blaxel = () => (
       <code>BL_CLIENT_CREDENTIALS</code>, <code>BL_WORKSPACE</code>, or the
       Blaxel CLI config.
     </p>
+    <p>
+      Treat native client session tokens as bearer credentials and create them
+      on a trusted backend. Agent Drive is a private-preview workspace-wide
+      feature, so <code>drivePath</code> and <code>readOnly</code> mounts are
+      not authorization boundaries for untrusted sandbox code. Restrict access
+      to the drive identity token and <code>blfs</code> when that boundary
+      matters.
+    </p>
     <CodeBlock code={BLAXEL_EXAMPLE} lang="ts" />
     <div className="flex flex-col gap-2">
       <Heading as="h4" id="adapter-blaxel-options">

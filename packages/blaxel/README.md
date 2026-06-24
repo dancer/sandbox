@@ -26,6 +26,14 @@ drive controls remain available through `sandbox.raw`.
 
 Read the [Blaxel adapter documentation](https://sandbox-sdk.sh/adapters.md).
 
+## Security
+
+Create client-side session tokens on a trusted backend and treat them as bearer
+credentials. Blaxel Agent Drive is currently a workspace-wide preview feature:
+`drivePath` and `readOnly` mounts are not authorization boundaries for
+untrusted sandbox code. Restrict access to the drive identity token and `blfs`
+when an agent must not change drive access.
+
 ## License
 
 MIT
