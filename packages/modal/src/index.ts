@@ -131,7 +131,6 @@ const capabilities: Capabilities = {
   fileStreaming: "buffered",
   files: true,
   ports: "create-time",
-  process: true,
   processExec: true,
   processSpawn: false,
   raw: {

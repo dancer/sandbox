@@ -155,7 +155,7 @@ if (supports(sandbox, "snapshotCreate")) {
 }
 \`\`\`
 
-Normalized capability flags include \`files\`, \`fileStreaming\`, \`process\`, \`processExec\`, \`processSpawn\`, \`ports\`, \`snapshotCreate\`, \`snapshotDelete\`, \`snapshotRestore\`, \`snapshotSource\`, \`environment\`, and \`streaming\`. Provider-specific powers are listed under \`capabilities.raw\` and reached through \`sandbox.raw\`.
+Normalized capability flags include \`files\`, \`fileStreaming\`, \`processExec\`, \`processSpawn\`, \`ports\`, \`snapshotCreate\`, \`snapshotDelete\`, \`snapshotRestore\`, \`snapshotSource\`, \`environment\`, and \`streaming\`. Provider-specific powers are listed under \`capabilities.raw\` and reached through \`sandbox.raw\`.
 
 \`capabilityMode(sandbox, capability)\` returns how a feature works when it exists but has a provider-specific shape, for example \`"disk"\` versus \`"memory"\` snapshots, \`"separate"\` versus \`"combined"\` output streams, or \`"native"\` versus \`"buffered"\` file delivery. The TypeScript map only accepts modes that belong to the named normalized capability, so output shape stays under \`streaming\` rather than \`processSpawn\`. \`sandbox.capabilities\` is the runtime source of truth for a given provider.`;
 

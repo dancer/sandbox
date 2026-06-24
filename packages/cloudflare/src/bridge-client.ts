@@ -252,7 +252,6 @@ export const bridgeCapabilities: Capabilities = {
   fileStreaming: "native",
   files: true,
   ports: "dynamic",
-  process: true,
   processExec: true,
   processSpawn: false,
   raw: {

@@ -26,7 +26,6 @@ test("adapters expose exact capability contracts", () => {
     fileStreaming: "native",
     files: true,
     ports: "derived",
-    process: true,
     processExec: true,
     processSpawn: "separate",
     snapshotCreate: "filesystem",
@@ -40,7 +39,6 @@ test("adapters expose exact capability contracts", () => {
     fileStreaming: "native",
     files: true,
     ports: "derived",
-    process: true,
     processExec: true,
     processSpawn: "separate",
     raw: {
@@ -65,7 +63,6 @@ test("adapters expose exact capability contracts", () => {
     fileStreaming: "native",
     files: true,
     ports: "dynamic",
-    process: true,
     processExec: true,
     processSpawn: "separate",
     raw: {
@@ -93,7 +90,6 @@ test("adapters expose exact capability contracts", () => {
       fileStreaming: "native",
       files: true,
       ports: "dynamic",
-      process: true,
       processExec: true,
       processSpawn: "separate",
       raw: {
@@ -118,7 +114,6 @@ test("adapters expose exact capability contracts", () => {
     fileStreaming: "native",
     files: true,
     ports: "dynamic",
-    process: true,
     processExec: true,
     processSpawn: "separate",
     raw: {
@@ -147,7 +142,6 @@ test("adapters expose exact capability contracts", () => {
     fileStreaming: "buffered",
     files: true,
     ports: "create-time",
-    process: true,
     processExec: true,
     processSpawn: false,
     raw: {
@@ -173,7 +167,6 @@ test("adapters expose exact capability contracts", () => {
     fileStreaming: "buffered",
     files: true,
     ports: "dynamic",
-    process: true,
     processExec: true,
     processSpawn: "separate",
     raw: {
@@ -200,7 +193,6 @@ test("adapters expose exact capability contracts", () => {
     fileStreaming: "buffered",
     files: true,
     ports: "dynamic",
-    process: true,
     processExec: true,
     processSpawn: true,
     raw: {
@@ -229,7 +221,6 @@ test("adapters expose exact capability contracts", () => {
       fileStreaming: "native",
       files: true,
       ports: "dynamic",
-      process: true,
       processExec: true,
       processSpawn: false,
       raw: {
@@ -259,7 +250,6 @@ test("cloudflare snapshots require explicit backup configuration", () => {
       fileStreaming: "native",
       files: true,
       ports: "dynamic",
-      process: true,
       processExec: true,
       processSpawn: "separate",
       raw: {

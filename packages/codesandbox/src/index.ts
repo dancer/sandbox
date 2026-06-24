@@ -97,7 +97,6 @@ const capabilities: Capabilities = {
   fileStreaming: "buffered",
   files: true,
   ports: "dynamic",
-  process: true,
   processExec: true,
   processSpawn: true,
   raw: {

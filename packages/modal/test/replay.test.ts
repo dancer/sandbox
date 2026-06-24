@@ -25,7 +25,6 @@ const capabilities = {
   environment: true,
   files: true,
   ports: "create-time",
-  process: true,
   processExec: true,
   processSpawn: false,
   raw: {

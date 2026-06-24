@@ -118,7 +118,6 @@ const capabilities: Capabilities = {
   fileStreaming: "native",
   files: true,
   ports: "dynamic",
-  process: true,
   processExec: true,
   processSpawn: "separate",
   raw: {

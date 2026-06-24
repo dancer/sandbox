@@ -9,7 +9,6 @@ const source: Source = {
     fileStreaming: "native",
     files: true,
     ports: "derived",
-    process: true,
     processExec: true,
     processSpawn: "separate",
     raw: {},

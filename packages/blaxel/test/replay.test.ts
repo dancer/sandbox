@@ -18,7 +18,6 @@ const workflow: Workflow = {
     environment: true,
     files: true,
     ports: "dynamic",
-    process: true,
     processExec: true,
     processSpawn: "separate",
     raw: {

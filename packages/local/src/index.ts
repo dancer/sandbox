@@ -491,7 +491,6 @@ export const local = (options: Local = {}): Adapter<Raw> => ({
     fileStreaming: "native",
     files: true,
     ports: "derived",
-    process: true,
     processExec: true,
     processSpawn: "separate",
     snapshotCreate: "filesystem",

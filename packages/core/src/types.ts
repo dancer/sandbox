@@ -4,7 +4,6 @@ export type Capability =
   | "files"
   | "fileStreaming"
   | "ports"
-  | "process"
   | "processExec"
   | "processSpawn"
   | "snapshotCreate"
@@ -65,8 +64,6 @@ export type CapabilityModes = Readonly<{
   files: boolean;
   /** preview port exposure behavior */
   ports: boolean | "create-time" | "derived" | "dynamic";
-  /** normalized process namespace support */
-  process: boolean;
   /** one-shot process execution support */
   processExec: boolean;
   /** lifecycle-safe background process support */
