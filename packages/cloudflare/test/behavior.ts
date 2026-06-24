@@ -3,6 +3,9 @@ import { expect } from "bun:test";
 import type { Coverage, PortResult, RawResult, Result } from "./fixture";
 import { portsCoverage, rawCoverage, workflowCoverage } from "./fixture";
 
+const record = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
 export const coverage = (payload: Coverage): void => {
   expect(payload.provider).toBe("cloudflare");
   expect(payload.fixture).toBe("workflow");
@@ -105,13 +108,22 @@ export const raw = ({ body, response }: RawResult): void => {
   expect(body.error).toBeUndefined();
   expect(body.ok).toBe(true);
   expect(body.provider).toBe("cloudflare");
+  const capabilities = body.capabilities.raw;
+  if (
+    !record(capabilities) ||
+    capabilities.websocket !== true ||
+    body.raw.websocket !== true
+  ) {
+    throw new Error(
+      "deployed cloudflare verifier does not expose raw.websocket. redeploy apps/cloudflare before live raw verification"
+    );
+  }
   expect(body.capabilities.raw).toMatchObject({
     backup: "configured",
     buckets: "configured",
     interpreter: true,
     sessions: true,
     watching: true,
-    websocket: true,
   });
   expect(body.capabilities.raw).not.toHaveProperty("network");
   expect(body.session).toEqual({
