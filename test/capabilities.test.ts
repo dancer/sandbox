@@ -9,28 +9,38 @@ import {
   supports,
   supportsRaw,
 } from "@sandbox-sdk/core";
+import type { Capabilities } from "@sandbox-sdk/core";
 import { daytona } from "@sandbox-sdk/daytona";
 import { e2b } from "@sandbox-sdk/e2b";
 import { local } from "@sandbox-sdk/local";
 import { modal } from "@sandbox-sdk/modal";
 import { vercel } from "@sandbox-sdk/vercel";
 
-test("adapters expose capability-honest feature modes", () => {
-  expect(local().capabilities).toMatchObject({
+const equal = (actual: Capabilities, expected: Capabilities): void => {
+  expect(actual).toEqual(expected);
+};
+
+test("adapters expose exact capability contracts", () => {
+  equal(local().capabilities, {
+    environment: true,
     fileStreaming: "native",
     files: true,
     ports: "derived",
+    process: true,
     processExec: true,
     processSpawn: "separate",
     snapshotCreate: "filesystem",
     snapshotDelete: true,
     snapshotRestore: "filesystem",
+    streaming: "separate",
   });
 
-  expect(e2b().capabilities).toMatchObject({
+  equal(e2b().capabilities, {
+    environment: true,
     fileStreaming: "native",
     files: true,
     ports: "derived",
+    process: true,
     processExec: true,
     processSpawn: "separate",
     raw: {
@@ -50,10 +60,12 @@ test("adapters expose capability-honest feature modes", () => {
     streaming: "separate",
   });
 
-  expect(vercel().capabilities).toMatchObject({
+  equal(vercel().capabilities, {
+    environment: true,
     fileStreaming: "native",
     files: true,
     ports: "dynamic",
+    process: true,
     processExec: true,
     processSpawn: "separate",
     raw: {
@@ -61,6 +73,7 @@ test("adapters expose capability-honest feature modes", () => {
       metrics: true,
       network: "dynamic",
       previews: "dynamic",
+      pty: true,
       resources: "dynamic",
       sessions: "dynamic",
     },
@@ -68,37 +81,44 @@ test("adapters expose capability-honest feature modes", () => {
     snapshotDelete: true,
     snapshotRestore: "disk",
     snapshotSource: "create-time",
+    streaming: "separate",
   });
 
-  expect(
+  equal(
     cloudflare({
       binding: {} as Parameters<typeof cloudflare>[0]["binding"],
-    }).capabilities
-  ).toMatchObject({
-    fileStreaming: "native",
-    files: true,
-    ports: "dynamic",
-    processExec: true,
-    processSpawn: "separate",
-    raw: {
-      backup: "configured",
-      buckets: "configured",
-      git: true,
-      interpreter: true,
-      pty: true,
-      sessions: true,
-      tunnels: "dynamic",
-      watching: true,
-    },
-    snapshotCreate: false,
-    snapshotDelete: false,
-    snapshotRestore: false,
-  });
+    }).capabilities,
+    {
+      environment: true,
+      fileStreaming: "native",
+      files: true,
+      ports: "dynamic",
+      process: true,
+      processExec: true,
+      processSpawn: "separate",
+      raw: {
+        backup: "configured",
+        buckets: "configured",
+        git: true,
+        interpreter: true,
+        pty: true,
+        sessions: true,
+        tunnels: "dynamic",
+        watching: true,
+      },
+      snapshotCreate: false,
+      snapshotDelete: false,
+      snapshotRestore: false,
+      streaming: "separate",
+    }
+  );
 
-  expect(daytona().capabilities).toMatchObject({
+  equal(daytona().capabilities, {
+    environment: true,
     fileStreaming: "native",
     files: true,
     ports: "dynamic",
+    process: true,
     processExec: true,
     processSpawn: "separate",
     raw: {
@@ -122,10 +142,12 @@ test("adapters expose capability-honest feature modes", () => {
     streaming: "separate",
   });
 
-  expect(modal().capabilities).toMatchObject({
+  equal(modal().capabilities, {
+    environment: true,
     fileStreaming: "buffered",
     files: true,
     ports: "create-time",
+    process: true,
     processExec: true,
     processSpawn: false,
     raw: {
@@ -143,12 +165,15 @@ test("adapters expose capability-honest feature modes", () => {
     snapshotDelete: true,
     snapshotRestore: false,
     snapshotSource: "create-time",
+    streaming: "separate",
   });
 
-  expect(blaxel().capabilities).toMatchObject({
+  equal(blaxel().capabilities, {
+    environment: true,
     fileStreaming: "buffered",
     files: true,
     ports: "dynamic",
+    process: true,
     processExec: true,
     processSpawn: "separate",
     raw: {
@@ -170,10 +195,12 @@ test("adapters expose capability-honest feature modes", () => {
     streaming: "separate",
   });
 
-  expect(codesandbox().capabilities).toMatchObject({
+  equal(codesandbox().capabilities, {
+    environment: true,
     fileStreaming: "buffered",
     files: true,
     ports: "dynamic",
+    process: true,
     processExec: true,
     processSpawn: true,
     raw: {
@@ -192,29 +219,65 @@ test("adapters expose capability-honest feature modes", () => {
     streaming: "combined",
   });
 
-  expect(
+  equal(
     cloudflareBridge({
       fetch: () => new Response(null, { status: 204 }),
       url: "https://bridge.example.com",
-    }).capabilities
-  ).toMatchObject({
-    fileStreaming: "native",
-    files: true,
-    ports: "dynamic",
-    processExec: true,
-    processSpawn: false,
-    raw: {
-      backup: true,
-      buckets: "configured",
-      lifecycle: "dynamic",
-      pty: true,
-      sessions: true,
-      tunnels: "dynamic",
-    },
-    snapshotCreate: false,
-    snapshotDelete: false,
-    snapshotRestore: false,
-  });
+    }).capabilities,
+    {
+      environment: "separate",
+      fileStreaming: "native",
+      files: true,
+      ports: "dynamic",
+      process: true,
+      processExec: true,
+      processSpawn: false,
+      raw: {
+        backup: true,
+        buckets: "configured",
+        lifecycle: "dynamic",
+        pty: true,
+        sessions: true,
+        tunnels: "dynamic",
+      },
+      snapshotCreate: false,
+      snapshotDelete: false,
+      snapshotRestore: false,
+      streaming: "separate",
+    }
+  );
+});
+
+test("cloudflare snapshots require explicit backup configuration", () => {
+  equal(
+    cloudflare({
+      backups: {},
+      binding: {} as Parameters<typeof cloudflare>[0]["binding"],
+    }).capabilities,
+    {
+      environment: true,
+      fileStreaming: "native",
+      files: true,
+      ports: "dynamic",
+      process: true,
+      processExec: true,
+      processSpawn: "separate",
+      raw: {
+        backup: "configured",
+        buckets: "configured",
+        git: true,
+        interpreter: true,
+        pty: true,
+        sessions: true,
+        tunnels: "dynamic",
+        watching: true,
+      },
+      snapshotCreate: "filesystem",
+      snapshotDelete: false,
+      snapshotRestore: "filesystem",
+      streaming: "separate",
+    }
+  );
 });
 
 test("raw capabilities are separate from normalized capabilities", () => {
