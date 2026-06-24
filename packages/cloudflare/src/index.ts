@@ -143,6 +143,7 @@ const capabilities = (backups: boolean): Capabilities => ({
     sessions: true,
     tunnels: "dynamic",
     watching: true,
+    websocket: true,
   },
   snapshotCreate: backups ? "filesystem" : false,
   snapshotDelete: false,

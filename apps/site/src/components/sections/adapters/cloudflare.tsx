@@ -14,13 +14,17 @@ type Env = {
 };
 
 export default {
-  async fetch(_request: Request, env: Env) {
+  async fetch(request: Request, env: Env) {
     const sandbox = await create({
       adapter: cloudflare({ binding: env.Sandbox }),
       cwd: "/workspace",
     });
 
     await sandbox.files.write("/workspace/main.ts", "console.log('hello')");
+
+    if (request.headers.get("upgrade")?.toLowerCase() === "websocket") {
+      return sandbox.raw.wsConnect(request, 8080);
+    }
 
     const result = await sandbox.process.shell("bun /workspace/main.ts");
 
@@ -77,7 +81,8 @@ export const Cloudflare = () => (
       and exposes ports through zero-config HTTPS tunnels. Set{" "}
       <code>tunnel</code> when one port needs a stable named tunnel, or use{" "}
       <code>tunnels</code> to map multiple ports to distinct labels in your
-      Cloudflare zone.
+      Cloudflare zone. For Worker-managed WebSocket upgrades, use the typed
+      native <code>sandbox.raw.wsConnect(request, port)</code> escape hatch.
     </p>
     <CodeBlock code={CLOUDFLARE_EXAMPLE} lang="ts" />
     <p>

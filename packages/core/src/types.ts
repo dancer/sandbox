@@ -36,7 +36,8 @@ export type RawCapability =
   | "system"
   | "tunnels"
   | "volumes"
-  | "watching";
+  | "watching"
+  | "websocket";
 
 /** generic capability mode vocabulary for raw capabilities and custom type composition */
 export type Mode =

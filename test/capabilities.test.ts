@@ -101,6 +101,7 @@ test("adapters expose exact capability contracts", () => {
         sessions: true,
         tunnels: "dynamic",
         watching: true,
+        websocket: true,
       },
       snapshotCreate: false,
       snapshotDelete: false,
@@ -261,6 +262,7 @@ test("cloudflare snapshots require explicit backup configuration", () => {
         sessions: true,
         tunnels: "dynamic",
         watching: true,
+        websocket: true,
       },
       snapshotCreate: "filesystem",
       snapshotDelete: false,
@@ -288,4 +290,5 @@ test("raw capabilities are separate from normalized capabilities", () => {
   expect(supportsRaw(current, "sessions")).toBe(true);
   expect(supportsRaw(current, "tunnels")).toBe(true);
   expect(supportsRaw(current, "watching")).toBe(true);
+  expect(supportsRaw(current, "websocket")).toBe(true);
 });

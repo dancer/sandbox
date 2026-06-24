@@ -111,6 +111,7 @@ export const raw = ({ body, response }: RawResult): void => {
     interpreter: true,
     sessions: true,
     watching: true,
+    websocket: true,
   });
   expect(body.capabilities.raw).not.toHaveProperty("network");
   expect(body.session).toEqual({
@@ -130,5 +131,6 @@ export const raw = ({ body, response }: RawResult): void => {
     buckets: true,
     git: true,
     pty: true,
+    websocket: true,
   });
 };

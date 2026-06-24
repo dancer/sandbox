@@ -57,7 +57,8 @@ export type RawCapability =
   | "system"
   | "tunnels"
   | "volumes"
-  | "watching";
+  | "watching"
+  | "websocket";
 ```
 
 #### `Mode`

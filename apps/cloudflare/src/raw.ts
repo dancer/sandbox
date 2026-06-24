@@ -45,6 +45,7 @@ export const handleRaw = async (env: Env): Promise<Response> => {
       buckets: typeof raw.mountBucket === "function",
       git: typeof raw.gitCheckout === "function",
       pty: typeof session.terminal === "function",
+      websocket: typeof raw.wsConnect === "function",
     };
     const ok = [
       sessionResult.success,
@@ -60,6 +61,7 @@ export const handleRaw = async (env: Env): Promise<Response> => {
       rawMethods.buckets,
       rawMethods.git,
       rawMethods.pty,
+      rawMethods.websocket,
     ].every(Boolean);
 
     return json({

@@ -79,6 +79,7 @@ export type RawPayload = Readonly<{
     buckets: boolean;
     git: boolean;
     pty: boolean;
+    websocket: boolean;
   }>;
   session: Readonly<{
     deleted: boolean;
@@ -183,6 +184,7 @@ export const rawCoverage: Coverage = {
     "raw.checkChanges",
     "raw.git.method",
     "raw.session.terminal.method",
+    "raw.wsConnect.method",
     "raw.createBackup.method",
     "raw.mountBucket.method",
     "sandbox.stop",
@@ -195,6 +197,7 @@ export const rawCoverage: Coverage = {
     "raw.mountBucket",
     "raw.unmountBucket",
     "raw.terminal.websocket",
+    "raw.wsConnect",
     "raw.gitCheckout",
   ],
 };
