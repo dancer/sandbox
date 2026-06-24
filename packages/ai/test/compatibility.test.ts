@@ -4,7 +4,11 @@ import { create } from "@sandbox-sdk/core";
 import { local } from "@sandbox-sdk/local";
 import { generateText as generateV6 } from "ai";
 import type { ToolSet as ToolsV6 } from "ai";
-import { generateText as generateV7, tool as toolV7 } from "ai-v7";
+import {
+  generateText as generateV7,
+  tool as toolV7,
+  ToolLoopAgent as ToolLoopAgentV7,
+} from "ai-v7";
 import type {
   Experimental_SandboxSession as SandboxV7,
   ToolSet as ToolsV7,
@@ -166,6 +170,40 @@ test("ai sdk v7 passes sandbox sessions to custom tools", async () => {
 
     expect(received).toBe(kit.sandbox);
     expect(await sandbox.files.text("/workspace/context.txt")).toBe("context");
+  } finally {
+    await sandbox.stop();
+  }
+});
+
+test("ai sdk v7 ToolLoopAgent forwards sandbox sessions", async () => {
+  const sandbox = await create({ adapter: local(), cwd: "/workspace" });
+
+  try {
+    const kit = tools(sandbox);
+    const ai = aisdk(kit);
+    let received: SandboxV7 | undefined;
+    const agent = new ToolLoopAgentV7({
+      instructions: ai.instructions,
+      model: new MockLanguageModelV4({
+        doGenerate: {
+          content: [{ text: "done", type: "text" }],
+          finishReason: { raw: undefined, unified: "stop" },
+          usage,
+          warnings: [],
+        },
+      }),
+      prepareCall: (options) => {
+        received = options.experimental_sandbox;
+        return options;
+      },
+    });
+
+    await agent.generate({
+      experimental_sandbox: ai.experimental_sandbox,
+      prompt: "inspect the sandbox session",
+    });
+
+    expect(received).toBe(kit.sandbox);
   } finally {
     await sandbox.stop();
   }
