@@ -1,4 +1,4 @@
-import { test } from "bun:test";
+import { expect, test } from "bun:test";
 
 import {
   coverage,
@@ -49,4 +49,27 @@ test("cloudflare replays the sanitized raw fixture", async () => {
     body: fixture.body,
     response: new Response(null, { status: fixture.status }),
   });
+});
+
+test("cloudflare explains stale verifier deployments", async () => {
+  const fixture = await load<RawPayload>("raw");
+
+  expect(() =>
+    raw({
+      body: {
+        ...fixture.body,
+        capabilities: {
+          ...fixture.body.capabilities,
+          raw: {},
+        },
+        raw: {
+          ...fixture.body.raw,
+          websocket: false,
+        },
+      },
+      response: new Response(null, { status: fixture.status }),
+    })
+  ).toThrow(
+    "deployed cloudflare verifier does not expose raw.websocket. redeploy apps/cloudflare before live raw verification"
+  );
 });
