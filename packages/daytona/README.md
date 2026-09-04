@@ -43,6 +43,14 @@ transport.
 
 Read the [Daytona adapter documentation](https://sandbox-sdk.sh/adapters.md).
 
+## Cleanup
+
+`stop()` retains the sandbox by default, subject to its archive and deletion
+policies. The example opts into permanent deletion with `deleteOnStop: true`.
+
+`withSandbox()` applies this cleanup even for an existing sandbox id. Consume
+streams inside its callback. See the [lifecycle guide](https://sandbox-sdk.sh/lifecycle.md).
+
 ## License
 
 MIT

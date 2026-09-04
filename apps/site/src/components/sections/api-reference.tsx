@@ -204,10 +204,10 @@ export const ApiReference = () => (
       </Heading>
       <p>
         Lists the immediate children of <code>path</code> (defaults to the
-        sandbox cwd). Returns a sorted, frozen array of <code>Entry</code>{" "}
-        values. Each carries <code>path</code>, <code>kind</code>, plus{" "}
+        sandbox cwd). Returns a readonly array of <code>Entry</code> values.
+        Each carries <code>path</code>, <code>kind</code>, plus{" "}
         <code>size</code> and <code>modified</code> where the adapter has them
-        cheaply.
+        available. Runtime freezing is not guaranteed.
       </p>
       <CodeBlock code={LIST_EXAMPLE} lang="ts" />
     </section>
@@ -261,9 +261,9 @@ export const ApiReference = () => (
           </PropAccordionItem>
           <PropAccordionItem name="timeout" status="optional" value="timeout">
             <p>
-              Maximum runtime in milliseconds. After it elapses the adapter
-              kills the process and rejects with <code>SandboxError</code>{" "}
-              carrying the partial output.
+              Command timeout in milliseconds. Set it explicitly for bounded
+              work because provider defaults differ. Timeout classification,
+              partial output, and cleanup depend on the adapter and provider.
             </p>
           </PropAccordionItem>
           <PropAccordionItem name="signal" status="optional" value="signal">

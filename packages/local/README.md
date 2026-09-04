@@ -26,6 +26,14 @@ execution.
 
 Read the [documentation](https://sandbox-sdk.sh/adapters.md).
 
+## Cleanup
+
+`stop()` removes temporary roots and local snapshots. Explicit roots remain on
+disk; `keep: true` also retains an automatically created root.
+
+`withSandbox()` applies this cleanup even for an existing sandbox id. Consume
+streams inside its callback. See the [lifecycle guide](https://sandbox-sdk.sh/lifecycle.md).
+
 ## License
 
 MIT

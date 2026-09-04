@@ -32,6 +32,13 @@ export const Modal = () => (
       until the provider exposes a matching stable primitive.
     </p>
     <CodeBlock code={MODAL_EXAMPLE} lang="ts" />
+    <p>
+      Runtime network changes require explicit allowlists at creation. Start
+      open with <code>outboundCidrAllowlist: ["0.0.0.0/0"]</code> and{" "}
+      <code>outboundDomainAllowlist: ["*"]</code>, then pass both lists to{" "}
+      <code>raw.updateNetworkPolicy()</code>. Empty lists block outbound access.
+      Use <code>raw.filesystem.watch()</code> for native file events.
+    </p>
     <div className="flex flex-col gap-2">
       <Heading as="h4" id="adapter-modal-options">
         Options

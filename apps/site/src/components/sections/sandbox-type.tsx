@@ -28,11 +28,12 @@ export const SandboxType = () => (
       The Sandbox type
     </Heading>
     <p>
-      <code>Sandbox</code> is a frozen record of the five capability namespaces
-      (<code>files</code>, <code>process</code>, <code>ports</code>,{" "}
-      <code>snapshots</code>, <code>raw</code>) plus identifiers and a lifecycle
-      hook. <code>capabilities</code> declares what the underlying provider can
-      do through the normalized API. Provider-specific powers live under{" "}
+      <code>Sandbox</code> is a readonly TypeScript contract for the five
+      capability namespaces (<code>files</code>, <code>process</code>,{" "}
+      <code>ports</code>, <code>snapshots</code>, <code>raw</code>) plus
+      identifiers and a lifecycle hook. Runtime freezing is not guaranteed.{" "}
+      <code>capabilities</code> declares what the underlying provider can do
+      through the normalized API. Provider-specific powers live under{" "}
       <code>capabilities.raw</code> and are available through{" "}
       <code>sandbox.raw</code>.
     </p>

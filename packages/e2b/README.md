@@ -25,6 +25,14 @@ volume APIs remain available through `sandbox.raw`.
 
 Read the [E2B adapter documentation](https://sandbox-sdk.sh/adapters.md).
 
+## Cleanup
+
+`stop()` kills the sandbox rather than pausing it. Save a snapshot before cleanup
+when you need to retain state, or manage native pause and resume yourself.
+
+`withSandbox()` applies this cleanup even for an existing sandbox id. Consume
+streams inside its callback. See the [lifecycle guide](https://sandbox-sdk.sh/lifecycle.md).
+
 ## License
 
 MIT

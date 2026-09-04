@@ -44,13 +44,24 @@ export const Errors = () => (
           exist.
         </li>
         <li className="px-4 py-3">
-          <code>"timeout"</code>: <code>process.shell</code> or{" "}
-          <code>process.exec</code> hit <code>options.timeout</code> and the
-          partial output is attached to <code>cause</code>.
+          <code>"timeout"</code>: the adapter recognized a timeout. Inspect{" "}
+          <code>cause</code> for provider details; partial output is not
+          guaranteed.
         </li>
         <li className="px-4 py-3">
           <code>"aborted"</code>: caller cancellation through{" "}
           <code>options.signal</code>.
+        </li>
+        <li className="px-4 py-3">
+          <code>"configuration"</code>: invalid or missing adapter
+          configuration.
+        </li>
+        <li className="px-4 py-3">
+          <code>"policy"</code>: a policy hook rejected the operation.
+        </li>
+        <li className="px-4 py-3">
+          <code>"process"</code>: a process failure classified separately by the
+          adapter.
         </li>
         <li className="px-4 py-3">
           <code>"provider"</code>: anything else. Inspect <code>cause</code> for

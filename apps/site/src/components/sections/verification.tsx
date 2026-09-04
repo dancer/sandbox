@@ -22,12 +22,15 @@ export const Verification = () => (
       Verification
     </Heading>
     <p>
-      Every adapter is verified against the live provider, not just mocked.
+      Every remote adapter has a live verification suite, not just mocks.
       Sanitized fixtures give fast contract replay in <code>bun test</code>, and
       the <code>verify:*</code> scripts run the same suite against real
       sandboxes as the source of truth for provider behavior. The deterministic
       suite never loads <code>.env.local</code>, while live scripts load it
-      explicitly and print readiness without leaking secret values.
+      explicitly and print readiness without leaking secret values. A fixture
+      replay or skipped live test does not prove current provider compatibility.
+      Confirm credentials and deployed verifier versions before relying on a
+      live result.
     </p>
     <CodeBlock code={VERIFY_EXAMPLE} lang="bash" />
   </section>

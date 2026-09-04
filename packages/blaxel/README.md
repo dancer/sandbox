@@ -34,6 +34,14 @@ credentials. Blaxel Agent Drive is currently a workspace-wide preview feature:
 untrusted sandbox code. Restrict access to the drive identity token and `blfs`
 when an agent must not change drive access.
 
+## Cleanup
+
+`stop()` deletes the sandbox rather than placing it in standby. Manage native
+lifecycle controls yourself when you want to retain a perpetual sandbox.
+
+`withSandbox()` applies this cleanup even for an existing sandbox id. Consume
+streams inside its callback. See the [lifecycle guide](https://sandbox-sdk.sh/lifecycle.md).
+
 ## License
 
 MIT

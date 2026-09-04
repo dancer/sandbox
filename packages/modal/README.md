@@ -57,6 +57,14 @@ image, volume, and secret calls share its credentials and transport.
 
 Read the [Modal adapter documentation](https://sandbox-sdk.sh/adapters.md).
 
+## Cleanup
+
+`stop()` terminates the sandbox by default. `stop: "detach"` leaves it running;
+use volumes or filesystem snapshots when data must survive termination.
+
+`withSandbox()` applies this cleanup even for an existing sandbox id. Consume
+streams inside its callback. See the [lifecycle guide](https://sandbox-sdk.sh/lifecycle.md).
+
 ## License
 
 MIT

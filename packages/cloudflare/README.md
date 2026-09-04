@@ -44,6 +44,14 @@ an explicitly authenticated HTTPS bridge.
 
 Read the [Cloudflare adapter documentation](https://sandbox-sdk.sh/adapters.md).
 
+## Cleanup
+
+`stop()` destroys the container and its local state, also when using the bridge.
+Persist important data externally or configure backups before cleanup.
+
+`withSandbox()` applies this cleanup even for an existing sandbox id. Consume
+streams inside its callback. See the [lifecycle guide](https://sandbox-sdk.sh/lifecycle.md).
+
 ## License
 
 MIT

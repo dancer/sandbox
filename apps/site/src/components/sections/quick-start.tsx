@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { CodeBlock } from "@/components/code-block";
 import { Heading } from "@/components/heading";
 
@@ -31,5 +33,18 @@ export const QuickStart = () => (
       lets the <code>raw</code> property stay narrowly typed.
     </p>
     <CodeBlock code={USAGE_EXAMPLE} lang="tsx" />
+    <p>
+      Consume streams and finish background work before the callback returns.
+      Cleanup can delete the sandbox, including when connecting to an existing
+      id. Use <code>create()</code> for longer-lived sessions and check the{" "}
+      <Link
+        className="underline decoration-dotted underline-offset-4 hover:text-foreground"
+        href="/lifecycle.md"
+        prefetch={false}
+      >
+        provider cleanup reference
+      </Link>{" "}
+      before choosing a retention strategy.
+    </p>
   </section>
 );

@@ -68,7 +68,46 @@ await withSandbox(
 );
 \`\`\`
 
-Use \`create()\` instead of \`withSandbox\` when you want to manage the lifecycle yourself; call \`sandbox.stop()\` when done.`;
+Use \`create()\` instead of \`withSandbox\` when you want to manage the lifecycle yourself; call \`sandbox.stop()\` when done. Consume streams and finish background work before the callback returns. Cleanup can delete the sandbox, including when connecting to an existing id. Read the [lifecycle guide](https://sandbox-sdk.sh/lifecycle.md) before choosing a retention strategy.`;
+
+const lifecycle = `# Lifecycle and cleanup
+
+\`withSandbox()\` always attempts \`stop()\` after the callback succeeds or fails. It also stops sandboxes opened with an existing \`id\`. Returning a stream, process handle, or preview URL does not keep the sandbox alive. Consume streams inside the callback, or use \`create()\` and own cleanup for the entire consumer lifetime.
+
+## What stop means
+
+Cleanup is provider-specific. These are the adapter defaults, not a portable pause or delete operation.
+
+| Adapter | Default cleanup | Retention choices |
+| --- | --- | --- |
+| Local | Removes an automatically created temporary root and local snapshots | Explicit roots remain on disk. Set \`keep: true\` to retain a temporary root |
+| Vercel | Stops the named sandbox. Persistent sandboxes automatically snapshot their filesystem | Native lifecycle and snapshot retention controls remain on \`raw\` |
+| E2B | Kills the sandbox, not a pause | Create a snapshot before cleanup, or manage native pause and resume explicitly |
+| Blaxel | Deletes the sandbox, not standby | Use native lifecycle management when retaining a perpetual sandbox |
+| Cloudflare | Destroys the container and its local state, including through the HTTP bridge | Persist data externally or configure R2 backups before cleanup |
+| Daytona | Stops the sandbox and retains disk, subject to its archive and deletion policies | \`deleteOnStop: true\` permanently deletes it |
+| Modal | Terminates the sandbox | \`stop: "detach"\` leaves it running. Use volumes or filesystem snapshots for durable data |
+| CodeSandbox | Disconnects the session and shuts down the VM, saving files for a clean boot | \`stop: "hibernate"\` retains resumable memory state, \`"disconnect"\` only closes the session, and \`"delete"\` permanently deletes it |
+
+Detached and retained resources may continue to consume quota or incur charges. Provider timeouts, idle policies, and snapshot retention still apply. A background process is not a portable keepalive. Local execution is not an isolation boundary for untrusted code.
+
+## Errors and ownership
+
+Await cleanup in \`finally\` when managing a sandbox yourself. If both the callback and cleanup fail, \`withSandbox()\` throws an \`AggregateError\` containing the work error followed by the cleanup error. Inspect both before retrying. Do not retry a destructive or non-idempotent operation solely because cleanup failed.
+
+For streamed AI output, the [streaming example](https://github.com/dancer/sandbox/blob/main/examples/aisdk.ts) keeps the sandbox alive during iteration, aborts model generation when iteration ends, and awaits cleanup on completion, early exit, or consumer failure.
+
+Snapshots are provider-owned state, not portable archives. Reuse the same provider and account context. Check \`snapshotCreate\`, \`snapshotSource\`, \`snapshotRestore\`, and \`snapshotDelete\` separately. Save durable snapshot ids before stopping the source; local snapshots do not survive cleanup.
+
+## Provider references
+
+- [Vercel SDK lifecycle](https://vercel.com/docs/sandbox/sdk-reference)
+- [E2B persistence](https://docs.e2b.dev/sandbox/persistence)
+- [Blaxel sandboxes](https://docs.blaxel.ai/Sandboxes/Overview)
+- [Cloudflare lifecycle](https://developers.cloudflare.com/sandbox/api/lifecycle/)
+- [Daytona sandboxes](https://www.daytona.io/docs/en/sandboxes/)
+- [Modal Sandbox reference](https://modal.com/docs/sdk/js/latest/Sandbox)
+- [CodeSandbox lifecycle source](https://github.com/codesandbox/codesandbox-sdk/blob/main/src/Sandboxes.ts)`;
 
 const adapters = `# Adapters
 
@@ -124,6 +163,7 @@ E2B microVM sandboxes via \`e2b\`. Can pin a template at construction and thread
 Modal sandboxes via \`modal\`. Creates sandboxes inside a Modal app, maps file reads and writes through Modal's filesystem, and exposes provider-declared HTTPS ports through Modal tunnels. Reconnecting by sandbox id discovers existing tunnels automatically. Use typed Modal adapter options and \`sandbox.raw\` for provider-specific private and direct TCP tunnel controls. Pass a shared \`ModalClient\` through \`client\` when application code also uses native app, image, volume, or secret services. Supports filesystem snapshot creation; in-place restore and background process handles stay unsupported until the provider exposes a matching stable primitive.
 
 - \`app\` (defaults to \`sandbox-sdk\`), \`image\`, \`ports\`.
+- Runtime network updates require explicit allowlists at creation. To start open and restrict later, set \`outboundCidrAllowlist: ["0.0.0.0/0"]\` and \`outboundDomainAllowlist: ["*"]\`. Pass both lists to \`raw.updateNetworkPolicy()\`; empty lists block outbound access. \`raw.filesystem.watch()\` yields native file events for absolute sandbox paths.
 - Credentials: \`MODAL_TOKEN_ID\` and \`MODAL_TOKEN_SECRET\`, or Modal CLI config.
 
 ## Vercel (@sandbox-sdk/vercel)
@@ -161,7 +201,7 @@ Normalized capability flags include \`files\`, \`fileStreaming\`, \`processExec\
 
 const files = `# Files
 
-Filesystem operations are scoped to the sandbox root. The local adapter rejects existing symlinks that resolve outside the root with \`SandboxError\` and \`code: "path_escape"\`.
+Paths use POSIX filesystem semantics, not URL encoding. Relative paths resolve against \`sandbox.cwd\`; spaces, Unicode, \`#\`, \`?\`, and percent signs remain literal filename characters. Remote absolute paths refer to the provider filesystem, not a boundary at \`cwd\`. The local adapter maps paths below its configured host root and rejects existing symlinks that resolve outside it with \`SandboxError\` and \`code: "path_escape"\`. The Cloudflare HTTP bridge restricts paths to \`/workspace\`.
 
 \`\`\`ts
 await sandbox.files.mkdir("/workspace/src");
@@ -177,7 +217,7 @@ await sandbox.files.remove("/workspace/src/index.ts");
 - \`files.read(path)\` returns raw \`Uint8Array\` bytes. \`files.text(path)\` decodes as UTF-8.
 - \`files.stream(path)\` returns \`ReadableStream<Uint8Array>\`. Check \`capabilityMode(sandbox, "fileStreaming")\` before relying on large-file behavior: \`"native"\` delivers bytes incrementally, while \`"buffered"\` exposes a stream after the provider SDK loads the file.
 - \`files.write(path, input)\` creates parent directories as needed and accepts \`string\`, \`Uint8Array\`, \`ArrayBuffer\`, \`Blob\`, or \`ReadableStream<Uint8Array>\`. Streams are drained before the write completes.
-- \`files.list(path?)\` lists the immediate children of \`path\` (defaults to the sandbox cwd) as a sorted, frozen array of \`Entry\` values, each with \`path\`, \`kind\`, plus \`size\` and \`modified\` where cheap.
+- \`files.list(path?)\` lists the immediate children of \`path\` (defaults to the sandbox cwd) as a readonly array of \`Entry\` values, each with \`path\`, \`kind\`, plus \`size\` and \`modified\` where available. Runtime freezing is not guaranteed.
 - \`files.exists(path)\` returns \`true\` when a path exists.
 - \`files.mkdir(path)\` creates a directory and missing parents.
 - \`files.remove(path)\` removes a file or directory recursively where supported. Catch \`SandboxError\` with \`code: "not_found"\` or \`code: "provider"\` when deleting optional paths.`;
@@ -203,26 +243,27 @@ console.log(result.stdout);
 - \`process.exec(command, args?, options?)\` runs an executable with explicit argv arguments.
 - \`process.spawn(command, args?, options?)\` and \`process.spawnShell(command, options?)\` return a handle immediately. Use \`output\` to stream merged stdout and stderr, optional \`stdout\` and \`stderr\` when the provider exposes separate streams, \`kill()\` to terminate, and \`result\` for the final \`{ code, signal?, stdout, stderr }\`.
 
-Options shared by all four: \`cwd\`, \`env\` (a \`Record<string, string>\`), \`timeout\` in milliseconds, and \`signal\` for \`AbortSignal\` cancellation. On timeout the adapter kills the process and rejects with \`SandboxError\` carrying the partial output. Background spawn is only available where \`processSpawn\` is supported.`;
+Options shared by all four: \`cwd\`, \`env\` (a \`Record<string, string>\`), \`timeout\` in milliseconds, and \`signal\` for \`AbortSignal\` cancellation. Set explicit timeouts for bounded work because native defaults differ. Timeout classification, partial output, and cancellation of already-running commands depend on the adapter and provider. Modal checks cancellation before execution but does not expose normalized per-command cancellation after execution starts. Background spawn is only available where \`processSpawn\` is supported. Use \`exec()\` with explicit arguments for untrusted values instead of interpolating them into shell strings.`;
 
 const ports = `# Ports
 
 Expose a port running inside the sandbox and get a provider-aware preview. Local sandboxes return derived localhost URLs; provider adapters may return public tunnels or create-time port URLs, or reject unsupported exposure. Branch on \`sandbox.capabilities.ports\` first.
 
 \`\`\`ts
-const result = await sandbox.process.shell("bun dev --host 0.0.0.0", {
-  cwd: "/workspace",
-  timeout: 1_000,
-});
+import { supports } from "@sandbox-sdk/core";
 
-if (!result.ok && !supports(sandbox, "processSpawn")) {
-  throw new Error(result.stderr);
+if (!supports(sandbox, "processSpawn") || !supports(sandbox, "ports")) {
+  throw new Error("this adapter needs provider-native server startup");
 }
 
+const server = await sandbox.process.spawnShell("bun dev --host 0.0.0.0", {
+  cwd: sandbox.cwd,
+});
 const preview = await sandbox.ports.expose(3000);
-const response = await preview.request("/health");
-console.log(preview.url, response.status);
+console.log(preview.url);
 \`\`\`
+
+This assumes the sandbox image has Bun and the application installed. Wait for your application's readiness signal before requesting the preview. Keep both the server and sandbox alive for the whole preview session, then await \`server.kill()\` and \`sandbox.stop()\` in your cleanup path. Do not return the URL from a short-lived \`withSandbox()\` callback. Modal requires ports at creation and native server startup; the Cloudflare HTTP bridge also needs native startup rather than normalized spawn.
 
 \`ports.expose(port, options?)\` returns \`{ url, port, request() }\`. \`request(path?, init?)\` only accepts same-origin paths and retains header-based provider access credentials outside serialized data. Redirects are manual by default and \`redirect: "follow"\` is rejected, so provider credentials cannot leave the preview origin. This makes restricted E2B and standard private Daytona previews usable without passing headers through agent output. Treat any provider-issued signed or tokenized \`url\` as a credential. Options are provider-specific and unsupported values throw at \`expose()\` time:
 
@@ -231,21 +272,20 @@ console.log(preview.url, response.status);
 
 const snapshots = `# Snapshots
 
-Snapshot support is capability-gated because providers expose different lifecycle shapes. Some providers pause or stop a sandbox while creating a snapshot, so treat creation as a lifecycle operation rather than a transparent file copy.
+Snapshot support is capability-gated because providers expose different lifecycle shapes. Some providers pause or stop a sandbox while creating a snapshot, so treat creation as a lifecycle operation rather than a transparent file copy. In this example, \`adapter\` is the same configured adapter used to create \`sandbox\`. Snapshot ids cannot be moved between providers.
 
 \`\`\`ts
 if (supports(sandbox, "snapshotCreate")) {
   const snapshot = await sandbox.snapshots.create();
 
-  await withSandbox(
-    {
-      adapter: vercel(),
-      snapshot: snapshot.id,
-    },
-    async (fresh) => {
-      console.log(await fresh.files.list());
-    }
-  );
+  if (supports(sandbox, "snapshotSource")) {
+    await withSandbox(
+      { adapter, snapshot: snapshot.id },
+      async (fresh) => {
+        console.log(await fresh.files.list());
+      }
+    );
+  }
 
   if (supports(sandbox, "snapshotDelete")) {
     await sandbox.snapshots.delete(snapshot.id);
@@ -260,7 +300,7 @@ if (supports(sandbox, "snapshotCreate")) {
 
 const sandboxType = `# The Sandbox type
 
-\`Sandbox\` is a frozen record of the capability namespaces (\`files\`, \`process\`, \`ports\`, \`snapshots\`, \`raw\`) plus identifiers and a lifecycle hook. \`capabilities\` declares what the underlying provider can do through the normalized API. Provider-specific powers live under \`capabilities.raw\` and are available through \`sandbox.raw\`.
+\`Sandbox\` is a readonly TypeScript contract for the capability namespaces (\`files\`, \`process\`, \`ports\`, \`snapshots\`, \`raw\`) plus identifiers and a lifecycle hook. Runtime freezing is not guaranteed. \`capabilities\` declares what the underlying provider can do through the normalized API. Provider-specific powers live under \`capabilities.raw\` and are available through \`sandbox.raw\`.
 
 \`\`\`ts
 type Sandbox<Raw = unknown> = Readonly<{
@@ -288,7 +328,7 @@ Codes:
 - \`"unsupported"\`: the adapter does not implement the method. Branch on \`capabilities\` to avoid this path.
 - \`"path_escape"\`: a file or \`cwd\` path resolved outside the sandbox root. Always thrown by the local adapter's safety check.
 - \`"not_found"\`: referenced path or snapshot id does not exist.
-- \`"timeout"\`: \`process.shell\` or \`process.exec\` hit \`options.timeout\`; partial output is attached to \`cause\`.
+- \`"timeout"\`: the adapter recognized a timeout. Inspect \`cause\` for provider details; partial output is not guaranteed.
 - \`"aborted"\`: caller cancellation through \`options.signal\`.
 - \`"configuration"\`: invalid or missing adapter configuration.
 - \`"policy"\`: a policy hook rejected the operation.
@@ -400,7 +440,7 @@ const kit = tools(sandbox, {
 
 const verification = `# Verification
 
-Every adapter is verified against the live provider, not just mocked. Sanitized fixtures give fast contract replay in \`bun test\`, which never loads \`.env.local\`. The \`verify:*\` scripts explicitly load \`.env.local\`, run the same suite against real sandboxes, and are the source of truth for provider behavior. They print readiness without leaking secret values.
+Every remote adapter has a live verification suite, not just mocks. Sanitized fixtures give fast contract replay in \`bun test\`, which never loads \`.env.local\`. The \`verify:*\` scripts explicitly load \`.env.local\`, run against real sandboxes, and are the source of truth for provider behavior. They print readiness without leaking secret values. A fixture replay or skipped live test does not prove current provider compatibility. Confirm credentials and deployed verifier versions before relying on a live result.
 
 \`\`\`bash
 # check which provider credentials are present
@@ -509,6 +549,12 @@ export const docs: readonly Doc[] = [
     title: "Quick start",
   },
   {
+    body: lifecycle,
+    slug: "lifecycle",
+    summary: "cleanup, persistence, streaming ownership, and provider defaults",
+    title: "Lifecycle and cleanup",
+  },
+  {
     body: adapters,
     slug: "adapters",
     summary: "the eight providers and how to configure each",
@@ -577,7 +623,7 @@ export const docs: readonly Doc[] = [
   {
     body: verification,
     slug: "verification",
-    summary: "every adapter is verified against the live provider",
+    summary: "live provider checks and fast sanitized contract replay",
     title: "Verification",
   },
   {

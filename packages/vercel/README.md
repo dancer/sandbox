@@ -30,6 +30,14 @@ network policy, sessions, snapshots, and forks remain available through
 
 Read the [Vercel adapter documentation](https://sandbox-sdk.sh/adapters.md).
 
+## Cleanup
+
+`stop()` stops the named sandbox. With Vercel's default persistent mode, it
+snapshots the filesystem rather than deleting the named resource.
+
+`withSandbox()` applies this cleanup even for an existing sandbox id. Consume
+streams inside its callback. See the [lifecycle guide](https://sandbox-sdk.sh/lifecycle.md).
+
 ## License
 
 MIT

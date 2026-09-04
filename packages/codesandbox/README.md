@@ -43,6 +43,15 @@ operations and native managers use the same credentials and transport.
 
 Read the [CodeSandbox adapter documentation](https://sandbox-sdk.sh/adapters.md).
 
+## Cleanup
+
+`stop()` disconnects the session and shuts down the VM by default, saving files
+for a clean boot. Use `stop: "hibernate"` for resumable memory state,
+`"disconnect"` to leave the VM running, or `"delete"` for permanent deletion.
+
+`withSandbox()` applies this cleanup even for an existing sandbox id. Consume
+streams inside its callback. See the [lifecycle guide](https://sandbox-sdk.sh/lifecycle.md).
+
 ## License
 
 MIT
