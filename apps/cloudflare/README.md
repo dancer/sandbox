@@ -4,26 +4,30 @@ This Worker validates the real `@sandbox-sdk/cloudflare` adapter against a Cloud
 
 ## deploy
 
+Use the repository's Bun version and authenticate Wrangler before deploying:
+
 ```bash
-bun install
+bun install --frozen-lockfile
+bunx wrangler login
+bun run build:packages
 bun run --cwd apps/cloudflare deploy
 ```
 
 Wrangler builds the configured Sandbox container during deploy, so Docker must
 be installed and running before this command can succeed.
 
-Set the live test URL after deploy:
+Keep the `@cloudflare/sandbox` dependency and Dockerfile image on the same
+version. Redeploy after updating either; local typechecks do not update the
+running verifier. This deploys only the test Worker, not the SDK packages or
+website.
 
-```bash
-export CLOUDFLARE_SANDBOX_WORKER_URL="https://verify.sandbox-sdk.workers.dev"
-bun run verify:cloudflare
-```
-
-Set the bearer token:
+After deployment, set the Worker secret before running live checks:
 
 ```bash
 bunx wrangler secret put SANDBOX_SDK_TOKEN --cwd apps/cloudflare
+export CLOUDFLARE_SANDBOX_WORKER_URL="https://verify.sandbox-sdk.workers.dev"
 export CLOUDFLARE_SANDBOX_TOKEN="same-value"
+bun run verify:cloudflare
 ```
 
 The live route requires `SANDBOX_SDK_TOKEN`. Without it, the Worker returns
@@ -36,6 +40,11 @@ unauthenticated.
 - `/sandbox-sdk/ports` verifies a reachable quick tunnel through `ports.expose()`
 - `/sandbox-sdk/raw` verifies raw sessions, code contexts, interpreter execution, retained change checks, and safe method presence for configured raw features
 - `/sandbox-sdk/cleanup` stops sandboxes created by tunnel checks
+
+All routes require a bearer token and accept only `POST`. Cleanup requires a
+JSON body with a nonempty string `id`; malformed requests return `422` before
+accessing a sandbox. Failed tunnel setup attempts to stop its sandbox automatically.
+Successful tunnel checks retain the sandbox until the client calls cleanup.
 
 ## binding
 
