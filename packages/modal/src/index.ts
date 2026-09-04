@@ -25,7 +25,12 @@ import * as ModalSdk from "modal";
 
 export { ModalClient } from "modal";
 
-/** native Modal sandbox object exposed as `sandbox.raw` */
+/**
+ * native Modal sandbox object exposed as `sandbox.raw`
+ *
+ * runtime network updates require allowlist configuration at creation and both allowlists on each update. use explicit allow-all lists to start open and restrict later
+ * `filesystem.watch()` yields native file events until its iterator closes or its timeout expires
+ */
 export type ModalRaw = ModalSdk.Sandbox;
 
 type CreateParams = ModalSdk.SandboxCreateParams;
@@ -137,12 +142,13 @@ const capabilities: Capabilities = {
     buckets: "create-time",
     gpu: "create-time",
     lifecycle: true,
-    network: "create-time",
+    network: "configured",
     pty: true,
     resources: "create-time",
     secrets: "create-time",
     tunnels: "create-time",
     volumes: "create-time",
+    watching: true,
   },
   snapshotCreate: "filesystem",
   snapshotDelete: true,

@@ -34,6 +34,8 @@ const adapter = (modalClient?: ModalSdk.ModalClient) =>
     app: "sandbox-sdk-live",
     client: modalClient,
     image: "alpine:3.21",
+    outboundCidrAllowlist: ["0.0.0.0/0"],
+    outboundDomainAllowlist: ["*"],
     ports: [3000],
     snapshotTimeout: 120_000,
     snapshotTtl: 3_600_000,
@@ -60,7 +62,11 @@ live("modal runs a live sandbox workflow", async () => {
     });
     await record(
       new URL("__fixtures__/workflow.json", import.meta.url),
-      workflowFixture("modal", payload, ["snapshots.create", "snapshotSource"])
+      workflowFixture("modal", payload, [
+        "snapshots.create",
+        "snapshots.delete",
+        "snapshotSource",
+      ])
     );
   } finally {
     await sandbox.stop();
@@ -154,6 +160,38 @@ live("modal exposes advertised raw capabilities", async () => {
     });
     expect(await pty.stdout.readText()).toContain("raw-pty");
     expect(await pty.wait()).toBe(0);
+
+    await sandbox.raw.updateNetworkPolicy({
+      outboundCidrAllowlist: [],
+      outboundDomainAllowlist: [],
+    });
+    const restricted = await sandbox.process.exec("printf", ["restricted"]);
+    expect(restricted.stdout).toBe("restricted");
+    await sandbox.raw.updateNetworkPolicy({
+      outboundCidrAllowlist: ["0.0.0.0/0"],
+      outboundDomainAllowlist: ["*"],
+    });
+
+    const path = `${cwd}/watched.txt`;
+    await sandbox.files.write(path, "initial");
+    const watching = (async () => {
+      for await (const event of sandbox.raw.filesystem.watch(path, {
+        timeoutMs: 10_000,
+      })) {
+        if (event.paths.includes(path)) {
+          return true;
+        }
+      }
+      return false;
+    })();
+    const writing = await sandbox.raw.exec([
+      "sh",
+      "-lc",
+      "for value in 1 2 3 4 5; do sleep 1; printf watched >> /app/watched.txt; done",
+    ]);
+    const [watched, code] = await Promise.all([watching, writing.wait()]);
+    expect(watched).toBe(true);
+    expect(code).toBe(0);
   } finally {
     await sandbox.stop();
   }

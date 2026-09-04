@@ -23,6 +23,7 @@ const json = async <Body>(name: string): Promise<Fixture<Body>> =>
 
 const capabilities = {
   environment: true,
+  fileStreaming: "buffered",
   files: true,
   ports: "create-time",
   processExec: true,
@@ -31,12 +32,13 @@ const capabilities = {
     buckets: "create-time",
     gpu: "create-time",
     lifecycle: true,
-    network: "create-time",
+    network: "configured",
     pty: true,
     resources: "create-time",
     secrets: "create-time",
     tunnels: "create-time",
     volumes: "create-time",
+    watching: true,
   },
   snapshotCreate: "filesystem",
   snapshotDelete: true,

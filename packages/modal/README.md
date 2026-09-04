@@ -23,6 +23,21 @@ Set `MODAL_TOKEN_ID` and `MODAL_TOKEN_SECRET`, or use Modal CLI configuration.
 Filesystem snapshots create images for fresh sandboxes. Native tunnel, volume,
 GPU, and connect-token controls remain available through `sandbox.raw`.
 
+## Runtime Controls
+
+To change outbound access while a sandbox runs, configure allowlists at creation.
+Modal cannot restrict a sandbox that started with its unrestricted network default.
+Start open with `outboundCidrAllowlist: ["0.0.0.0/0"]` and
+`outboundDomainAllowlist: ["*"]`, then call
+`sandbox.raw.updateNetworkPolicy()` with both lists. Empty lists block outbound
+traffic, and updates terminate existing connections no longer allowed by the policy.
+
+Use `sandbox.raw.filesystem.watch(path, { timeoutMs })` to iterate file events.
+Pass an absolute sandbox path and stop the iterator when finished. Watch timeouts
+are truncated to whole seconds and end iteration without throwing.
+
+See the [Modal SDK reference](https://modal.com/docs/sdk/js/latest/Sandbox).
+
 ## Native Client
 
 For Modal service managers that are not tied to one sandbox, reuse a native

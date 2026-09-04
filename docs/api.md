@@ -2684,6 +2684,9 @@ Modal Sandbox adapter for Sandbox SDK
 
 native Modal sandbox object exposed as `sandbox.raw`
 
+runtime network updates require allowlist configuration at creation and both allowlists on each update. use explicit allow-all lists to start open and restrict later
+`filesystem.watch()` yields native file events until its iterator closes or its timeout expires
+
 ```ts
 export type ModalRaw = ModalSdk.Sandbox;
 ```
