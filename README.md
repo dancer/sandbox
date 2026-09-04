@@ -4,6 +4,11 @@ One TypeScript API for agent sandboxes. A small, typed runtime layer for files, 
 
 https://sandbox-sdk.sh
 
+This project is not released yet. For repository development, use Bun 1.4.0
+and Node.js 24. Bun 1.4 is required for version-scoped security overrides.
+Publishing requires an explicit manual workflow dispatch and remains disabled
+until the first release is approved.
+
 ## Install
 
 ```bash
