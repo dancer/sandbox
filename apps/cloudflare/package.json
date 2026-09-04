@@ -6,7 +6,8 @@
   "scripts": {
     "deploy": "bunx wrangler deploy",
     "dev": "bunx wrangler dev",
-    "typecheck": "tsc --noEmit"
+    "test": "bun test test",
+    "typecheck": "tsc --noEmit && tsc -p test/tsconfig.json"
   },
   "dependencies": {
     "@cloudflare/sandbox": "^0.12.9",

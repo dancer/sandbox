@@ -18,7 +18,7 @@
     "fix": "ultracite fix",
     "pack:packages": "bun run build:packages && for p in packages/core packages/local packages/ai packages/vercel packages/e2b packages/daytona packages/cloudflare packages/modal packages/blaxel packages/codesandbox; do (cd $p && bun pm pack --dry-run --ignore-scripts); done",
     "release": "bun run verify && changeset publish",
-    "test": "bun run build:packages && bun test packages scripts test",
+    "test": "bun run build:packages && bun test ./packages ./scripts ./test && bun run --cwd apps/cloudflare test",
     "verify": "bun run test && bun run docs:api:check && bun run check && bun run typecheck && bun run pack:packages && bun run build",
     "verify:env": "bun --env-file=.env.local scripts/credentials.ts",
     "verify:providers": "bun run verify:env && bun run build:packages && (bun --env-file=.env.local test --timeout=300000 packages/blaxel/test/live.test.ts packages/cloudflare/test/live.test.ts packages/daytona/test/live.test.ts packages/e2b/test/live.test.ts packages/modal/test/live.test.ts packages/vercel/test/live.test.ts; tests=$?; node --env-file=.env.local packages/codesandbox/test/live.mjs; codesandbox=$?; exit $((tests || codesandbox)))",

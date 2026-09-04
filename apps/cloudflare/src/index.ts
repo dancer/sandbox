@@ -105,6 +105,7 @@ const handlePorts = async (env: Env): Promise<Response> => {
       provider: sandbox.provider,
     });
   } catch (error) {
+    await sandbox?.stop().catch(ignore);
     return json(
       {
         error: error instanceof Error ? error.message : "unknown",
@@ -283,7 +284,7 @@ const guard = (request: Request, env: Env, url: URL): Response | undefined => {
 };
 
 export default {
-  fetch(request, env): Promise<Response> | Response {
+  fetch(request: Request, env: Env): Promise<Response> | Response {
     const url = new URL(request.url);
     const blocked = guard(request, env, url);
     if (blocked) {
