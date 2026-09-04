@@ -435,6 +435,9 @@ const status = (error: unknown): number | undefined => {
   if (!(error instanceof Error)) {
     return undefined;
   }
+  if ("status" in error && typeof error.status === "number") {
+    return error.status;
+  }
   try {
     const value: unknown = JSON.parse(error.message);
     if (
