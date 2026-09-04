@@ -119,8 +119,14 @@ const handlePorts = async (env: Env): Promise<Response> => {
 };
 
 const handleCleanup = async (request: Request, env: Env): Promise<Response> => {
-  const input = (await request.json()) as { id?: string };
-  if (!input.id) {
+  const input: unknown = await request.json().catch(ignore);
+  if (
+    typeof input !== "object" ||
+    input === null ||
+    !("id" in input) ||
+    typeof input.id !== "string" ||
+    input.id.trim().length === 0
+  ) {
     return json({ error: "missing_id", ok: false }, 422);
   }
 

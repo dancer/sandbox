@@ -96,3 +96,47 @@ test("successful tunnel setup remains alive for the client probe", async () => {
   expect(await response.json()).toMatchObject({ ok: true });
   expect(stop).not.toHaveBeenCalled();
 });
+
+test.each([
+  "{",
+  "null",
+  "[]",
+  '"sandbox"',
+  "{}",
+  '{"id":42}',
+  '{"id":""}',
+  '{"id":"   "}',
+])(
+  "cleanup rejects invalid input without creating a sandbox: %s",
+  async (body) => {
+    const response = await worker.fetch(
+      new Request("https://verify.example/sandbox-sdk/cleanup", {
+        body,
+        headers: { authorization: "Bearer test-token" },
+        method: "POST",
+      }),
+      env
+    );
+
+    expect(response.status).toBe(422);
+    expect(await response.json()).toEqual({ error: "missing_id", ok: false });
+    expect(shared.instance).not.toHaveBeenCalled();
+  }
+);
+
+test("cleanup stops the requested verifier sandbox", async () => {
+  const stop = spyOn(sandbox, "stop");
+  const response = await worker.fetch(
+    new Request("https://verify.example/sandbox-sdk/cleanup", {
+      body: JSON.stringify({ id: "sandbox" }),
+      headers: { authorization: "Bearer test-token" },
+      method: "POST",
+    }),
+    env
+  );
+
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual({ ok: true });
+  expect(shared.instance).toHaveBeenCalledWith(env, "/workspace", "sandbox");
+  expect(stop).toHaveBeenCalledTimes(1);
+});
