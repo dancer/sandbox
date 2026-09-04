@@ -9,7 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@cloudflare/sandbox": "^0.12.1",
+    "@cloudflare/sandbox": "^0.12.9",
     "@sandbox-sdk/cloudflare": "workspace:*",
     "@sandbox-sdk/core": "workspace:*"
   },

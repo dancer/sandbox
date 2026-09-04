@@ -547,6 +547,7 @@ test("claude supports approval and server overrides", async () => {
     "mcp__workspace__exec",
     { command: "printf ok" },
     {
+      requestId: "allowed",
       signal: new AbortController().signal,
       toolUseID: "allowed",
     }
@@ -555,13 +556,14 @@ test("claude supports approval and server overrides", async () => {
     "mcp__workspace__read",
     { path: "/workspace/file.txt" },
     {
+      requestId: "denied",
       signal: new AbortController().signal,
       toolUseID: "denied",
     }
   );
 
-  expect(allowed.behavior).toBe("allow");
-  expect(denied.behavior).toBe("deny");
+  expect(allowed).toMatchObject({ behavior: "allow" });
+  expect(denied).toMatchObject({ behavior: "deny" });
 
   await sandbox.stop();
 });

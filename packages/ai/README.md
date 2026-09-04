@@ -31,7 +31,9 @@ await withSandbox({ adapter: local(), cwd: "/workspace" }, async (sandbox) => {
 ```
 
 `tools()` returns policy-aware agent tools and `aisdk()` returns AI SDK v6 and
-v7 compatible prompt context, tools, and sandbox session fields.
+stable v7 compatible prompt context, tools, and sandbox session fields.
+Compatibility tests execute tools against both major versions, including v7
+custom-tool and `ToolLoopAgent` sandbox sessions.
 
 Read the [AI tools documentation](https://sandbox-sdk.sh/ai-tools.md).
 

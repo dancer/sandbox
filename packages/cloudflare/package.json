@@ -43,7 +43,7 @@
     "test": "bun test test"
   },
   "dependencies": {
-    "@cloudflare/sandbox": "^0.12.1",
+    "@cloudflare/sandbox": "^0.12.9",
     "@sandbox-sdk/core": "workspace:*"
   },
   "devDependencies": {

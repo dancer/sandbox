@@ -94,7 +94,7 @@ live("blaxel maps native missing paths to false", async () => {
   try {
     const missing = `${cwd}/missing`;
     await expect(sandbox.raw.fs.ls(missing)).rejects.toMatchObject({
-      message: expect.stringContaining('"status":404'),
+      status: 404,
     });
     await expect(sandbox.files.exists(missing)).resolves.toBe(false);
   } finally {
