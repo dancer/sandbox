@@ -328,6 +328,32 @@ test("sandboxPath resolves relative paths against cwd", () => {
   expect(sandboxPath("/workspace", "/tmp/file.txt")).toBe("/tmp/file.txt");
 });
 
+test.each([
+  "hello world.txt",
+  "report#1.txt",
+  "query?.txt",
+  "100%.txt",
+  "%2e%2e/secret",
+  "file\\name.txt",
+  "café.txt",
+])("sandboxPath preserves literal filename %s", (path) => {
+  expect(sandboxPath("/workspace", path)).toBe(`/workspace/${path}`);
+  expect(sandboxPath("/workspace", `/tmp/${path}`)).toBe(`/tmp/${path}`);
+  expect(sandboxPath(`/workspace/${path}`, "file.txt")).toBe(
+    `/workspace/${path}/file.txt`
+  );
+});
+
+test.each([
+  ["/workspace", "./src/../file.txt", "/workspace/file.txt"],
+  ["/workspace", "../../file.txt", "/file.txt"],
+  ["/workspace", "//tmp///file.txt", "/tmp/file.txt"],
+  ["/workspace", "src/", "/workspace/src/"],
+  ["/workspace", "/", "/"],
+])("sandboxPath normalizes %s and %s", (cwd, path, expected) => {
+  expect(sandboxPath(cwd, path)).toBe(expected);
+});
+
 test("fromSandboxRuntime derives exec from spawn output", async () => {
   const seen: unknown[] = [];
   const running = (id: string, output: string) => ({

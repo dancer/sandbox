@@ -433,14 +433,20 @@ export const text = async (input: Input): Promise<string> => {
   return typeof value === "string" ? value : new TextDecoder().decode(value);
 };
 
-/** resolve a sandbox path against the sandbox cwd */
+/** resolve a POSIX sandbox path against cwd without interpreting filenames as URLs */
 export const sandboxPath = (cwd: string, value?: string): string => {
   const input = value === undefined || value.length === 0 ? cwd : value;
-  if (input.startsWith("/")) {
-    return new URL(input, "file:///").pathname;
+  const path = input.startsWith("/") ? input : `${cwd}/${input}`;
+  const parts: string[] = [];
+  for (const part of path.split("/")) {
+    if (part === "..") {
+      parts.pop();
+    } else if (part !== "" && part !== ".") {
+      parts.push(part);
+    }
   }
-  const base = cwd.endsWith("/") ? cwd : `${cwd}/`;
-  return new URL(`${base}${input}`, "file:///").pathname;
+  const suffix = path.endsWith("/") && parts.length > 0 ? "/" : "";
+  return `/${parts.join("/")}${suffix}`;
 };
 
 const read = async (value: ReadableStream<Uint8Array>): Promise<Uint8Array> => {

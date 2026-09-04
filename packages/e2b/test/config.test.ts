@@ -514,6 +514,13 @@ test("e2b maps create and command options without running a real provider", asyn
       path: "/work/data.bin",
     });
 
+    for (const path of ["report #1?.txt", "café.txt", "%2e%2e/file.txt"]) {
+      await sandbox.files.write(path, "literal");
+      expect(writeSeen).toMatchObject({ path: `/work/${path}` });
+      await sandbox.files.stream(path);
+      expect(readSeen).toMatchObject({ path: `/work/${path}` });
+    }
+
     await expect(sandbox.snapshots.create("ready")).resolves.toEqual({
       id: "snapshot-id",
       name: "team/ready:default",

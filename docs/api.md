@@ -849,7 +849,7 @@ export declare const text: (input: Input) => Promise<string>;
 
 #### `sandboxPath`
 
-resolve a sandbox path against the sandbox cwd
+resolve a POSIX sandbox path against cwd without interpreting filenames as URLs
 
 ```ts
 export declare const sandboxPath: (cwd: string, value?: string) => string;
