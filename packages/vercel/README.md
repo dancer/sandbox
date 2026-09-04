@@ -2,6 +2,9 @@
 
 Vercel Sandbox adapter for Sandbox SDK.
 
+The adapter defaults to the legacy `node24` runtime on Amazon Linux, preserving
+existing workloads when using Vercel Sandbox 3. Forks inherit the source runtime.
+
 ## Install
 
 ```bash

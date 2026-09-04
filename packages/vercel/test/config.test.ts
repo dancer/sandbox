@@ -130,6 +130,7 @@ test("vercel passes oidc credentials directly to provider", async () => {
     expect(sandbox.id).toBe("sandbox");
     expect(seen).toMatchObject({
       projectId: "project",
+      runtime: "node24",
       teamId: "team",
       token: value,
     });
@@ -423,6 +424,7 @@ test("vercel forks named sandboxes with normalized create options", async () => 
       teamId: "team",
       token: "token",
     });
+    expect(seen).not.toHaveProperty("runtime");
   } finally {
     VercelSandbox.fork = original;
   }

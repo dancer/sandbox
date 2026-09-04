@@ -2977,7 +2977,7 @@ export type Vercel = Readonly<{
   projectId?: string;
   /** resource request for new sandboxes */
   resources?: Resources;
-  /** Vercel runtime id such as node26, node24, node22, or python3.13 */
+  /** Vercel runtime id, defaults to node24 on Amazon Linux to preserve existing workloads */
   runtime?: Runtime;
   /** signal that cancels sandbox creation, get, get-or-create, or fork requests */
   signal?: AbortSignal;
