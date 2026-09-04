@@ -4,6 +4,15 @@ import { resolve } from "node:path";
 
 const root = resolve(import.meta.dir, "..");
 
+test("publishing requires an explicit manual workflow dispatch", () => {
+  const workflow = readFileSync(
+    resolve(root, ".github/workflows/release.yml"),
+    "utf-8"
+  );
+  expect(workflow).toContain("workflow_dispatch:");
+  expect(workflow).not.toContain("  push:");
+});
+
 type Changesets = Readonly<{
   access?: string;
   fixed?: readonly (readonly string[])[];
