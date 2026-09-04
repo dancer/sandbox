@@ -123,6 +123,8 @@ const stopAfterError = async (
  *
  * use this for short-lived work where retaining the sandbox after the callback
  * completes would be unexpected
+ * consume streams and finish background work inside the callback
+ * returning a stream or process handle does not extend the sandbox lifetime
  *
  * @example
  * import { withSandbox } from "@sandbox-sdk/core"
