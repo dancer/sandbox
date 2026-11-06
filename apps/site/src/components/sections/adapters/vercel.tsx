@@ -8,7 +8,8 @@ import { vercel } from "@sandbox-sdk/vercel";
 
 const sandbox = await create({
   adapter: vercel({
-    runtime: "node24",
+    image: "vercel/sandbox/universal",
+    region: "iad1",
   }),
 });
 
@@ -46,12 +47,33 @@ export const Vercel = () => (
         Options
       </Heading>
       <Accordion className="rounded-md border-dotted" type="multiple">
+        <PropAccordionItem name="image" status="optional" value="image">
+          <p>
+            Vercel Container Registry image. Omit it to use the current
+            universal image. Images and legacy runtimes are mutually exclusive;
+            snapshot sources use their own environment.
+          </p>
+        </PropAccordionItem>
+        <PropAccordionItem name="region" status="optional" value="region">
+          <p>
+            Primary Vercel region. Set <code>failoverRegions</code> for
+            alternate placement and <code>networkId</code> for Secure Compute.
+            Up to 15 ports can be exposed.
+          </p>
+        </PropAccordionItem>
+        <PropAccordionItem name="mounts" status="optional" value="VercelMounts">
+          <p>
+            Pre-created drives keyed by absolute mount path. Import{" "}
+            <code>VercelDrive</code> for native drive management. Forks must
+            explicitly declare mounts.
+          </p>
+        </PropAccordionItem>
         <PropAccordionItem name="runtime" status="optional" value="runtime">
           <p>
-            Vercel Sandbox runtime. Supported runtime ids include{" "}
-            <code>node26</code>, <code>node24</code>, <code>node22</code>, and{" "}
-            <code>python3.13</code>. Forks inherit their source runtime and do
-            not accept this option.
+            Legacy Vercel Sandbox runtime. Omit it for the universal image.
+            Runtime ids include <code>node26</code>, <code>node24</code>,{" "}
+            <code>node22</code>, and <code>python3.13</code>. Forks inherit
+            their source runtime and do not accept this option.
           </p>
         </PropAccordionItem>
         <PropAccordionItem name="name" status="optional" value="name">

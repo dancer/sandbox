@@ -25,16 +25,20 @@ export const E2B = () => (
     <p>
       Use the shared <code>snapshot</code> create option to start a fresh E2B
       sandbox from a snapshot id. E2B snapshots capture filesystem and memory
-      state, briefly pausing the source sandbox and dropping active command,
+      state by default. Set <code>snapshotMode: "filesystem"</code> for
+      disk-only snapshots that boot fresh. Snapshot creation can pause the
+      source, briefly pausing the source sandbox and dropping active command,
       PTY, and WebSocket connections. Use <code>template</code> for provider
       template ids and names. Named snapshots return E2B's persisted canonical
       name, which can include a namespace and tag. Call{" "}
       <code>snapshots.delete()</code> after the snapshot is no longer needed.
     </p>
     <p>
-      When E2B restricts preview traffic, call <code>preview.request()</code>{" "}
-      after <code>ports.expose()</code>. It retains the traffic access header
-      without returning it in serializable data.
+      Use <code>idempotencyKey</code> for creation retries and{" "}
+      <code>httpVersion</code> for native HTTP behavior. When E2B restricts
+      preview traffic, call <code>preview.request()</code> after{" "}
+      <code>ports.expose()</code>. It retains the traffic access header without
+      returning it in serializable data.
     </p>
     <CodeBlock code={E2B_EXAMPLE} lang="ts" />
     <div className="flex flex-col gap-2">

@@ -14,7 +14,7 @@ const ADAPTERS = [
     label: "Blaxel",
   },
   {
-    config: `cloudflare({ binding: env.SANDBOX })`,
+    config: `cloudflare({ container })`,
     id: "cloudflare",
     import: `import { cloudflare } from "@sandbox-sdk/cloudflare";`,
     label: "Cloudflare",
@@ -44,7 +44,7 @@ const ADAPTERS = [
     label: "Modal",
   },
   {
-    config: `vercel({ runtime: "node22" })`,
+    config: `vercel({ image: "vercel/sandbox/universal" })`,
     id: "vercel",
     import: `import { vercel } from "@sandbox-sdk/vercel";`,
     label: "Vercel",
@@ -61,9 +61,9 @@ await withSandbox(
     cwd: "/workspace",
   },
   async (sandbox) => {
-    await sandbox.files.write("main.ts", "console.log('hello')");
+    await sandbox.files.write("message.txt", "hello");
 
-    const result = await sandbox.process.shell("bun main.ts");
+    const result = await sandbox.process.exec("cat", ["message.txt"]);
 
     console.log(result.stdout);
   }

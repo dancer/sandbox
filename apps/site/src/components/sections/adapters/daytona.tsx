@@ -39,6 +39,12 @@ export const Daytona = () => (
       only when an external client needs a self-contained URL. Standard tokens
       reset after a sandbox restart, so expose the port again after restarting.
     </p>
+    <p>
+      Stable filesystem snapshots are available through{" "}
+      <code>snapshots.create()</code>. Start a fresh sandbox with its id;
+      in-place restoration remains unsupported. Typed options also cover
+      auto-pause, TTL, queue timeouts, domain rules, secret references, and KVM.
+    </p>
     <CodeBlock code={DAYTONA_EXAMPLE} lang="ts" />
     <div className="flex flex-col gap-2">
       <Heading as="h4" id="adapter-daytona-options">

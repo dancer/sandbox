@@ -130,12 +130,15 @@ Blaxel perpetual sandboxes via \`@blaxel/core\`. Maps Blaxel files, process exec
 
 ## Cloudflare (@sandbox-sdk/cloudflare)
 
-Cloudflare via \`@cloudflare/sandbox\`. Backed by a Durable Object running a Linux container, so the adapter takes a binding from \`env\` rather than an API key. The Worker must export \`Sandbox\` from \`@cloudflare/sandbox\` and bind that Durable Object in \`wrangler.jsonc\`. The adapter enforces RPC transport and \`ports.expose()\` returns a zero-config HTTPS quick tunnel by default. Use \`tunnel\` for one stable named port or \`tunnels\` to map distinct labels per port. Worker-managed WebSocket upgrades stay provider-specific through typed \`sandbox.raw.wsConnect(request, port)\`. Set \`backups\` to opt into R2-backed normalized filesystem snapshot create and in-place restore. Use \`backups.useGitignore\` to exclude Git-ignored files, matching Cloudflare's public backup documentation. The Worker needs a \`BACKUP_BUCKET\` binding and production R2 presigned URL credentials. Restore uses the adapter cwd and configured \`localBucket\` mode. Production restore mounts are lost after the sandbox sleeps or restarts, so restore again from the snapshot id. Cloudflare has no native backup delete operation, so deletion and fresh-sandbox backup sources remain unsupported. For non-Worker runtimes, deploy Cloudflare's HTTP bridge and use \`cloudflareBridge()\`; its \`ports.expose()\` has the same quick and named tunnel behavior. Named tunnels require the bridge Worker or native Worker to have Cloudflare account and zone credentials. The bridge has no lifecycle-safe background process route, so \`process.spawn()\` stays unavailable. Start a long-running bridge service through \`sandbox.raw.pty()\` or a bridge image entrypoint before calling \`ports.expose()\`. \`SANDBOX_API_KEY\` authenticates the bridge and is rejected from sandbox environment configuration.
+Cloudflare 1.0 uses the native container from your own Durable Object. Pass \`this.ctx.container\` to \`cloudflare()\`. Configure a named \`sandbox\` image containing the matching \`sandbox-shim\`, or pass \`image\` explicitly. The adapter starts stopped containers and keeps native execution available through \`sandbox.raw\`.
 
-- \`binding\` (required), \`backups\`, \`id\`, \`tunnel\`, \`tunnels\`.
-- Bridge working directories stay below \`/workspace\`; relative values resolve there, custom directories are created, and external paths fail with \`SandboxError\` and \`code: "path_escape"\` before a bridge request.
-- Bridge credentials: \`SANDBOX_API_URL\` and \`SANDBOX_API_KEY\`.
-- Repository live verifier: \`CLOUDFLARE_SANDBOX_WORKER_URL\` and \`CLOUDFLARE_SANDBOX_TOKEN\`.
+The application owns authorization, request routing, concurrency, and Durable Object lifetime. Network access stays disabled unless \`startup.enableInternet\` is enabled. Native \`exec()\` does not inherit startup environment values, so the adapter merges configured values into each command. Finish processes and consume streams while their request context is alive.
+
+Filesystem snapshots capture the root filesystem, excluding memory and mounted directories. Create with \`snapshots.create(name?)\`, restore in place with \`snapshots.restore(id)\`, or start a stopped container with \`create({ snapshot: id })\`. Container snapshots are a Cloudflare beta feature. Snapshot deletion is unsupported by the normalized container API.
+
+Previews require an application-owned \`preview\` callback. Route requests to \`container.getTcpPort(port).fetch()\` in your Worker, and return its public URL from the callback. Put access headers in the callback's private \`headers\` field so \`preview.request()\` authenticates without serializing them. Old 0.x bindings, sessions, interpreter contexts, and automatic quick tunnels are not native 1.0 APIs.
+
+\`cloudflareBridge()\` continues to target the official 0.12 HTTP bridge, deployed separately with \`@cloudflare/sandbox@0.12.14\` and its matching image. It supports files, bounded commands, sessions, and tunnels, but has no normalized background process handles or snapshots. Bridge paths stay below \`/workspace\`. Keep \`SANDBOX_API_KEY\` on the host and Worker, outside sandbox environment values.
 
 ## CodeSandbox (@sandbox-sdk/codesandbox)
 
@@ -146,6 +149,8 @@ CodeSandbox microVMs via \`@codesandbox/sdk\`. Creates or resumes sandboxes, con
 
 ## Daytona (@sandbox-sdk/daytona)
 
+Stable filesystem snapshot creation is available through \`snapshots.create()\`. In-place restoration stays unsupported. TTL, auto-pause, queue timeouts, domain rules, secrets, and KVM use typed native options.
+
 Daytona dev environments via \`@daytona/sdk\`. Spins up a workspace from the given image, mounts a workdir, and threads files and processes through Daytona's API. Standard private previews work through \`preview.request()\`, which retains Daytona's preview token. Standard tokens reset after a sandbox restart, so expose the port again after restarting. Set \`signedPreview\` when an external client needs a self-contained URL. Network limits are configured at creation time; native \`raw.updateNetworkSettings()\` is available when the account tier supports runtime changes. Pass a shared \`DaytonaClient\` through \`client\` when application code also needs native snapshot or volume services.
 
 - \`image\`, \`apiKey\`, \`target\`, \`networkBlockAll\`, \`networkAllowList\`.
@@ -153,12 +158,14 @@ Daytona dev environments via \`@daytona/sdk\`. Spins up a workspace from the giv
 
 ## E2B (@sandbox-sdk/e2b)
 
-E2B microVM sandboxes via \`e2b\`. Can pin a template at construction and threads writes, commands, ports, and snapshots through the E2B SDK. E2B snapshots capture filesystem and memory state, briefly pausing the source sandbox and dropping active command, PTY, and WebSocket connections. Use the shared \`snapshot\` create option to start a fresh sandbox from a snapshot id. Named snapshots return E2B's persisted canonical name, which can include a namespace and tag. \`ports.expose()\` returns E2B's derived HTTP or HTTPS URL. When \`network.allowPublicTraffic\` is false, \`preview.request()\` retains E2B's traffic access header.
+E2B microVM sandboxes via \`e2b\`. Can pin a template at construction and threads writes, commands, ports, and snapshots through the E2B SDK. E2B snapshots capture filesystem and memory state by default; set \`snapshotMode: "filesystem"\` for disk-only snapshots, briefly pausing the source sandbox and dropping active command, PTY, and WebSocket connections. Use the shared \`snapshot\` create option to start a fresh sandbox from a snapshot id. Named snapshots return E2B's persisted canonical name, which can include a namespace and tag. \`ports.expose()\` returns E2B's derived HTTP or HTTPS URL. When \`network.allowPublicTraffic\` is false, \`preview.request()\` retains E2B's traffic access header.
 
 - \`template\`, \`apiKey\`, \`apiHeaders\`, \`proxy\`, \`integration\`, \`validateApiKey\`, \`timeout\`.
 - Credentials: \`E2B_API_KEY\`.
 
 ## Modal (@sandbox-sdk/modal)
+
+Set \`runtime: "vm"\` to select a full virtual machine, or \`runtime: "gvisor"\` explicitly. Creation waits for scheduling.
 
 Modal sandboxes via \`modal\`. Creates sandboxes inside a Modal app, maps file reads and writes through Modal's filesystem, and exposes provider-declared HTTPS ports through Modal tunnels. Reconnecting by sandbox id discovers existing tunnels automatically. Use typed Modal adapter options and \`sandbox.raw\` for provider-specific private and direct TCP tunnel controls. Pass a shared \`ModalClient\` through \`client\` when application code also uses native app, image, volume, or secret services. Supports filesystem snapshot creation; in-place restore and background process handles stay unsupported until the provider exposes a matching stable primitive.
 
@@ -167,6 +174,8 @@ Modal sandboxes via \`modal\`. Creates sandboxes inside a Modal app, maps file r
 - Credentials: \`MODAL_TOKEN_ID\` and \`MODAL_TOKEN_SECRET\`, or Modal CLI config.
 
 ## Vercel (@sandbox-sdk/vercel)
+
+Vercel uses its universal image by default. Configure \`image\`, \`region\`, \`failoverRegions\`, \`networkId\`, and \`mounts\` for native placement, networking, and drives. Up to 15 ports are supported. Legacy \`runtime\` is explicit and cannot be combined with \`image\`.
 
 Vercel via \`@vercel/sandbox\`. Backed by Fluid Compute: named, persistent microVMs with snapshots, dynamic ports, network policy, sessions, interactive PTY connections, and provider-native lifecycle controls. Use \`snapshot\` to start from a snapshot id, or \`snapshots.restore()\` to point the current named sandbox at a snapshot. Use \`fork\` to start from a named source sandbox after stopping or snapshotting it when the fork needs its filesystem. Fork inherits the source runtime and cannot be combined with \`runtime\`, \`source\`, \`getOrCreate\`, or create input \`id\`, \`snapshot\`, or \`template\`.
 

@@ -117,6 +117,12 @@ export const AiTools = () => (
       AI tools
     </Heading>
     <p>
+      Current AI SDK sessions also expose <code>stat</code>,{" "}
+      <code>listDirectory</code>, and file-only <code>deleteFile</code>. These
+      use POSIX command execution, preserve symbolic-link semantics, and apply{" "}
+      <code>beforeExec</code>. Writable stdin rejects before starting a process.
+    </p>
+    <p>
       <code>@sandbox-sdk/ai</code> wraps a configured sandbox into ready-made
       tools for agent frameworks. The kit includes prompt context plus file,
       command, directory, preview tools, and an AI SDK-compatible sandbox object

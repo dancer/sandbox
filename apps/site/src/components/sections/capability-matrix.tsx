@@ -103,7 +103,9 @@ const ROWS: { capability: string; cells: Record<ColumnKey, Cell> }[] = [
     capability: "ports",
     cells: {
       blaxel: ok,
-      cloudflare: ok,
+      cloudflare: warn(
+        "Requires application-owned preview routing and a preview callback."
+      ),
       codesandbox: ok,
       daytona: ok,
       e2b: ok,
@@ -123,13 +125,13 @@ const ROWS: { capability: string; cells: Record<ColumnKey, Cell> }[] = [
         "Blaxel snapshot behavior is provider-specific today and stays behind raw until the normalized contract is right."
       ),
       cloudflare: warn(
-        "Cloudflare creates R2-backed filesystem snapshots when cloudflare({ backups }) is configured on a Worker with the required R2 binding and credentials."
+        "Cloudflare 1.0 captures the root filesystem through native Container snapshots, currently in beta. Memory and mounted directories are excluded."
       ),
       codesandbox: warn(
         "CodeSandbox snapshot creation hibernates the current VM and returns its sandbox id for create-time snapshot sources."
       ),
-      daytona: no(
-        "Daytona snapshot and fork APIs are still experimental in the current adapter surface. Use raw for provider-specific snapshot workflows."
+      daytona: warn(
+        "Daytona uses its stable filesystem snapshot API. Snapshots can seed fresh sandboxes; in-place restore remains unavailable."
       ),
       e2b: warn(
         "E2B supports snapshot creation. Restore is tracked separately because in-place restore is not normalized yet."
@@ -152,7 +154,7 @@ const ROWS: { capability: string; cells: Record<ColumnKey, Cell> }[] = [
         "Blaxel snapshot deletion stays behind raw until its snapshot lifecycle has a matching normalized contract."
       ),
       cloudflare: no(
-        "Cloudflare has no native backup deletion operation. Use an R2 lifecycle rule for cleanup and raw only when direct object management is appropriate."
+        "The native Container API does not expose normalized snapshot deletion. Manage snapshot retention through Cloudflare."
       ),
       codesandbox: no(
         "CodeSandbox normalized snapshots are hibernated sandbox ids, so deleting one would delete the source sandbox."
@@ -181,7 +183,7 @@ const ROWS: { capability: string; cells: Record<ColumnKey, Cell> }[] = [
         "Blaxel restore and fork flows are provider-specific in this adapter today."
       ),
       cloudflare: warn(
-        "Cloudflare restores configured R2 backups into the adapter cwd. Production restores are copy-on-write mounts lost when the sandbox sleeps or restarts."
+        "Cloudflare restores a native filesystem snapshot by destroying the active instance and starting from the selected snapshot."
       ),
       codesandbox: no("CodeSandbox has no normalized in-place restore."),
       daytona: no(
@@ -207,8 +209,8 @@ const ROWS: { capability: string; cells: Record<ColumnKey, Cell> }[] = [
       blaxel: no(
         "Blaxel snapshot source flows stay behind raw until the normalized create-from-snapshot contract is right."
       ),
-      cloudflare: no(
-        "Cloudflare restores backups in place. Creating a fresh sandbox from a backup id stays provider-specific through raw."
+      cloudflare: warn(
+        "A stopped Cloudflare container can start from a native snapshot id. Snapshot sources cannot replace a running instance during create."
       ),
       codesandbox: warn(
         "CodeSandbox can create a fresh sandbox from a hibernated sandbox id through the shared snapshot source option."
@@ -234,7 +236,9 @@ const ROWS: { capability: string; cells: Record<ColumnKey, Cell> }[] = [
     capability: "environment",
     cells: {
       blaxel: ok,
-      cloudflare: ok,
+      cloudflare: warn(
+        "Native exec does not inherit startup variables. The adapter applies configured values to each normalized command."
+      ),
       codesandbox: ok,
       daytona: ok,
       e2b: ok,

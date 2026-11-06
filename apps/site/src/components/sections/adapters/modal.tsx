@@ -31,6 +31,11 @@ export const Modal = () => (
       and background process handles stay unsupported in the normalized adapter
       until the provider exposes a matching stable primitive.
     </p>
+    <p>
+      Set <code>runtime: "vm"</code> for a full virtual machine, or{" "}
+      <code>runtime: "gvisor"</code> explicitly. Creation waits for scheduling.
+      Entrypoint logs are available through <code>sandbox.raw.logs</code>.
+    </p>
     <CodeBlock code={MODAL_EXAMPLE} lang="ts" />
     <p>
       Runtime network changes require explicit allowlists at creation. Start
