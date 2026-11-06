@@ -3,11 +3,13 @@ import type { Result, Sandbox as CoreSandbox } from "@sandbox-sdk/core";
 import { handleRaw } from "./raw";
 import type { Context as Env } from "./shared";
 import { ignore, instance, json } from "./shared";
+import { snapshots } from "./snapshots";
 
 const liveRoute = "/sandbox-sdk/live";
 const portsRoute = "/sandbox-sdk/ports";
 const rawRoute = "/sandbox-sdk/raw";
 const cleanupRoute = "/sandbox-sdk/cleanup";
+const snapshotsRoute = "/sandbox-sdk/snapshots";
 const message = "hello from cloudflare";
 const port = 8080;
 const portMessage = "hello from cloudflare port";
@@ -289,7 +291,8 @@ export const guard = (
     url.pathname !== liveRoute &&
     url.pathname !== portsRoute &&
     url.pathname !== rawRoute &&
-    url.pathname !== cleanupRoute
+    url.pathname !== cleanupRoute &&
+    url.pathname !== snapshotsRoute
   ) {
     return json({ error: "not_found", ok: false }, 404);
   }
@@ -314,6 +317,10 @@ export default {
 
     if (url.pathname === portsRoute) {
       return handlePorts(env);
+    }
+
+    if (url.pathname === snapshotsRoute) {
+      return snapshots(env);
     }
 
     if (url.pathname === rawRoute) {

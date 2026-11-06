@@ -1,4 +1,4 @@
-import { test } from "bun:test";
+import { expect, test } from "bun:test";
 
 import { ports, raw, workflow } from "./behavior";
 import {
@@ -6,6 +6,7 @@ import {
   execute,
   executePorts,
   executeRaw,
+  executeSnapshots,
   portsFixture,
   rawFixture,
   record,
@@ -31,3 +32,17 @@ live("cloudflare verifies native container execution", async () => {
   raw(result);
   await record("raw", rawFixture(result));
 });
+
+live(
+  "cloudflare restores native filesystem snapshots and starts from a snapshot",
+  async () => {
+    const response = await executeSnapshots();
+    const body: unknown = await response.json();
+    expect(body).toEqual({
+      ok: true,
+      restored: "checkpoint",
+      source: "checkpoint",
+    });
+    expect(response.ok).toBe(true);
+  }
+);

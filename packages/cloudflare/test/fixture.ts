@@ -444,3 +444,10 @@ export const record = async <Body>(
   await mkdir(dirname(file), { recursive: true });
   await Bun.write(file, `${JSON.stringify(value, null, 2)}\n`);
 };
+
+export const executeSnapshots = (): Promise<Response> =>
+  fetch(endpoint("/sandbox-sdk/snapshots"), {
+    headers: headers(),
+    method: "POST",
+    signal: AbortSignal.timeout(300_000),
+  });

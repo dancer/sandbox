@@ -34,9 +34,9 @@ afterEach(async () => {
   await dispose();
 });
 
-const request = (): Promise<Response> | Response =>
+const request = (route = "/sandbox-sdk/ports"): Promise<Response> | Response =>
   worker.fetch(
-    new Request("https://verify.example/sandbox-sdk/ports", {
+    new Request(new URL(route, "https://verify.example").toString(), {
       headers: { authorization: "Bearer test-token" },
       method: "POST",
     }),
@@ -139,5 +139,43 @@ test("cleanup stops the requested verifier sandbox", async () => {
   expect(response.status).toBe(200);
   expect(await response.json()).toEqual({ ok: true });
   expect(shared.instance).toHaveBeenCalledWith(env, "/workspace", "sandbox");
+  expect(stop).toHaveBeenCalledTimes(1);
+});
+
+test("snapshot verification restores files and stops every instance", async () => {
+  const stop = spyOn(sandbox, "stop").mockResolvedValue();
+  spyOn(sandbox.snapshots, "create").mockResolvedValue({ id: "snapshot" });
+  const restore = spyOn(sandbox.snapshots, "restore").mockImplementation(() =>
+    sandbox.files.write("checkpoint.txt", "checkpoint")
+  );
+  const response = await request("/sandbox-sdk/snapshots");
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual({
+    ok: true,
+    restored: "checkpoint",
+    source: "checkpoint",
+  });
+  expect(restore).toHaveBeenCalledWith("snapshot");
+  expect(shared.instance).toHaveBeenLastCalledWith(
+    env,
+    "/workspace",
+    "sandbox",
+    undefined,
+    "snapshot"
+  );
+  expect(stop).toHaveBeenCalledTimes(2);
+});
+
+test("failed snapshot verification stops its sandbox", async () => {
+  const stop = spyOn(sandbox, "stop");
+  spyOn(sandbox.snapshots, "create").mockRejectedValue(
+    new Error("snapshot failed")
+  );
+  const response = await request("/sandbox-sdk/snapshots");
+  expect(response.status).toBe(500);
+  expect(await response.json()).toEqual({
+    error: "snapshot failed",
+    ok: false,
+  });
   expect(stop).toHaveBeenCalledTimes(1);
 });

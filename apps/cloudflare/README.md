@@ -34,13 +34,14 @@ bun run verify:cloudflare
 - `/sandbox-sdk/live` verifies files, process execution, environment and streaming
 - `/sandbox-sdk/ports` starts a server and returns an authenticated application preview
 - `/sandbox-sdk/raw` verifies native execution and the available raw methods
+- `/sandbox-sdk/snapshots` verifies snapshot creation, in-place restoration and create-from-snapshot
 - `/sandbox-sdk/cleanup` destroys the container retained by preview verification
 
 These routes require a bearer token and accept `POST`. Cleanup validates the Durable Object id before accessing its binding
 
 `/preview/{id}/{port}/` requires the same bearer token and routes through `getTcpPort`. The verifier strips authorization before forwarding to the application over HTTP. The external preview URL uses HTTPS
 
-Native snapshots are in public beta. Deterministic adapter tests cover creation, restoration and create-from-snapshot mappings. The live workflow does not create persistent snapshots
+Native snapshots are in public beta. The live snapshot check writes a checkpoint, restores it in place, then starts a stopped container from the same snapshot. Every instance is destroyed after verification. The provider snapshot remains available until Cloudflare expires it. The client allows five minutes for this check and does not retry creation automatically
 
 ## legacy bridge
 

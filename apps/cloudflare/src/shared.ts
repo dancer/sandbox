@@ -26,7 +26,8 @@ export const instance = (
   env: Context,
   cwd: string,
   id: string,
-  variables?: Readonly<Record<string, string>>
+  variables?: Readonly<Record<string, string>>,
+  snapshot?: string
 ): Promise<CoreSandbox<CloudflareRaw>> =>
   create({
     adapter: cloudflare({
@@ -41,5 +42,6 @@ export const instance = (
     }),
     cwd,
     timeout: 300_000,
+    ...(snapshot === undefined ? {} : { snapshot }),
     ...(variables === undefined ? {} : { env: variables }),
   });
