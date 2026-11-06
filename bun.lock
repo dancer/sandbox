@@ -222,6 +222,9 @@
     "@tailwindcss/oxide",
     "sharp",
   ],
+  "patchedDependencies": {
+    "zod@3.22.4": "patches/zod.patch",
+  },
   "overrides": {
     "@babel/core": "7.29.6",
     "@codesandbox/sdk": {

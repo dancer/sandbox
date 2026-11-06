@@ -349,6 +349,7 @@ bun run docs:api
 bun run verify:env
 bun run test
 bun run verify
+bun run audit
 bun run verify:providers
 bun run verify:e2b
 bun run verify:daytona:snapshot-delete
@@ -356,6 +357,10 @@ bun run verify:daytona:snapshot-delete
 
 `bun run verify` is the deterministic release gate. It runs tests, generated
 API docs, linting, typechecking, package dry-runs, and the production build.
+
+`bun run audit` checks dependencies with regression-guarded exceptions for a
+rejected advisory and a patched CLI dependency. See [dependency security](docs/security.md)
+for the evidence and removal conditions.
 
 The default test suite never loads `.env.local`, even when it exists. It covers
 core behavior, the local adapter, AI tool execution, package exports, config

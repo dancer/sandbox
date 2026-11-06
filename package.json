@@ -33,7 +33,8 @@
     "verify:vercel": "bun --env-file=.env.local scripts/credentials.ts vercel && bun run --cwd packages/vercel build && bun --env-file=.env.local test --timeout=300000 packages/vercel/test/live.test.ts",
     "typecheck": "bun run build:packages && tsc -p packages/ai/test/tsconfig.json && tsc -p packages/cloudflare/test/tsconfig.json && tsc -p packages/vercel/test/tsconfig.json && bunx tsc -p scripts/tsconfig.json && bun run --cwd apps/site typecheck && bun run --cwd apps/cloudflare typecheck && bun run --cwd apps/cloudflare-bridge typecheck && tsc -p examples/tsconfig.json",
     "version:packages": "changeset version",
-    "prepare": "husky"
+    "prepare": "husky",
+    "audit": "bun test ./test/security.test.ts && bun audit --ignore=GHSA-gcqx-w48m-w2h4 --ignore=GHSA-mrhx-c7xc-m3w5"
   },
   "dependencies": {
     "vercel": "^65.11.0"
@@ -105,6 +106,9 @@
     "zod@4": "4.6.7"
   },
   "packageManager": "bun@1.4.0",
+  "patchedDependencies": {
+    "zod@3.22.4": "patches/zod.patch"
+  },
   "trustedDependencies": [
     "@tailwindcss/oxide",
     "sharp",
