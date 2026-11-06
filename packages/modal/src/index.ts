@@ -104,6 +104,8 @@ export type Modal = Readonly<
     proxy?: CreateParams["proxy"];
     /** readiness probe used before Modal marks the sandbox ready */
     readinessProbe?: CreateParams["readinessProbe"];
+    /** native sandbox runtime; vm supports nested virtualization, while gvisor retains the existing default */
+    runtime?: CreateParams["runtime"];
     /** Modal regions used for sandbox placement */
     regions?: CreateParams["regions"];
     /** Modal secrets injected as sandbox environment variables */
@@ -392,6 +394,7 @@ const createOptions = (
   set(output, "proxy", options.proxy);
   set(output, "pty", options.pty);
   set(output, "readinessProbe", options.readinessProbe);
+  set(output, "runtime", options.runtime);
   set(output, "regions", options.regions);
   set(output, "secrets", options.secrets);
   set(output, "tags", Object.keys(tags).length === 0 ? undefined : tags);

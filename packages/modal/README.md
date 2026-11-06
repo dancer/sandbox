@@ -23,6 +23,10 @@ Set `MODAL_TOKEN_ID` and `MODAL_TOKEN_SECRET`, or use Modal CLI configuration.
 Filesystem snapshots create images for fresh sandboxes. Native tunnel, volume,
 GPU, and connect-token controls remain available through `sandbox.raw`.
 
+## Runtime selection
+
+Set `runtime: "vm"` for Modal's full virtual-machine runtime, or `runtime: "gvisor"` explicitly. Omit the option to use Modal's current default. Modal 0.11 creation waits for scheduling and reports unsatisfiable placement requests during creation. Entrypoint logs remain available through `sandbox.raw.logs`.
+
 ## Runtime Controls
 
 To change outbound access while a sandbox runs, configure allowlists at creation.
