@@ -4,15 +4,16 @@ import { create } from "@sandbox-sdk/core";
 import type { Sandbox } from "@sandbox-sdk/core";
 import { local } from "@sandbox-sdk/local";
 
-import type { Env } from "../src/shared";
-
-void mock.module("@cloudflare/sandbox", () => ({ Sandbox: mock() }));
+import type { Context as Env } from "../src/shared";
 
 const shared = await import("../src/shared");
-const { default: worker } = await import("../src/index");
+const { default: worker } = await import("../src/routes");
 const env: Env = {
   SANDBOX_SDK_TOKEN: "test-token",
-  Sandbox: {} as Env["Sandbox"],
+  container: {} as Container,
+  id: "sandbox",
+  url: "https://verify.example",
+  waitUntil: () => {},
 };
 let sandbox: Sandbox;
 let dispose: () => Promise<void>;

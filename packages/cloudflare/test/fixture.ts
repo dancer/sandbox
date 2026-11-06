@@ -65,31 +65,17 @@ export type PortPayload = Readonly<{
 
 export type RawPayload = Readonly<{
   capabilities: Record<string, unknown>;
-  code: Readonly<{
-    contextDeleted: boolean;
-    contextListed: boolean;
-    result: string;
-  }>;
   error?: string;
   id: string;
   ok: boolean;
   provider: string;
   raw: Readonly<{
-    backup: boolean;
-    buckets: boolean;
-    git: boolean;
-    pty: boolean;
-    websocket: boolean;
+    exec: boolean;
+    network: boolean;
+    ports: boolean;
+    snapshots: boolean;
   }>;
-  session: Readonly<{
-    deleted: boolean;
-    output: string;
-  }>;
-  watch: Readonly<{
-    after: string;
-    before: string;
-    changed: boolean;
-  }>;
+  result: string;
 }>;
 
 export type Result = Readonly<{
@@ -174,31 +160,20 @@ export const portsCoverage: Coverage = {
 export const rawCoverage: Coverage = {
   features: [
     "capabilities",
-    "raw.createSession",
-    "raw.session.exec",
-    "raw.deleteSession",
-    "raw.createCodeContext",
-    "raw.runCode",
-    "raw.listCodeContexts",
-    "raw.deleteCodeContext",
-    "raw.checkChanges",
-    "raw.git.method",
-    "raw.session.terminal.method",
-    "raw.wsConnect.method",
-    "raw.createBackup.method",
-    "raw.mountBucket.method",
+    "raw.exec",
+    "raw.inspect",
+    "raw.getTcpPort.method",
+    "raw.interceptOutboundHttp.method",
+    "raw.snapshotContainer.method",
     "sandbox.stop",
   ],
   fixture: "raw",
   provider: "cloudflare",
   uncovered: [
-    "raw.createBackup",
-    "raw.restoreBackup",
-    "raw.mountBucket",
-    "raw.unmountBucket",
-    "raw.terminal.websocket",
-    "raw.wsConnect",
-    "raw.gitCheckout",
+    "raw.exec.pty",
+    "raw.interceptOutboundHttp",
+    "snapshots.create",
+    "snapshots.restore",
   ],
 };
 
@@ -361,7 +336,17 @@ export const executePorts = async (): Promise<PortResult> => {
         return {
           body: {
             ...body,
-            response: await requestPreview(body.port.url),
+            response: await (async () => {
+              const preview = await fetch(body.port.url, {
+                headers: headers(),
+                signal: AbortSignal.timeout(previewTimeout),
+              });
+              return {
+                ok: preview.ok,
+                status: preview.status,
+                text: await preview.text(),
+              };
+            })(),
           },
           response,
         };
@@ -430,7 +415,7 @@ export const portsFixture = (input: PortResult): Fixture<PortPayload> => ({
     id: "sandbox",
     port: {
       ...input.body.port,
-      url: "https://sandbox-fixture.trycloudflare.com",
+      url: "https://verify.example/preview/sandbox/8080/",
     },
   },
   coverage: portsCoverage,
@@ -441,11 +426,6 @@ export const rawFixture = (input: RawResult): Fixture<RawPayload> => ({
   body: {
     ...input.body,
     id: "sandbox",
-    watch: {
-      ...input.body.watch,
-      after: "version-after",
-      before: "version-before",
-    },
   },
   coverage: rawCoverage,
   status: input.response.status,

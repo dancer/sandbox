@@ -1,24 +1,21 @@
 {
   "body": {
     "capabilities": {
-      "environment": true,
+      "environment": "separate",
+      "fileStreaming": "native",
       "files": true,
       "ports": "dynamic",
       "processExec": true,
       "processSpawn": "separate",
       "raw": {
-        "backup": "configured",
-        "buckets": "configured",
-        "git": true,
-        "interpreter": true,
-        "pty": true,
-        "sessions": true,
-        "tunnels": "dynamic",
-        "watching": true
+        "lifecycle": "dynamic",
+        "network": "configured",
+        "pty": true
       },
-      "snapshotCreate": false,
+      "snapshotCreate": "filesystem",
       "snapshotDelete": false,
-      "snapshotRestore": false,
+      "snapshotRestore": "filesystem",
+      "snapshotSource": "create-time",
       "streaming": "separate"
     },
     "id": "sandbox",
@@ -31,7 +28,7 @@
     "ok": true,
     "port": {
       "port": 8080,
-      "url": "https://sandbox-fixture.trycloudflare.com"
+      "url": "https://verify.example/preview/sandbox/8080/"
     },
     "provider": "cloudflare",
     "response": {

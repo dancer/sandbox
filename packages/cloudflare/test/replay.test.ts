@@ -64,12 +64,12 @@ test("cloudflare explains stale verifier deployments", async () => {
         },
         raw: {
           ...fixture.body.raw,
-          websocket: false,
+          exec: false,
         },
       },
       response: new Response(null, { status: fixture.status }),
     })
   ).toThrow(
-    "deployed cloudflare verifier does not expose raw.websocket. redeploy apps/cloudflare before live raw verification"
+    "deployed cloudflare verifier is not using Cloudflare 1.0. redeploy apps/cloudflare before live verification"
   );
 });

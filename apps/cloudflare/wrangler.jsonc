@@ -4,20 +4,20 @@
   "main": "src/index.ts",
   "workers_dev": true,
   "preview_urls": true,
-  "compatibility_date": "2026-05-13",
+  "compatibility_date": "2026-11-04",
   "compatibility_flags": ["nodejs_compat"],
   "containers": [
     {
-      "class_name": "Sandbox",
-      "image": "./Dockerfile",
-      "instance_type": "lite",
-      "max_instances": 4,
+      "class_name": "Native",
+      "name": "verify-native",
+      "scheduling_policy": "durable_object",
+      "images": { "sandbox": { "dockerfile": "./Dockerfile" } },
     },
   ],
   "durable_objects": {
     "bindings": [
       {
-        "class_name": "Sandbox",
+        "class_name": "Native",
         "name": "Sandbox",
       },
     ],
@@ -27,5 +27,6 @@
       "new_sqlite_classes": ["Sandbox"],
       "tag": "v1",
     },
+    { "new_sqlite_classes": ["Native"], "tag": "v2" },
   ],
 }

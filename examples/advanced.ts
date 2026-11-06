@@ -14,11 +14,11 @@ export const useVercelRaw = async (sandbox: Sandbox<VercelRaw>) => {
 };
 
 export const useCloudflareRaw = async (sandbox: Sandbox<CloudflareRaw>) => {
-  const context = await sandbox.raw.createCodeContext({
-    cwd: sandbox.cwd,
-    language: "python",
-  });
-  return sandbox.raw.runCode("print('hello from cloudflare')", { context });
+  const process = await sandbox.raw.exec(
+    ["python3", "-c", "print('hello from cloudflare')"],
+    { cwd: sandbox.cwd }
+  );
+  return process.output();
 };
 
 export const useE2BRaw = async (sandbox: Sandbox<E2BRaw>) => {

@@ -20,17 +20,14 @@ live("cloudflare runs a live sandbox workflow", async () => {
   await record("workflow", workflowFixture(result));
 });
 
-live("cloudflare exposes a live tunnel", async () => {
+live("cloudflare exposes an authenticated application preview", async () => {
   const result = await executePorts();
   ports(result);
   await record("ports", portsFixture(result));
 });
 
-live(
-  "cloudflare verifies live raw sessions and interpreter features",
-  async () => {
-    const result = await executeRaw();
-    raw(result);
-    await record("raw", rawFixture(result));
-  }
-);
+live("cloudflare verifies native container execution", async () => {
+  const result = await executeRaw();
+  raw(result);
+  await record("raw", rawFixture(result));
+});

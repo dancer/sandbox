@@ -1,91 +1,53 @@
 # cloudflare live validation
 
-This Worker validates the real `@sandbox-sdk/cloudflare` adapter against a Cloudflare Sandbox Durable Object binding.
+This Worker validates `@sandbox-sdk/cloudflare` against Cloudflare 1.0 native containers inside an application-owned Durable Object
 
 ## deploy
 
-Use the repository's Bun version and authenticate Wrangler before deploying:
+Use the repository Bun version, log into Wrangler, and start Docker Desktop before deployment
 
 ```bash
 bun install --frozen-lockfile
 bunx wrangler login
 bun run build:packages
 bun run --cwd apps/cloudflare deploy
+bunx wrangler secret put SANDBOX_SDK_TOKEN --cwd apps/cloudflare
 ```
 
-Wrangler builds the configured Sandbox container during deploy, so Docker must
-be installed and running before this command can succeed.
+The Dockerfile copies the 1.0.3 sandbox-shim into a Node.js image. Keep it aligned with `@cloudflare/sandbox`. Wrangler builds and uploads the image during deployment. This deploys the verification Worker only
 
-Keep the `@cloudflare/sandbox` dependency and Dockerfile image on the same
-version. Redeploy after updating either; local typechecks do not update the
-running verifier. This deploys only the test Worker, not the SDK packages or
-website.
+The `Native` Durable Object owns its container. `wrangler.jsonc` uses `durable_object` scheduling and a named `sandbox` image. The historical `Sandbox` export is retained for the previous migration
 
-After deployment, set the Worker secret before running live checks:
+## verify
+
+Set these values in the repository's ignored `.env.local` file
 
 ```bash
-bunx wrangler secret put SANDBOX_SDK_TOKEN --cwd apps/cloudflare
-export CLOUDFLARE_SANDBOX_WORKER_URL="https://verify.sandbox-sdk.workers.dev"
-export CLOUDFLARE_SANDBOX_TOKEN="same-value"
+CLOUDFLARE_SANDBOX_WORKER_URL=https://verify.sandbox-sdk.workers.dev
+CLOUDFLARE_SANDBOX_TOKEN=the-worker-secret
+```
+
+```bash
 bun run verify:cloudflare
 ```
 
-The live route requires `SANDBOX_SDK_TOKEN`. Without it, the Worker returns
-`missing_token` so a deployed validation endpoint cannot run sandboxes
-unauthenticated.
+- `/sandbox-sdk/live` verifies files, process execution, environment and streaming
+- `/sandbox-sdk/ports` starts a server and returns an authenticated application preview
+- `/sandbox-sdk/raw` verifies native execution and the available raw methods
+- `/sandbox-sdk/cleanup` destroys the container retained by preview verification
 
-## routes
+These routes require a bearer token and accept `POST`. Cleanup validates the Durable Object id before accessing its binding
 
-- `/sandbox-sdk/live` verifies normalized files, process execution, environment, and streaming behavior
-- `/sandbox-sdk/ports` verifies a reachable quick tunnel through `ports.expose()`
-- `/sandbox-sdk/raw` verifies raw sessions, code contexts, interpreter execution, retained change checks, and safe method presence for configured raw features
-- `/sandbox-sdk/cleanup` stops sandboxes created by tunnel checks
+`/preview/{id}/{port}/` requires the same bearer token and routes through `getTcpPort`. The verifier strips authorization before forwarding to the application over HTTP. The external preview URL uses HTTPS
 
-All routes require a bearer token and accept only `POST`. Cleanup requires a
-JSON body with a nonempty string `id`; malformed requests return `422` before
-accessing a sandbox. Failed tunnel setup attempts to stop its sandbox automatically.
-Successful tunnel checks retain the sandbox until the client calls cleanup.
+Native snapshots are in public beta. Deterministic adapter tests cover creation, restoration and create-from-snapshot mappings. The live workflow does not create persistent snapshots
 
-## binding
+## legacy bridge
 
-The Worker must export the Sandbox Durable Object class and bind it in `wrangler.jsonc`.
+`apps/cloudflare-bridge` is a separate verifier for the existing HTTP bridge transport. Cloudflare 1.0 removed that bridge, so this optional verifier uses the maintained 0.12.14 SDK and matching image
 
-```ts
-export { Sandbox } from "@cloudflare/sandbox";
+```bash
+bun run verify:cloudflare:bridge
 ```
 
-```jsonc
-{
-  "containers": [
-    {
-      "class_name": "Sandbox",
-      "image": "./Dockerfile",
-      "instance_type": "lite",
-      "max_instances": 1,
-    },
-  ],
-  "durable_objects": {
-    "bindings": [
-      {
-        "class_name": "Sandbox",
-        "name": "Sandbox",
-      },
-    ],
-  },
-}
-```
-
-## ports
-
-The adapter uses Cloudflare's RPC transport and quick tunnels, so the live port
-verification only needs the Worker URL and bearer token. No wildcard route or
-custom preview hostname is required. Cloudflare accepts ports 1024-65535 and
-reserves port `3000` for the Sandbox runtime.
-
-## named tunnels
-
-The default live verifier intentionally covers quick tunnels only. Named tunnel
-mapping is covered by adapter contract tests. A provider-backed named tunnel
-check requires a `CLOUDFLARE_API_TOKEN` with access to one Cloudflare account
-and zone to be configured as a Worker secret. That token stays on the Worker
-and must never be passed through sandbox environment configuration.
+It requires `CLOUDFLARE_BRIDGE_URL` and `CLOUDFLARE_BRIDGE_TOKEN`. Quick tunnels depend on the legacy provider service. New applications should use native containers with application-owned preview routing
