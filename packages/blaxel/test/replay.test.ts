@@ -16,6 +16,7 @@ const json = async <Body>(name: string): Promise<Fixture<Body>> =>
 const workflow: Workflow = {
   capabilities: {
     environment: true,
+    fileStreaming: "buffered",
     files: true,
     ports: "dynamic",
     processExec: true,

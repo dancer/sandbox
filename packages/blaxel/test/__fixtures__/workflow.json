@@ -33,6 +33,7 @@
   "payload": {
     "capabilities": {
       "environment": true,
+      "fileStreaming": "buffered",
       "files": true,
       "ports": "dynamic",
       "processExec": true,
@@ -43,11 +44,11 @@
         "lifecycle": true,
         "network": "dynamic",
         "previews": true,
+        "resources": "create-time",
         "sessions": true,
         "system": true,
         "volumes": "create-time",
-        "watching": true,
-        "resources": "create-time"
+        "watching": true
       },
       "snapshotCreate": false,
       "snapshotDelete": false,
