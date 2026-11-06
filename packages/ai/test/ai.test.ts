@@ -887,3 +887,61 @@ test("agent command execution uses exec policy", async () => {
 
   await sandbox.stop();
 });
+
+test("ai sdk session metadata follows links and deletes only files", async () => {
+  const sandbox = await create({ adapter: local(), cwd: "/workspace" });
+  try {
+    await sandbox.files.mkdir("nested");
+    const session = tools(sandbox, { cwd: "/workspace/nested" }).sandbox;
+    const name = 'a "quoted"\nfile.txt';
+    await session.writeTextFile({ content: "hello", path: name });
+    expect(await session.readTextFile({ path: name })).toBe("hello");
+    expect(await session.stat({ path: name })).toEqual({
+      size: 5,
+      type: "file",
+    });
+    expect(await session.stat({ path: "missing" })).toBeNull();
+    expect(await session.stat({ path: "." })).toEqual({
+      size: 0,
+      type: "directory",
+    });
+    await sandbox.process.exec("ln", ["-s", name, "link"], {
+      cwd: "/workspace/nested",
+    });
+    expect(await session.stat({ path: "link" })).toEqual({
+      size: 5,
+      type: "file",
+    });
+    expect(await session.listDirectory({ path: "." })).toEqual(
+      expect.arrayContaining([
+        { name, type: "file" },
+        { name: "link", type: "symlink" },
+      ])
+    );
+    await expect(session.listDirectory({ path: name })).rejects.toMatchObject({
+      code: "provider",
+    });
+    await expect(session.deleteFile({ path: "." })).rejects.toMatchObject({
+      code: "provider",
+    });
+    expect(await session.deleteFile({ path: "link" })).toBe(true);
+    expect(await session.readTextFile({ path: name })).toBe("hello");
+    expect(await session.deleteFile({ path: name })).toBe(true);
+    expect(await session.deleteFile({ path: name })).toBe(false);
+  } finally {
+    await sandbox.stop();
+  }
+});
+
+test("ai sdk rejects writable stdin before starting a process", async () => {
+  const sandbox = await create({ adapter: local(), cwd: "/workspace" });
+  try {
+    const session = tools(sandbox).sandbox;
+    await expect(
+      session.spawn({ command: "touch started", stdin: true })
+    ).rejects.toMatchObject({ code: "unsupported" });
+    expect(await sandbox.files.exists("started")).toBe(false);
+  } finally {
+    await sandbox.stop();
+  }
+});

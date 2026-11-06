@@ -1,9 +1,11 @@
 import {
   capabilityMode,
+  command,
   isSandboxError,
   rawCapabilities,
   requireCapability,
   sandboxError,
+  sandboxPath,
   supports,
   supportsRaw,
   unsupported,
@@ -165,6 +167,12 @@ export type SandboxSession = Readonly<{
   description: string;
   /** adapter provider name */
   provider: string;
+  /** inspect a path, following symbolic links; requires files and POSIX command execution */
+  stat(input: File): PromiseLike<SandboxFileStat | null>;
+  /** list immediate directory entries without following symbolic links; requires files and POSIX command execution */
+  listDirectory(input: File): PromiseLike<SandboxDirectoryEntry[] | null>;
+  /** delete one file or symbolic link, rejecting directories; requires files and POSIX command execution */
+  deleteFile(input: File): PromiseLike<boolean>;
   /** read one file as a byte stream, returning null when it does not exist */
   readFile(input: File): PromiseLike<ReadableStream<Uint8Array> | null>;
   /** read one file as bytes, returning null when it does not exist */
@@ -178,7 +186,9 @@ export type SandboxSession = Readonly<{
   /** run a shell command and return buffered stdout and stderr */
   run(input: Command): PromiseLike<CommandResult>;
   /** start a shell command and return a streaming process handle */
-  spawn(input: Command): PromiseLike<SandboxProcess>;
+  spawn(input: Command & { stdin: true }): PromiseLike<never>;
+  /** start a process or reject an unsupported writable stdin request before execution */
+  spawn(input: Command & { stdin?: boolean }): PromiseLike<SandboxProcess>;
   /** default working directory used when an input does not provide one */
   workingDirectory: string;
   /** write one file from a byte stream */
@@ -187,6 +197,22 @@ export type SandboxSession = Readonly<{
   writeBinaryFile(input: BinaryFileWrite): PromiseLike<void>;
   /** write one text file */
   writeTextFile(input: TextFileWrite): PromiseLike<void>;
+}>;
+
+/** file metadata compatible with the current AI SDK session contract */
+export type SandboxFileStat = Readonly<{
+  /** followed path kind */
+  type: "file" | "directory" | "other";
+  /** file byte count; directories and special files report zero */
+  size: number;
+}>;
+
+/** immediate directory entry compatible with the current AI SDK session contract */
+export type SandboxDirectoryEntry = Readonly<{
+  /** entry name without its parent directory */
+  name: string;
+  /** entry kind without following symbolic links */
+  type: "file" | "directory" | "symlink" | "other";
 }>;
 
 /** host-owned sandbox infrastructure kept outside the AI SDK session contract */
@@ -704,6 +730,7 @@ const description = (
     capabilityMode(sandbox, "streaming") === "separate"
       ? undefined
       : "background processes with separate stdout and stderr",
+    "writable process stdin",
   ].filter((item): item is string => item !== undefined);
 
   return [
@@ -719,15 +746,28 @@ const description = (
     unavailable.length === 0
       ? undefined
       : `Unavailable requested tools: ${unavailable.join(", ")}.`,
-    session.length === 0
-      ? "All AI SDK session capabilities are available."
-      : `Unavailable AI SDK session capabilities: ${session.join(", ")}.`,
+    `Unavailable AI SDK session capabilities: ${session.join(", ")}.`,
+    "Session stat, listDirectory, and deleteFile require files and POSIX command execution.",
     raw.length === 0
       ? "No provider-specific raw capabilities are advertised."
       : `Provider-specific raw capabilities: ${raw.join(", ")}. Host code can use sandbox.raw for these; the agent tools only expose the normalized tools above.`,
   ]
     .filter((line): line is string => line !== undefined)
     .join("\n");
+};
+
+const relative = (cwd: string, path: string): string => {
+  const base = sandboxPath("/", cwd).split("/").filter(Boolean);
+  const target = sandboxPath(cwd, path).split("/").filter(Boolean);
+  let shared = 0;
+  while (shared < base.length && base[shared] === target[shared]) {
+    shared += 1;
+  }
+  return (
+    [...base.slice(shared).map(() => ".."), ...target.slice(shared)].join(
+      "/"
+    ) || "."
+  );
 };
 
 const agent = (
@@ -737,15 +777,93 @@ const agent = (
   timeout: number,
   beforeExec?: Policy<Exec, "exec">
 ): SandboxSession => {
+  const operation = async (
+    input: File,
+    script: string
+  ): Promise<string | null> => {
+    requireCapability(sandbox, "files");
+    assertActive(input.abortSignal);
+    await sandbox.files.exists(sandboxPath(cwd, input.path));
+    assertActive(input.abortSignal);
+    const output = await run(
+      sandbox,
+      {
+        command: command("sh", ["-c", script, "sh", relative(cwd, input.path)]),
+        ...(input.abortSignal === undefined
+          ? {}
+          : { abortSignal: input.abortSignal }),
+      },
+      cwd,
+      timeout,
+      beforeExec
+    );
+    if (output.exitCode === 44) {
+      return null;
+    }
+    if (output.exitCode !== 0) {
+      throw sandboxError(
+        "ai",
+        "Filesystem operation failed",
+        "provider",
+        output
+      );
+    }
+    return output.stdout;
+  };
+  function start(input: Command & { stdin: true }): Promise<never>;
+  function start(input: Command & { stdin?: boolean }): Promise<SandboxProcess>;
+  async function start(
+    input: Command & { stdin?: boolean }
+  ): Promise<SandboxProcess> {
+    if (input.stdin === true) {
+      unsupported(sandbox.provider, "AI SDK writable process stdin");
+    }
+    return await spawn(sandbox, input, cwd, timeout, beforeExec);
+  }
   const session = {
     capabilities: sandbox.capabilities,
+    deleteFile: async (input: File) => {
+      const output = await operation(
+        input,
+        'if [ -d "$1" ] && [ ! -L "$1" ]; then exit 73; elif [ ! -e "$1" ] && [ ! -L "$1" ]; then exit 44; else rm -- "$1" || exit; printf true; fi'
+      );
+      return output !== null;
+    },
     description: details,
+    listDirectory: async (
+      input: File
+    ): Promise<SandboxDirectoryEntry[] | null> => {
+      const output = await operation(
+        input,
+        'if [ ! -e "$1" ]; then exit 44; fi; [ -d "$1" ] || exit 73; find "$1/." ! -name . -prune -exec sh -c \'for entry do if [ -L "$entry" ]; then kind=symlink; elif [ -d "$entry" ]; then kind=directory; elif [ -f "$entry" ]; then kind=file; else kind=other; fi; printf "%s\\0%s\\0" "$kind" "$entry"; done\' sh {} +'
+      );
+      if (output === null) {
+        return null;
+      }
+      const values = output.split("\0");
+      const entries: SandboxDirectoryEntry[] = [];
+      for (let index = 0; index < values.length - 1; index += 2) {
+        const type = values[index];
+        const name = values[index + 1];
+        if (
+          (type !== "file" &&
+            type !== "directory" &&
+            type !== "symlink" &&
+            type !== "other") ||
+          name === undefined
+        ) {
+          throw sandboxError("ai", "Invalid directory metadata", "provider");
+        }
+        entries.push({ name: name.slice(name.lastIndexOf("/") + 1), type });
+      }
+      return entries;
+    },
     provider: sandbox.provider,
     readBinaryFile: async (input: File) => {
       requireCapability(sandbox, "files");
       assertActive(input.abortSignal);
       try {
-        const output = await sandbox.files.read(input.path);
+        const output = await sandbox.files.read(sandboxPath(cwd, input.path));
         assertActive(input.abortSignal);
         return output;
       } catch (error) {
@@ -756,19 +874,41 @@ const agent = (
       requireCapability(sandbox, "files");
       assertActive(input.abortSignal);
       try {
-        const output = await sandbox.files.stream(input.path);
+        const output = await sandbox.files.stream(sandboxPath(cwd, input.path));
         assertActive(input.abortSignal);
         return output;
       } catch (error) {
         return missing<ReadableStream<Uint8Array>>(error, input.abortSignal);
       }
     },
-    readTextFile: (input: TextFile) => readText(sandbox, input),
+    readTextFile: (input: TextFile) =>
+      readText(sandbox, { ...input, path: sandboxPath(cwd, input.path) }),
     run: (input: Command) => run(sandbox, input, cwd, timeout, beforeExec),
-    spawn: (input: Command) => spawn(sandbox, input, cwd, timeout, beforeExec),
+    spawn: start,
+    stat: async (input: File): Promise<SandboxFileStat | null> => {
+      const output = await operation(
+        input,
+        'if [ ! -e "$1" ]; then exit 44; elif [ -f "$1" ]; then printf "file\\0"; wc -c < "$1"; elif [ -d "$1" ]; then printf "directory\\0%s" 0; else printf "other\\0%s" 0; fi'
+      );
+      if (output === null) {
+        return null;
+      }
+      const [type, value] = output.split("\0");
+      const size = Number(value?.trim());
+      if (
+        (type !== "file" && type !== "directory" && type !== "other") ||
+        !Number.isSafeInteger(size) ||
+        size < 0
+      ) {
+        throw sandboxError("ai", "Invalid file metadata", "provider");
+      }
+      return { size, type };
+    },
     workingDirectory: cwd,
-    writeBinaryFile: (input: BinaryFileWrite) => write(sandbox, input),
-    writeFile: (input: FileWrite) => write(sandbox, input),
+    writeBinaryFile: (input: BinaryFileWrite) =>
+      write(sandbox, { ...input, path: sandboxPath(cwd, input.path) }),
+    writeFile: (input: FileWrite) =>
+      write(sandbox, { ...input, path: sandboxPath(cwd, input.path) }),
     writeTextFile: (input: TextFileWrite) => {
       if (input.encoding !== undefined && !/^utf-?8$/iu.test(input.encoding)) {
         throw sandboxError(
@@ -777,7 +917,7 @@ const agent = (
           "unsupported"
         );
       }
-      return write(sandbox, input);
+      return write(sandbox, { ...input, path: sandboxPath(cwd, input.path) });
     },
   } satisfies SandboxSession;
 

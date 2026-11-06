@@ -37,6 +37,12 @@ custom-tool and `ToolLoopAgent` sandbox sessions.
 
 Read the [AI tools documentation](https://sandbox-sdk.sh/ai-tools.md).
 
+## Current AI SDK sessions
+
+Sessions implement `stat`, `listDirectory`, and `deleteFile` for AI SDK 7. Metadata and file-only deletion use POSIX `sh`, `find`, `wc`, and `rm`, requiring both file support and command execution. `beforeExec` also applies to those commands. Directory entries preserve symbolic links, stat follows links, and deletion refuses directories. Missing paths return null or false as required by the session contract.
+
+All session-relative paths resolve against its fixed `workingDirectory`. Writable stdin is unsupported and rejects before a command starts. Direct session methods remain outside the generated tool allowlist and file policy hooks.
+
 ## License
 
 MIT
