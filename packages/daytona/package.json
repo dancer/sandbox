@@ -42,11 +42,11 @@
     "test": "bun test test"
   },
   "dependencies": {
-    "@daytona/sdk": "^0.207.1",
+    "@daytona/sdk": "^0.227.3",
     "@sandbox-sdk/core": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^20.19.41",
+    "@types/node": "^20.19.43",
     "typescript": "^6.0.3"
   }
 }

@@ -43,10 +43,10 @@
   },
   "dependencies": {
     "@sandbox-sdk/core": "workspace:*",
-    "modal": "^0.10.0"
+    "modal": "^0.11.1"
   },
   "devDependencies": {
-    "@types/node": "^20.19.41",
+    "@types/node": "^20.19.43",
     "typescript": "^6.0.3"
   }
 }

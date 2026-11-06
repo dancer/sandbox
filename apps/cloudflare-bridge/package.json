@@ -9,10 +9,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@cloudflare/sandbox": "^0.12.9"
+    "@cloudflare/sandbox": "^0.12.14"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260617.1",
+    "@cloudflare/workers-types": "^5.20261104.1",
     "typescript": "^6.0.3"
   }
 }

@@ -42,11 +42,11 @@
     "test": "bun test test"
   },
   "dependencies": {
-    "@blaxel/core": "^0.3.13",
+    "@blaxel/core": "^0.3.34",
     "@sandbox-sdk/core": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^20.19.41",
+    "@types/node": "^20.19.43",
     "typescript": "^6.0.3"
   }
 }

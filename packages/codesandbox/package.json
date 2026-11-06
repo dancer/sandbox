@@ -42,11 +42,11 @@
     "test": "bun test test"
   },
   "dependencies": {
-    "@codesandbox/sdk": "^2.4.2",
+    "@codesandbox/sdk": "2.4.2",
     "@sandbox-sdk/core": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^20.19.41",
+    "@types/node": "^20.19.43",
     "typescript": "^6.0.3"
   }
 }

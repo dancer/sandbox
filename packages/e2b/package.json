@@ -43,10 +43,10 @@
   },
   "dependencies": {
     "@sandbox-sdk/core": "workspace:*",
-    "e2b": "^2.46.1"
+    "e2b": "^2.63.0"
   },
   "devDependencies": {
-    "@types/node": "^20.19.41",
+    "@types/node": "^20.19.43",
     "typescript": "^6.0.3"
   }
 }

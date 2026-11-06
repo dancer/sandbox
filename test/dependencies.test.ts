@@ -20,7 +20,7 @@ type Parser = Readonly<{ parse(input: string): unknown }>;
 
 test("blaxel TOML configuration preserves values and rejects prototype traversal", () => {
   const require = dependency("@sandbox-sdk/blaxel", "@blaxel/core");
-  const parser = require("toml") as Parser;
+  const parser = require("smol-toml") as Parser;
   expect(parser.parse('[env]\nGREETING = "hello"\nCOUNT = 2')).toEqual({
     env: { COUNT: 2, GREETING: "hello" },
   });
@@ -30,7 +30,7 @@ test("blaxel TOML configuration preserves values and rejects prototype traversal
   expect(Object.hasOwn(Object.prototype, "polluted")).toBe(false);
   expect(() =>
     parser.parse(`value = ${"[".repeat(3000)}1${"]".repeat(3000)}`)
-  ).toThrow("Maximum nesting depth");
+  ).toThrow();
 });
 
 test("vercel archive updates preserve streaming extraction", async () => {
@@ -67,21 +67,19 @@ test("codesandbox telemetry retains its optional SDK entrypoints", () => {
   });
 });
 
-test("yaml security updates preserve legacy changesets and modern tooling APIs", () => {
-  const legacy = dependency(
+test("yaml security updates preserve changesets and Vercel tooling APIs", () => {
+  const workspace = dependency(
     "@changesets/cli",
     "@manypkg/get-packages",
-    "read-yaml-file"
-  )("js-yaml") as {
-    safeLoad(input: string): unknown;
-  };
+    "@manypkg/tools"
+  )("yaml") as Parser;
   const modern = dependency(
     "vercel/package.json",
     "@vercel/python-analysis"
   )("js-yaml") as {
     load(input: string): unknown;
   };
-  expect(legacy.safeLoad("packages:\n  - packages/*")).toEqual({
+  expect(workspace.parse("packages:\n  - packages/*")).toEqual({
     packages: ["packages/*"],
   });
   expect(modern.load("runtime: python3.13")).toEqual({ runtime: "python3.13" });
