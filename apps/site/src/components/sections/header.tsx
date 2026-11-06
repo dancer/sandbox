@@ -66,7 +66,7 @@ export const Header = () => (
         href="https://github.com/dancer/sandbox"
         rel="noopener noreferrer"
         target="_blank"
-        aria-label="sandbox-sdk on GitHub"
+        aria-label="dancer/sandbox on GitHub"
       >
         <span className="flex size-9 items-center justify-center rounded-full border border-dotted transition-colors hover:bg-sidebar sm:hidden">
           <GithubMark className="size-4" />

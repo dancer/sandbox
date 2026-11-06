@@ -44,7 +44,7 @@ export const Heading = ({
           href={`#${slug}`}
         >
           <Star className="size-3 shrink-0 text-foreground/40 transition-colors group-hover/heading:text-foreground/70" />
-          <span className="font-mono text-xl font-light tabular-nums text-foreground/35 transition-colors group-hover/heading:text-foreground/60">
+          <span className="font-mono text-xl font-light tabular-nums text-foreground/60 transition-colors group-hover/heading:text-foreground/80">
             {formatted}
           </span>
           <span aria-hidden="true" className="text-foreground/15">

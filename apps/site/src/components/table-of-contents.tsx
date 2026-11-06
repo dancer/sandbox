@@ -125,6 +125,7 @@ export const TableOfContents = () => {
             <li key={id}>
               <a
                 href={`#${id}`}
+                aria-current={activeId === id ? "location" : undefined}
                 className={cn(
                   rowBase,
                   active
@@ -142,7 +143,7 @@ export const TableOfContents = () => {
                     )}
                   />
                 </span>
-                <span className="font-mono tabular-nums text-[0.7rem] text-foreground/40">
+                <span className="font-mono tabular-nums text-[0.7rem] text-foreground/60">
                   {number === undefined ? "" : String(number).padStart(2, "0")}
                 </span>
                 <span className="truncate">{label}</span>
@@ -150,6 +151,7 @@ export const TableOfContents = () => {
               {children ? (
                 <div
                   aria-hidden={!expanded}
+                  inert={!expanded}
                   className={cn(
                     "grid transition-[grid-template-rows,opacity] duration-200 ease-out",
                     expanded
@@ -164,6 +166,7 @@ export const TableOfContents = () => {
                         <li key={child.id}>
                           <a
                             href={`#${child.id}`}
+                            aria-current={childActive ? "location" : undefined}
                             className={cn(
                               rowBase,
                               childActive
