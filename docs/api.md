@@ -1210,6 +1210,12 @@ export type SandboxSession = Readonly<{
   description: string;
   /** adapter provider name */
   provider: string;
+  /** inspect a path, following symbolic links; requires files and POSIX command execution */
+  stat(input: File): PromiseLike<SandboxFileStat | null>;
+  /** list immediate directory entries without following symbolic links; requires files and POSIX command execution */
+  listDirectory(input: File): PromiseLike<SandboxDirectoryEntry[] | null>;
+  /** delete one file or symbolic link, rejecting directories; requires files and POSIX command execution */
+  deleteFile(input: File): PromiseLike<boolean>;
   /** read one file as a byte stream, returning null when it does not exist */
   readFile(input: File): PromiseLike<ReadableStream<Uint8Array> | null>;
   /** read one file as bytes, returning null when it does not exist */
@@ -1223,7 +1229,17 @@ export type SandboxSession = Readonly<{
   /** run a shell command and return buffered stdout and stderr */
   run(input: Command): PromiseLike<CommandResult>;
   /** start a shell command and return a streaming process handle */
-  spawn(input: Command): PromiseLike<SandboxProcess>;
+  spawn(
+    input: Command & {
+      stdin: true;
+    }
+  ): PromiseLike<never>;
+  /** start a process or reject an unsupported writable stdin request before execution */
+  spawn(
+    input: Command & {
+      stdin?: boolean;
+    }
+  ): PromiseLike<SandboxProcess>;
   /** default working directory used when an input does not provide one */
   workingDirectory: string;
   /** write one file from a byte stream */
@@ -1232,6 +1248,32 @@ export type SandboxSession = Readonly<{
   writeBinaryFile(input: BinaryFileWrite): PromiseLike<void>;
   /** write one text file */
   writeTextFile(input: TextFileWrite): PromiseLike<void>;
+}>;
+```
+
+#### `SandboxFileStat`
+
+file metadata compatible with the current AI SDK session contract
+
+```ts
+export type SandboxFileStat = Readonly<{
+  /** followed path kind */
+  type: "file" | "directory" | "other";
+  /** file byte count; directories and special files report zero */
+  size: number;
+}>;
+```
+
+#### `SandboxDirectoryEntry`
+
+immediate directory entry compatible with the current AI SDK session contract
+
+```ts
+export type SandboxDirectoryEntry = Readonly<{
+  /** entry name without its parent directory */
+  name: string;
+  /** entry kind without following symbolic links */
+  type: "file" | "directory" | "symlink" | "other";
 }>;
 ```
 
@@ -2255,93 +2297,39 @@ export type CloudflareTunnelNames = Readonly<Record<number, string>>;
 
 #### `CloudflareRaw`
 
-native Cloudflare Sandbox object exposed as `sandbox.raw` for Worker-only features
+native Cloudflare container owned by the application's Durable Object
 
 ```ts
-export type CloudflareRaw = Native;
-```
-
-#### `CloudflareBinding`
-
-Cloudflare Worker Durable Object namespace for a native Sandbox class
-
-```ts
-export type CloudflareBinding<
-  ProviderRaw extends CloudflareRaw = CloudflareRaw,
-> = DurableObjectNamespace<ProviderRaw>;
-```
-
-#### `CloudflareBackups`
-
-Cloudflare R2 backup options for normalized filesystem snapshots
-
-`dir` is the sandbox cwd and `name` comes from `snapshots.create(name?)`
-use `useGitignore` to match Cloudflare's public backup documentation
-configure `BACKUP_BUCKET` and production R2 credentials on the Worker before enabling this
-
-```ts
-export type CloudflareBackups = Readonly<{
-  /** archive compression format and worker count */
-  compression?: NonNullable<BackupOptions["compression"]>;
-  /** glob patterns excluded from the backup archive */
-  excludes?: NonNullable<BackupOptions["excludes"]>;
-  /** use the Worker R2 binding directly for local development */
-  localBucket?: NonNullable<BackupOptions["localBucket"]>;
-  /** use multipart R2 uploads for large archives */
-  multipart?: NonNullable<BackupOptions["multipart"]>;
-  /** backup lifetime in seconds */
-  ttl?: NonNullable<BackupOptions["ttl"]>;
-  /** exclude files matched by .gitignore when the backup directory is a git repository */
-  useGitignore?: boolean;
-}>;
+export type CloudflareRaw = Container;
 ```
 
 #### `Cloudflare`
 
-Cloudflare Worker-native Sandbox adapter configuration
-
-`ProviderRaw` is inferred from `binding`, so `sandbox.raw` keeps the exact native Cloudflare Sandbox environment type
-
-use `cloudflareBridge()` for a deployed HTTP bridge outside a Cloudflare Worker
+Cloudflare 1.0 adapter configuration for use inside a Durable Object
 
 ```ts
-export type Cloudflare<ProviderRaw extends CloudflareRaw = CloudflareRaw> =
-  Readonly<{
-    /** required Durable Object binding for the Cloudflare Sandbox class, usually `env.Sandbox` */
-    binding: CloudflareBinding<ProviderRaw>;
-    /** configured R2 backups that enable normalized filesystem snapshot create and restore */
-    backups?: CloudflareBackups;
-    /**
-     * default working directory for normalized file and process operations
-     *
-     * @default "/workspace"
-     */
-    cwd?: string;
-    /**
-     * default environment variables written to the selected sandbox
-     *
-     * values cross the Worker-to-sandbox trust boundary. pass only secrets the sandbox may use, and keep host-only credentials behind a Worker proxy
-     */
-    env?: Readonly<Record<string, string>>;
-    /** stable sandbox id used when create input omits id */
-    id?: string;
-    /** list options forwarded to Cloudflare `listFiles` */
-    list?: ListFilesOptions;
-    /**
-     * optional named tunnel label with lowercase letters, digits, and internal hyphens
-     *
-     * use it for one named tunnel or as the fallback for one port not listed in `tunnels`. named tunnels require Worker-side API token, account, and zone configuration
-     */
-    tunnel?: string;
-    /** named tunnel labels keyed by port. entries override `tunnel` and labels must be unique within one sandbox */
-    tunnels?: CloudflareTunnelNames;
-    /**
-     * low-level options forwarded to `getSandbox`, with the current RPC transport enforced
-     *
-     * normalized commands are sessionless by default. set `enableDefaultSession: true` only when native raw operations need shared shell state
-     */
-    options?: Omit<SandboxOptions, "transport">;
-  }>;
+export type Cloudflare = Readonly<{
+  /** native container from `this.ctx.container`; its request context must outlive streams and processes */
+  container: Container;
+  /** default working directory */
+  cwd?: string;
+  /** process environment defaults; native exec does not inherit container startup variables */
+  env?: Readonly<Record<string, string>>;
+  /** Durable Object id for bookkeeping; pass `this.ctx.id.toString()` when available */
+  id?: string;
+  /** image with the matching sandbox-shim binary, used when starting a stopped container */
+  image?: string;
+  /** application-owned preview routing; keep authentication headers in the returned private headers field */
+  preview?: (
+    port: number,
+    options?: Port
+  ) => Promise<SandboxRuntimePreview> | SandboxRuntimePreview;
+  /** native container startup options; networking remains disabled unless explicitly enabled */
+  startup?: Omit<
+    ContainerStartupOptions,
+    "image" | "containerSnapshot" | "env" | "labels"
+  >;
+}>;
 ```
 
 ### functions
@@ -2360,26 +2348,16 @@ export declare const cloudflareBridge: (
 
 #### `cloudflare`
 
-create a Cloudflare Sandbox adapter from a Worker binding
+adapt Cloudflare 1.0 native container execution and Files helpers
 
-`sandbox.raw` preserves the native Sandbox type from `binding` and defaults to `CloudflareRaw`
-
-```ts
-export declare const cloudflare: <
-  ProviderRaw extends CloudflareRaw = CloudflareRaw,
->(
-  options: Cloudflare<ProviderRaw>
-) => Adapter<ProviderRaw>;
-```
-
-### provider exports
-
-#### `CloudflareSandbox`
-
-re-exported from `@cloudflare/sandbox`
+call inside the application's Durable Object, which owns routing, authorization, concurrency, and lifetime
+previews require an application-owned callback; old sessions, interpreters, and automatic tunnels are not part of 1.0
+snapshots capture the root filesystem, not memory or mounted directories, and deletion is not normalized
 
 ```ts
-export type { Sandbox as CloudflareSandbox } from "@cloudflare/sandbox";
+export declare const cloudflare: (
+  options: Cloudflare
+) => Adapter<CloudflareRaw>;
 ```
 
 ## @sandbox-sdk/codesandbox
@@ -2521,6 +2499,20 @@ export type Daytona = Omit<DaytonaConfig, "serverUrl"> &
     autoDeleteInterval?: number;
     /** stop an idle sandbox after this many minutes; use 0 to disable */
     autoStopInterval?: number;
+    /** idle auto-pause interval in minutes for sandbox classes that support pausing */
+    autoPauseInterval?: number;
+    /** maximum wall-clock lifetime in minutes; zero disables the limit */
+    ttlMinutes?: number;
+    /** maximum runner queue wait in minutes */
+    queueTimeout?: number;
+    /** native domain allowlist enforced by Daytona networking */
+    domainAllowList?: string;
+    /** outbound HTTP proxy; combine with network policy when enforcement is required */
+    outboundProxyUrl?: string;
+    /** existing organization secret names keyed by sandbox environment variable */
+    secrets?: Readonly<Record<string, string>>;
+    /** enable nested virtualization where supported by the selected sandbox class */
+    kvm?: boolean;
     /** existing native Daytona client for advanced service access, custom transport, or credential reuse and takes precedence over Daytona connection options */
     client?: DaytonaClient;
     /** default working directory for normalized file and process operations */
@@ -2628,6 +2620,12 @@ export type E2B = Readonly<{
   env?: Readonly<Record<string, string>>;
   /** integration identifier appended to the E2B user agent */
   integration?: string;
+  /** HTTP protocol used for control-plane and sandbox requests */
+  httpVersion?: SandboxConnectOpts["httpVersion"];
+  /** native workload identity configuration injected by E2B */
+  iam?: SandboxOpts["iam"];
+  /** idempotency key reused by native sandbox creation retries */
+  idempotencyKey?: string;
   /** e2b lifecycle behavior such as pause or kill when timeout is reached */
   lifecycle?: SandboxLifecycle;
   /** metadata attached to new sandboxes */
@@ -2652,6 +2650,8 @@ export type E2B = Readonly<{
   template?: string;
   /** sandbox lifetime timeout in milliseconds */
   timeout?: number;
+  /** snapshot state captured by normalized creation; full includes memory, filesystem boots fresh */
+  snapshotMode?: SnapshotMode;
   /** linux user used for file and command operations */
   user?: string;
   /** validate the E2B API key format before provider requests */
@@ -2667,7 +2667,7 @@ export type E2B = Readonly<{
 
 create an E2B adapter with normalized sandbox operations
 
-E2B snapshots capture filesystem and memory state. creation briefly pauses the source sandbox and drops active command, pty, and WebSocket connections. create a fresh sandbox with `create({ snapshot })`; in-place restore is not normalized
+E2B snapshots capture filesystem and memory state by default; snapshotMode can select filesystem-only capture. creation briefly pauses the source sandbox and drops active command, pty, and WebSocket connections. create a fresh sandbox with `create({ snapshot })`; in-place restore is not normalized
 named snapshots return E2B's provider-persisted canonical name, which can include a namespace and tag
 
 `ports.expose()` returns E2B's derived HTTP or HTTPS URL. when `network.allowPublicTraffic` is false, `preview.request()` adds E2B's traffic access header without exposing it in serializable data
@@ -2766,6 +2766,8 @@ export type Modal = Readonly<
     proxy?: CreateParams["proxy"];
     /** readiness probe used before Modal marks the sandbox ready */
     readinessProbe?: CreateParams["readinessProbe"];
+    /** native sandbox runtime; vm supports nested virtualization, while gvisor retains the existing default */
+    runtime?: CreateParams["runtime"];
     /** Modal regions used for sandbox placement */
     regions?: CreateParams["regions"];
     /** Modal secrets injected as sandbox environment variables */
@@ -2964,13 +2966,21 @@ export type Vercel = Readonly<{
   fork?: Fork | string;
   /** reuse a named sandbox when present and create it when absent */
   getOrCreate?: boolean;
+  /** Vercel container image; omitted to use the current universal image, and mutually exclusive with runtime or a snapshot source */
+  image?: string;
+  /** failover regions tried after the primary region; must not contain the primary region */
+  failoverRegions?: readonly SandboxRegion[];
+  /** pre-created Vercel drives keyed by absolute mount path; forked sandboxes must declare mounts explicitly */
+  mounts?: SandboxMounts;
+  /** Secure Compute private network id for the sandbox */
+  networkId?: string;
   /** retention policy for snapshots created by this sandbox */
   keepLastSnapshots?: KeepLastSnapshots;
   /** provider sandbox name used when the create input does not supply an id */
   name?: string;
   /** outbound network policy for the sandbox, including optional Vercel transformations */
   networkPolicy?: NetworkPolicy;
-  /** initial public ports, with create input values taking precedence and a Vercel maximum of four unique ports per sandbox */
+  /** initial public ports, with create input values taking precedence and a Vercel maximum of fifteen unique ports per sandbox */
   ports?: readonly number[];
   /**
    * control automatic filesystem restoration between Vercel sandbox sessions
@@ -2982,7 +2992,9 @@ export type Vercel = Readonly<{
   projectId?: string;
   /** resource request for new sandboxes */
   resources?: Resources;
-  /** Vercel runtime id, defaults to node24 on Amazon Linux to preserve existing workloads */
+  /** primary Vercel region, defaulting to the provider's region */
+  region?: SandboxRegion;
+  /** legacy Vercel runtime id; omit for the universal image or select an image explicitly */
   runtime?: Runtime;
   /** signal that cancels sandbox creation, get, get-or-create, or fork requests */
   signal?: AbortSignal;
@@ -3043,6 +3055,14 @@ re-exported from `@vercel/sandbox`
 
 ```ts
 export { CommandFinished as VercelCommandFinished } from "@vercel/sandbox";
+```
+
+#### `VercelDrive`
+
+re-exported from `@vercel/sandbox`
+
+```ts
+export { Drive as VercelDrive } from "@vercel/sandbox";
 ```
 
 #### `VercelFileSystem`
@@ -3203,6 +3223,30 @@ re-exported from `@vercel/sandbox`
 
 ```ts
 export type { SerializedSnapshot as SerializedVercelSnapshot } from "@vercel/sandbox";
+```
+
+#### `SerializedVercelDrive`
+
+re-exported from `@vercel/sandbox`
+
+```ts
+export type { SerializedDrive as SerializedVercelDrive } from "@vercel/sandbox";
+```
+
+#### `VercelMounts`
+
+re-exported from `@vercel/sandbox`
+
+```ts
+export type { SandboxMounts as VercelMounts } from "@vercel/sandbox";
+```
+
+#### `VercelRegion`
+
+re-exported from `@vercel/sandbox`
+
+```ts
+export type { SandboxRegion as VercelRegion } from "@vercel/sandbox";
 ```
 
 #### `VercelSnapshotTreeNodeData`

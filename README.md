@@ -194,8 +194,8 @@ async function tuneNetwork(sandbox: Sandbox<VercelRaw>) {
 
 Use `supportsRaw(sandbox, "...")` and `raw` for features that do not have one
 clean cross-provider meaning:
-Cloudflare sessions, code contexts, quick tunnels, and configured backups,
-and bucket mounts; Vercel network policy and timeout extension;
+Cloudflare native container execution, startup networking, PTY, and lifecycle;
+legacy Cloudflare bridge sessions, tunnels, persistence, and bucket mounts; Vercel network policy, regions, Secure Compute, drive mounts, and timeout extension;
 Vercel named sandbox list, get, getOrCreate, fork, dynamic updates, sessions,
 interactive PTY connections, snapshot lists, snapshot trees, proxy helpers,
 and native filesystem helpers;
@@ -319,109 +319,19 @@ for await (const message of query({
 `@sandbox-sdk/ai` does not depend on `ai`. OpenAI and Claude support live behind
 optional subpaths so apps only install the agent framework they use.
 
-The Cloudflare adapter is designed for Workers. Importing the package is safe in
-Node-based tooling, but creating a Cloudflare sandbox loads
-`@cloudflare/sandbox` inside the Worker path.
+## Cloudflare 1.0
 
-For non-Worker apps, use the official Cloudflare Sandbox bridge instead:
+Cloudflare 1.0 uses the native container from your own Durable Object. Pass `this.ctx.container` to `cloudflare()`. Configure a named `sandbox` image containing the matching `sandbox-shim`, or pass `image` explicitly. The adapter starts stopped containers and keeps native execution available through `sandbox.raw`.
 
-```ts
-import { create } from "@sandbox-sdk/core";
-import { cloudflareBridge } from "@sandbox-sdk/cloudflare";
+The application owns authorization, request routing, concurrency, and Durable Object lifetime. Network access stays disabled unless `startup.enableInternet` is enabled. Native `exec()` does not inherit startup environment values, so the adapter merges configured values into each command. Finish processes and consume streams while their request context is alive.
 
-const sandbox = await create({
-  adapter: cloudflareBridge({
-    token: process.env.SANDBOX_API_KEY,
-    url: process.env.SANDBOX_API_URL,
-  }),
-});
-```
+Filesystem snapshots capture the root filesystem, excluding memory and mounted directories. Create with `snapshots.create(name?)`, restore in place with `snapshots.restore(id)`, or start a stopped container with `create({ snapshot: id })`. Container snapshots are a Cloudflare beta feature. Snapshot deletion is unsupported by the normalized container API.
 
-The bridge adapter supports normalized files, command execution, and HTTPS port
-exposure over HTTP. `ports.expose()` creates a zero-config ephemeral quick
-tunnel by default. Set `tunnel` for one stable named port, or use `tunnels` to
-map each exposed port to a distinct named label when the bridge Worker has the
-required Cloudflare account and zone credentials. Bridge lifecycle, sessions, persist, hydrate, bucket mounts,
-warm-pool controls, health, OpenAPI schema access, raw tunnel controls, and PTY
-connection descriptors are available through `sandbox.raw`. Normalized working
-directories stay below `/workspace`: relative values resolve there and custom
-directories are created. Paths outside that workspace fail with `SandboxError`
-and `code: "path_escape"`
-before a bridge request. Use `sandbox.raw.request()` for provider-specific
-execution outside the normalized workspace boundary. Normalized
-snapshots and terminal I/O stay unsupported because the bridge does not expose
-the same snapshot or WebSocket ownership contract as the Worker binding adapter.
-The bridge HTTP API also has no lifecycle-safe background process route, so
-normalized `process.spawn()` stays unsupported. Start a long-running bridge
-service through its typed raw PTY connection or a bridge image entrypoint before
-calling `ports.expose()`.
-`SANDBOX_API_KEY` authenticates the bridge and is rejected from sandbox
-environment configuration so the control-plane credential is not forwarded into
-the remote sandbox. Remote bridge URLs must use HTTPS. HTTP is supported only
-for local loopback development.
+Previews require an application-owned `preview` callback. Route requests to `container.getTcpPort(port).fetch()` in your Worker, and return its public URL from the callback. Put access headers in the callback's private `headers` field so `preview.request()` authenticates without serializing them. Old 0.x bindings, sessions, interpreter contexts, and automatic quick tunnels are not native 1.0 APIs.
 
-## Cloudflare Validation
+`cloudflareBridge()` continues to target the official 0.12 HTTP bridge, deployed separately with `@cloudflare/sandbox@0.12.14` and its matching image. It supports files, bounded commands, sessions, and tunnels, but has no normalized background process handles or snapshots. Bridge paths stay below `/workspace`. Keep `SANDBOX_API_KEY` on the host and Worker, outside sandbox environment values.
 
-`apps/cloudflare` is a deployable Worker fixture for the Cloudflare live test.
-It exports the Sandbox Durable Object class, binds it in `wrangler.jsonc`, and
-validates file operations, command execution, shell execution, background
-process spawning, and reachable quick tunnels through the shared adapter. Named
-tunnel mapping is contract-tested. A provider-backed named tunnel check also
-requires a `CLOUDFLARE_API_TOKEN` with account and zone access on the deployed
-Worker, so it remains intentionally separate from the default live verifier.
-
-`apps/cloudflare-bridge` is a separate deployable fixture for the official HTTP
-bridge. It has a zero-sized warm pool and allows one lite container at a time.
-Set its `SANDBOX_API_KEY` Worker secret, then set
-`CLOUDFLARE_BRIDGE_URL` and `CLOUDFLARE_BRIDGE_TOKEN` in `.env.local` to run
-`bun run verify:cloudflare:bridge`. This optional verifier does not change the
-native `bun run verify:cloudflare` workflow.
-
-`@sandbox-sdk/cloudflare` enforces Cloudflare's RPC transport so stream writes,
-stream reads, sessions, and tunnels work without app-specific transport
-configuration. `ports.expose()` returns a zero-config HTTPS quick tunnel by
-default. Set `tunnel` for one stable named port, or use `tunnels` to map each
-exposed port to a distinct named label when the Worker has the upstream
-Cloudflare account and zone credentials configured. Named labels create
-Cloudflare-side tunnel and DNS resources, so keep labels unique within one
-sandbox. Quick tunnels are public and ephemeral, so do not treat the generated
-URL as authentication. Add authentication inside the exposed service when its
-content is sensitive. Ports must be in 1024-65535, excluding reserved port 3000.
-
-Set `backups` on `cloudflare()` to opt into normalized filesystem snapshots
-through Cloudflare R2 backups. The Worker needs a `BACKUP_BUCKET` R2 binding;
-production also needs `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`,
-`CLOUDFLARE_ACCOUNT_ID`, and `BACKUP_BUCKET_NAME`. The configured `cwd` must
-stay below `/workspace`, `/home`, `/tmp`, `/var/tmp`, or `/app`.
-
-```ts
-const sandbox = await create({
-  adapter: cloudflare({
-    binding: env.Sandbox,
-    backups: {
-      useGitignore: true,
-      ttl: 86_400,
-    },
-  }),
-  cwd: "/workspace",
-});
-
-const snapshot = await sandbox.snapshots.create("before-upgrade");
-await sandbox.snapshots.restore(snapshot.id);
-```
-
-`backups` forwards the current native `BackupOptions` except `dir`, `name`, and
-the installed SDK's internal `gitignore` name. Use `useGitignore` to match
-Cloudflare's public backup documentation. The adapter supplies its `cwd` for
-`dir` and maps `snapshots.create(name?)` to the native name. Cloudflare stores
-that name in backup metadata. Restore uses the adapter's current `cwd` and
-`localBucket` setting; use `sandbox.raw` when you need a different restore
-directory or need to carry the full native backup handle across configurations.
-Production restores are copy-on-write mounts and are lost when the sandbox
-sleeps or restarts, so restore again from the snapshot id. Configure an R2
-lifecycle rule because backup TTL limits restoration but does not delete R2
-objects. Snapshot deletion and fresh-sandbox creation from a backup remain
-unsupported by the normalized API.
+See [examples/cloudflare.ts](examples/cloudflare.ts) for a Worker with an application-owned Durable Object. See [apps/cloudflare/README.md](apps/cloudflare/README.md) for native live verification and deployment.
 
 ## API Reference
 

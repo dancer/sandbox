@@ -66,6 +66,7 @@ test("adapters expose exact capability contracts", () => {
     processExec: true,
     processSpawn: "separate",
     raw: {
+      drives: "create-time",
       lifecycle: "dynamic",
       metrics: true,
       network: "dynamic",
@@ -81,34 +82,20 @@ test("adapters expose exact capability contracts", () => {
     streaming: "separate",
   });
 
-  equal(
-    cloudflare({
-      binding: {} as Parameters<typeof cloudflare>[0]["binding"],
-    }).capabilities,
-    {
-      environment: true,
-      fileStreaming: "native",
-      files: true,
-      ports: "dynamic",
-      processExec: true,
-      processSpawn: "separate",
-      raw: {
-        backup: "configured",
-        buckets: "configured",
-        git: true,
-        interpreter: true,
-        pty: true,
-        sessions: true,
-        tunnels: "dynamic",
-        watching: true,
-        websocket: true,
-      },
-      snapshotCreate: false,
-      snapshotDelete: false,
-      snapshotRestore: false,
-      streaming: "separate",
-    }
-  );
+  equal(cloudflare({ container: {} as Container }).capabilities, {
+    environment: "separate",
+    fileStreaming: "native",
+    files: true,
+    ports: false,
+    processExec: true,
+    processSpawn: "separate",
+    raw: { lifecycle: "dynamic", network: "configured", pty: true },
+    snapshotCreate: "filesystem",
+    snapshotDelete: false,
+    snapshotRestore: "filesystem",
+    snapshotSource: "create-time",
+    streaming: "separate",
+  });
 
   equal(daytona().capabilities, {
     environment: true,
@@ -131,7 +118,7 @@ test("adapters expose exact capability contracts", () => {
       ssh: true,
       volumes: "create-time",
     },
-    snapshotCreate: false,
+    snapshotCreate: "filesystem",
     snapshotDelete: true,
     snapshotRestore: false,
     snapshotSource: "create-time",
@@ -241,55 +228,27 @@ test("adapters expose exact capability contracts", () => {
   );
 });
 
-test("cloudflare snapshots require explicit backup configuration", () => {
-  equal(
-    cloudflare({
-      backups: {},
-      binding: {} as Parameters<typeof cloudflare>[0]["binding"],
-    }).capabilities,
-    {
-      environment: true,
-      fileStreaming: "native",
-      files: true,
-      ports: "dynamic",
-      processExec: true,
-      processSpawn: "separate",
-      raw: {
-        backup: "configured",
-        buckets: "configured",
-        git: true,
-        interpreter: true,
-        pty: true,
-        sessions: true,
-        tunnels: "dynamic",
-        watching: true,
-        websocket: true,
-      },
-      snapshotCreate: "filesystem",
-      snapshotDelete: false,
-      snapshotRestore: "filesystem",
-      streaming: "separate",
-    }
-  );
+test("cloudflare previews require application routing", () => {
+  const container = {} as Container;
+  expect(supports(cloudflare({ container }), "ports")).toBe(false);
+  expect(
+    supports(
+      cloudflare({
+        container,
+        preview: (port) => ({ port, url: "https://preview.example" }),
+      }),
+      "ports"
+    )
+  ).toBe(true);
+  expect(supports(cloudflare({ container }), "snapshotCreate")).toBe(true);
 });
 
 test("raw capabilities are separate from normalized capabilities", () => {
-  const current = cloudflare({
-    binding: {} as Parameters<typeof cloudflare>[0]["binding"],
-  });
-
-  expect(supports(current, "ports")).toBe(true);
+  const current = cloudflare({ container: {} as Container });
   expect(capabilityMode(current, "fileStreaming")).toBe("native");
   expect(supportsRaw(current, "desktop")).toBe(false);
   expect(rawCapabilityMode(current, "desktop")).toBeUndefined();
-  expect(supportsRaw(current, "git")).toBe(true);
-  expect(supportsRaw(current, "backup")).toBe(true);
-  expect(rawCapabilityMode(current, "backup")).toBe("configured");
-  expect(supportsRaw(current, "network")).toBe(false);
-  expect(supportsRaw(current, "interpreter")).toBe(true);
+  expect(supportsRaw(current, "backup")).toBe(false);
+  expect(rawCapabilityMode(current, "network")).toBe("configured");
   expect(supportsRaw(current, "pty")).toBe(true);
-  expect(supportsRaw(current, "sessions")).toBe(true);
-  expect(supportsRaw(current, "tunnels")).toBe(true);
-  expect(supportsRaw(current, "watching")).toBe(true);
-  expect(supportsRaw(current, "websocket")).toBe(true);
 });

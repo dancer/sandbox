@@ -21,6 +21,8 @@ import type {
   SandboxBackend,
   SandboxProcess,
   SandboxSession,
+  SandboxFileStat,
+  SandboxDirectoryEntry,
   Schema,
   TextFile,
   TextFileWrite,
@@ -50,7 +52,6 @@ import type {
 } from "@sandbox-sdk/blaxel";
 import type {
   Cloudflare,
-  CloudflareBinding,
   CloudflareBridge,
   CloudflareBridgeFetch,
   CloudflareBridgeJson,
@@ -63,7 +64,6 @@ import type {
   CloudflareBridgeTunnel,
   CloudflareBridgeTunnelOptions,
   CloudflareRaw,
-  CloudflareSandbox,
 } from "@sandbox-sdk/cloudflare";
 import type {
   CodeSandbox,
@@ -125,6 +125,9 @@ import type {
   VercelProxyHandler,
   VercelProxyMeta,
   VercelRaw,
+  VercelMounts,
+  VercelRegion,
+  SerializedVercelDrive,
   VercelSnapshotTreeNodeData,
   SerializedVercelCommand,
   SerializedVercelCommandFinished,
@@ -178,7 +181,6 @@ export type EntrypointTypes = Readonly<{
   claudeToolAnnotations: ToolAnnotations;
   claudeTools: ClaudeTools;
   cloudflare: Cloudflare;
-  cloudflareBinding: CloudflareBinding;
   cloudflareBridge: CloudflareBridge;
   cloudflareBridgeFetch: CloudflareBridgeFetch;
   cloudflareBridgeJson: CloudflareBridgeJson;
@@ -191,7 +193,6 @@ export type EntrypointTypes = Readonly<{
   cloudflareBridgeTunnel: CloudflareBridgeTunnel;
   cloudflareBridgeTunnelOptions: CloudflareBridgeTunnelOptions;
   cloudflareRaw: CloudflareRaw;
-  cloudflareSandbox: CloudflareSandbox;
   code: Code;
   codesandbox: CodeSandbox;
   codesandboxClient: InstanceType<typeof CodeSandboxClient>;
@@ -222,6 +223,8 @@ export type EntrypointTypes = Readonly<{
   result: Result;
   running: Running;
   sandbox: Sandbox;
+  stat: SandboxFileStat;
+  directory: SandboxDirectoryEntry;
   runtimeFiles: SandboxRuntimeFiles;
   runtimePorts: SandboxRuntimePorts;
   runtimeProcess: SandboxRuntimeProcess;
@@ -247,6 +250,9 @@ export type EntrypointTypes = Readonly<{
   vercelProxyHandler: VercelProxyHandler;
   vercelProxyMeta: VercelProxyMeta;
   vercelRaw: VercelRaw;
+  vercelMounts: VercelMounts;
+  vercelRegion: VercelRegion;
+  vercelSerializedDrive: SerializedVercelDrive;
   vercelResources: Resources;
   vercelRuntime: Runtime;
   vercelSerializedCommand: SerializedVercelCommand;
