@@ -29,6 +29,7 @@ import type {
   SandboxLifecycle,
   SandboxNetworkOpts,
   SandboxOpts,
+  SnapshotMode,
   Volume,
 } from "e2b";
 
@@ -59,6 +60,12 @@ export type E2B = Readonly<{
   env?: Readonly<Record<string, string>>;
   /** integration identifier appended to the E2B user agent */
   integration?: string;
+  /** HTTP protocol used for control-plane and sandbox requests */
+  httpVersion?: SandboxConnectOpts["httpVersion"];
+  /** native workload identity configuration injected by E2B */
+  iam?: SandboxOpts["iam"];
+  /** idempotency key reused by native sandbox creation retries */
+  idempotencyKey?: string;
   /** e2b lifecycle behavior such as pause or kill when timeout is reached */
   lifecycle?: SandboxLifecycle;
   /** metadata attached to new sandboxes */
@@ -83,6 +90,8 @@ export type E2B = Readonly<{
   template?: string;
   /** sandbox lifetime timeout in milliseconds */
   timeout?: number;
+  /** snapshot state captured by normalized creation; full includes memory, filesystem boots fresh */
+  snapshotMode?: SnapshotMode;
   /** linux user used for file and command operations */
   user?: string;
   /** validate the E2B API key format before provider requests */
@@ -194,6 +203,9 @@ const connection = (options: E2B): SandboxConnectOpts => {
     ...(present(options.integration)
       ? { integration: options.integration }
       : {}),
+    ...(options.httpVersion === undefined
+      ? {}
+      : { httpVersion: options.httpVersion }),
     ...(request === undefined ? {} : { requestTimeoutMs: request }),
     ...(present(options.proxy) ? { proxy: options.proxy } : {}),
     ...(present(options.sandboxUrl) ? { sandboxUrl: options.sandboxUrl } : {}),
@@ -212,6 +224,10 @@ const createOptions = (
   assertSandboxEnv(envs);
   return {
     ...connection(options),
+    ...(options.iam === undefined ? {} : { iam: options.iam }),
+    ...(options.idempotencyKey === undefined
+      ? {}
+      : { idempotencyKey: options.idempotencyKey }),
     ...(options.allowInternetAccess === undefined
       ? {}
       : { allowInternetAccess: options.allowInternetAccess }),
@@ -536,7 +552,11 @@ const createSandbox = (
   user: string | undefined,
   config: E2B
 ): Sandbox<Raw> => ({
-  capabilities,
+  capabilities: {
+    ...capabilities,
+    snapshotCreate:
+      config.snapshotMode === "filesystem" ? "filesystem" : "memory",
+  },
   cwd,
   files: {
     exists: (path) =>
@@ -652,7 +672,13 @@ const createSandbox = (
   snapshots: {
     create: async (name) => {
       const snapshot = await wrap(
-        () => raw.createSnapshot(name === undefined ? undefined : { name }),
+        () =>
+          raw.createSnapshot({
+            ...(name === undefined ? {} : { name }),
+            ...(config.snapshotMode === undefined
+              ? {}
+              : { mode: config.snapshotMode }),
+          }),
         "snapshot"
       );
       return {
@@ -686,13 +712,17 @@ const createSandbox = (
 /**
  * create an E2B adapter with normalized sandbox operations
  *
- * E2B snapshots capture filesystem and memory state. creation briefly pauses the source sandbox and drops active command, pty, and WebSocket connections. create a fresh sandbox with `create({ snapshot })`; in-place restore is not normalized
+ * E2B snapshots capture filesystem and memory state by default; snapshotMode can select filesystem-only capture. creation briefly pauses the source sandbox and drops active command, pty, and WebSocket connections. create a fresh sandbox with `create({ snapshot })`; in-place restore is not normalized
  * named snapshots return E2B's provider-persisted canonical name, which can include a namespace and tag
  *
  * `ports.expose()` returns E2B's derived HTTP or HTTPS URL. when `network.allowPublicTraffic` is false, `preview.request()` adds E2B's traffic access header without exposing it in serializable data
  */
 export const e2b = (options: E2B = {}): Adapter<Raw> => ({
-  capabilities,
+  capabilities: {
+    ...capabilities,
+    snapshotCreate:
+      options.snapshotMode === "filesystem" ? "filesystem" : "memory",
+  },
   async create(input = {}) {
     validate(options);
     const cwd = input.cwd ?? options.cwd ?? "/home/user";

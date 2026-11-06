@@ -66,7 +66,11 @@ live("e2b runs a live sandbox workflow", async () => {
     });
     await record(
       new URL("__fixtures__/workflow.json", import.meta.url),
-      workflowFixture("e2b", payload, ["snapshots.create", "snapshotSource"])
+      workflowFixture("e2b", payload, [
+        "snapshots.create",
+        "snapshots.delete",
+        "snapshotSource",
+      ])
     );
   } finally {
     await sandbox.stop();
@@ -241,6 +245,32 @@ live("e2b preserves process state in a live snapshot", async () => {
         true
       )
     );
+  } finally {
+    try {
+      await Promise.all([derived?.stop(), sandbox.stop()]);
+    } finally {
+      if (snapshot !== undefined) {
+        await sandbox.snapshots.delete(snapshot.id);
+      }
+    }
+  }
+});
+
+live("e2b restores filesystem-only snapshots", async () => {
+  const sandbox = await create({
+    adapter: e2b({ snapshotMode: "filesystem", timeout: 300_000 }),
+  });
+  let derived: typeof sandbox | undefined;
+  let snapshot: Snapshot | undefined;
+  try {
+    expect(sandbox.capabilities.snapshotCreate).toBe("filesystem");
+    await sandbox.files.write("snapshot.txt", "filesystem");
+    snapshot = await sandbox.snapshots.create();
+    derived = await create({
+      adapter: e2b({ timeout: 300_000 }),
+      snapshot: snapshot.id,
+    });
+    expect(await derived.files.text("snapshot.txt")).toBe("filesystem");
   } finally {
     try {
       await Promise.all([derived?.stop(), sandbox.stop()]);

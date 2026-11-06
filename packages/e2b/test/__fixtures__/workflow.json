@@ -33,6 +33,7 @@
   "payload": {
     "capabilities": {
       "environment": true,
+      "fileStreaming": "native",
       "files": true,
       "ports": "derived",
       "processExec": true,
@@ -41,11 +42,11 @@
         "git": true,
         "lifecycle": "dynamic",
         "mcp": "create-time",
+        "metrics": true,
         "network": "dynamic",
         "pty": true,
         "volumes": "create-time",
-        "watching": true,
-        "metrics": true
+        "watching": true
       },
       "snapshotCreate": "memory",
       "snapshotDelete": true,

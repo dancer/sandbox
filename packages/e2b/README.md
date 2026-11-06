@@ -25,6 +25,10 @@ volume APIs remain available through `sandbox.raw`.
 
 Read the [E2B adapter documentation](https://sandbox-sdk.sh/adapters.md).
 
+## Current SDK options
+
+Set `snapshotMode: "filesystem"` for filesystem-only snapshots that boot fresh. The default full snapshot also captures memory. The advertised `snapshotCreate` mode reflects this choice. Use `idempotencyKey` for safe create retries, `httpVersion` to select native HTTP behavior, and `iam` for E2B workload identity. Interactive stdin remains provider-specific through `raw`.
+
 ## Cleanup
 
 `stop()` kills the sandbox rather than pausing it. Save a snapshot before cleanup

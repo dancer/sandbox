@@ -336,6 +336,8 @@ test("e2b maps create and command options without running a real provider", asyn
         apiHeaders: { "x-api-header": "value" },
         apiKey: "key",
         env: { A: "1" },
+        httpVersion: "1.1",
+        idempotencyKey: "sandbox-sdk-test",
         integration: "sandbox-sdk-test/1.0.0",
         lifecycle: { autoResume: true, onTimeout: "pause" },
         mcp: {
