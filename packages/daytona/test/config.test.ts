@@ -1017,3 +1017,40 @@ test("daytona uses provider streaming file APIs", async () => {
     client.create = original;
   }
 });
+
+test("daytona creates stable filesystem snapshots and resolves persisted metadata", async () => {
+  const native = new DaytonaClient({ apiKey: "key" });
+  const original = native.create;
+  const { get } = native.snapshot;
+  let captured: unknown;
+  const raw = {
+    createSnapshot: (name: string, timeout?: number) => {
+      captured = { name, timeout };
+      return Promise.resolve();
+    },
+    fs: { createFolder: () => Promise.resolve() },
+    getWorkDir: () => Promise.resolve("/workspace"),
+    id: "sandbox",
+  };
+  native.create = (() => Promise.resolve(raw)) as typeof native.create;
+  native.snapshot.get = ((name: string) =>
+    Promise.resolve({ id: "snapshot", name })) as typeof get;
+  try {
+    const sandbox = await create({
+      adapter: daytona({ client: native, timeout: 3000 }),
+    });
+    expect(sandbox.capabilities.snapshotCreate).toBe("filesystem");
+    expect(await sandbox.snapshots.create("checkpoint")).toEqual({
+      id: "snapshot",
+      name: "checkpoint",
+    });
+    expect(captured).toEqual({ name: "checkpoint", timeout: 3 });
+    await expect(sandbox.snapshots.create("")).rejects.toMatchObject({
+      code: "configuration",
+    });
+    expect(captured).toEqual({ name: "checkpoint", timeout: 3 });
+  } finally {
+    native.create = original;
+    native.snapshot.get = get;
+  }
+});

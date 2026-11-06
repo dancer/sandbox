@@ -2,13 +2,17 @@ import { expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
 import { setTimeout as delay } from "node:timers/promises";
 
-import { Daytona as DaytonaClient } from "@daytona/sdk";
+import { Daytona as DaytonaClient, Image } from "@daytona/sdk";
 import { create } from "@sandbox-sdk/core";
 
 import { record, workflowFixture } from "../../../test/fixture";
 import { requestPreview } from "../../../test/preview";
 import { workflow } from "../../../test/workflow";
 import { daytona } from "../src/index";
+
+const image = Image.debianSlim("3.12").runCommands(
+  "apt-get update && apt-get install -y --no-install-recommends git nodejs curl && rm -rf /var/lib/apt/lists/*"
+);
 
 const credentialed = Boolean(
   process.env.DAYTONA_API_KEY ||
@@ -93,6 +97,7 @@ live("daytona runs a live sandbox workflow", async () => {
   const sandbox = await create({
     adapter: daytona({
       deleteOnStop: true,
+      image,
       networkBlockAll: false,
       timeout: 300_000,
     }),
@@ -110,6 +115,7 @@ live("daytona runs a live sandbox workflow", async () => {
       new URL("__fixtures__/workflow.json", import.meta.url),
       workflowFixture("daytona", payload, [
         "snapshots.create",
+        "snapshots.delete",
         "snapshotSource",
       ])
     );
@@ -123,11 +129,13 @@ snapshotLive("daytona deletes a durable snapshot", async () => {
   const name = `sandbox-sdk-live-${randomUUID()}`;
   const client = new DaytonaClient({
     apiKey: process.env.DAYTONA_SNAPSHOT_DELETE_API_KEY,
+    apiUrl: process.env.DAYTONA_API_URL ?? "https://app.daytona.io/api",
   });
   const sandbox = await create({
     adapter: daytona({
       apiKey: process.env.DAYTONA_SNAPSHOT_DELETE_API_KEY,
       deleteOnStop: true,
+      image,
       timeout: 300_000,
     }),
     cwd,
@@ -137,11 +145,23 @@ snapshotLive("daytona deletes a durable snapshot", async () => {
 
   try {
     created = true;
-    await client.snapshot.create(
-      { image: "python:3.12", name },
-      { timeout: 120 }
-    );
-
+    await sandbox.files.write("snapshot.txt", "filesystem");
+    const snapshot = await sandbox.snapshots.create(name);
+    expect(snapshot.name).toBe(name);
+    const derived = await create({
+      adapter: daytona({
+        apiKey: process.env.DAYTONA_SNAPSHOT_DELETE_API_KEY,
+        deleteOnStop: true,
+        timeout: 300_000,
+      }),
+      cwd,
+      snapshot: snapshot.id,
+    });
+    try {
+      expect(await derived.files.text("snapshot.txt")).toBe("filesystem");
+    } finally {
+      await derived.stop();
+    }
     await sandbox.snapshots.delete(name);
     deleted = true;
   } finally {
@@ -162,6 +182,7 @@ live("daytona exposes advertised raw capabilities", async () => {
   const sandbox = await create({
     adapter: daytona({
       deleteOnStop: true,
+      image,
       timeout: 300_000,
     }),
     cwd,
@@ -286,6 +307,7 @@ live(
     const sandbox = await create({
       adapter: daytona({
         deleteOnStop: true,
+        image,
         public: false,
         timeout: 300_000,
       }),
@@ -316,6 +338,7 @@ live("daytona updates live raw network settings", async () => {
   const sandbox = await create({
     adapter: daytona({
       deleteOnStop: true,
+      image,
       networkBlockAll: false,
       timeout: 300_000,
     }),
@@ -348,28 +371,47 @@ live("daytona updates live raw network settings", async () => {
 });
 
 live("daytona creates a linked sandbox", async () => {
+  const key = process.env.DAYTONA_SNAPSHOT_DELETE_API_KEY;
   const source = await create({
     adapter: daytona({
+      ...(key === undefined
+        ? { snapshot: "daytonaio/sandbox:0.11.0" }
+        : { apiKey: key, image }),
       deleteOnStop: true,
       ephemeral: true,
       timeout: 300_000,
     }),
   });
   let linked: typeof source | undefined;
-
+  let snapshot: string | undefined;
   try {
+    if (key !== undefined) {
+      const created = await source.snapshots.create();
+      snapshot = created.id;
+    }
     linked = await create({
       adapter: daytona({
+        ...(key === undefined ? {} : { apiKey: key }),
         autoDeleteInterval: 0,
         deleteOnStop: true,
         linkedSandbox: source.id,
+        snapshot: snapshot ?? "daytonaio/sandbox:0.11.0",
         timeout: 300_000,
       }),
     });
     await linked.raw.refreshData();
     expect(linked.raw.linkedSandboxId).toBe(source.id);
   } finally {
-    await linked?.stop();
-    await source.stop();
+    try {
+      await linked?.stop();
+    } finally {
+      try {
+        await source.stop();
+      } finally {
+        if (snapshot !== undefined) {
+          await source.snapshots.delete(snapshot);
+        }
+      }
+    }
   }
 });

@@ -23,6 +23,12 @@ await withSandbox(
 Pass `apiKey` or set `DAYTONA_API_KEY`. Typed native controls such as SSH, PTY,
 LSP, and network settings remain available through `sandbox.raw`.
 
+## Snapshots and lifecycle
+
+`snapshots.create(name?)` captures the current filesystem through Daytona's stable sandbox snapshot API and returns the provider id and persisted name. Create a fresh sandbox with `create({ snapshot: id })`. In-place restoration stays unsupported. Snapshot deletion requires the provider's `delete:snapshots` permission.
+
+`target` selects the creation region, including when using an injected client. Native options include `autoPauseInterval`, `ttlMinutes`, `queueTimeout`, `domainAllowList`, `outboundProxyUrl`, `secrets`, and `kvm`. Proxy routing alone is not a network authorization boundary. Linked sandboxes require a prebuilt snapshot and cannot use a declarative image build.
+
 ## Native Client
 
 For Daytona service managers that are not tied to one sandbox, such as durable

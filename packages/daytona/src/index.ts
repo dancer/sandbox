@@ -63,6 +63,20 @@ export type Daytona = Omit<DaytonaConfig, "serverUrl"> &
     autoDeleteInterval?: number;
     /** stop an idle sandbox after this many minutes; use 0 to disable */
     autoStopInterval?: number;
+    /** idle auto-pause interval in minutes for sandbox classes that support pausing */
+    autoPauseInterval?: number;
+    /** maximum wall-clock lifetime in minutes; zero disables the limit */
+    ttlMinutes?: number;
+    /** maximum runner queue wait in minutes */
+    queueTimeout?: number;
+    /** native domain allowlist enforced by Daytona networking */
+    domainAllowList?: string;
+    /** outbound HTTP proxy; combine with network policy when enforcement is required */
+    outboundProxyUrl?: string;
+    /** existing organization secret names keyed by sandbox environment variable */
+    secrets?: Readonly<Record<string, string>>;
+    /** enable nested virtualization where supported by the selected sandbox class */
+    kvm?: boolean;
     /** existing native Daytona client for advanced service access, custom transport, or credential reuse and takes precedence over Daytona connection options */
     client?: DaytonaClient;
     /** default working directory for normalized file and process operations */
@@ -134,7 +148,7 @@ const capabilities: Capabilities = {
     ssh: true,
     volumes: "create-time",
   },
-  snapshotCreate: false,
+  snapshotCreate: "filesystem",
   snapshotDelete: true,
   snapshotRestore: false,
   snapshotSource: "create-time",
@@ -273,6 +287,19 @@ const validate = (options: Daytona): void => {
   }
   lifecycle("autoArchiveInterval", options.autoArchiveInterval);
   lifecycle("autoStopInterval", options.autoStopInterval);
+  for (const [name, value] of Object.entries({
+    autoPauseInterval: options.autoPauseInterval,
+    queueTimeout: options.queueTimeout,
+    ttlMinutes: options.ttlMinutes,
+  })) {
+    if (value !== undefined && (!Number.isInteger(value) || value < 0)) {
+      throw sandboxError(
+        provider,
+        `${name} must be a non-negative integer`,
+        "configuration"
+      );
+    }
+  }
   if (
     options.linkedSandbox !== undefined &&
     options.ephemeral !== true &&
@@ -328,9 +355,10 @@ const config = (options: Daytona): DaytonaConfig => {
     env("DAYTONA_ORGANIZATION_ID")
   );
   const target = first(options.target, env("DAYTONA_TARGET"));
+  const apiUrl = first(options.apiUrl, env("DAYTONA_API_URL"));
   return {
     ...(apiKey === undefined ? {} : { apiKey }),
-    ...(present(options.apiUrl) ? { apiUrl: options.apiUrl } : {}),
+    ...(apiUrl === undefined ? {} : { apiUrl }),
     ...(jwtToken === undefined ? {} : { jwtToken }),
     ...(organizationId === undefined ? {} : { organizationId }),
     ...(options.otelEnabled === undefined
@@ -346,6 +374,50 @@ const config = (options: Daytona): DaytonaConfig => {
 const nativeClient = (options: Daytona): DaytonaClient =>
   options.client ?? new DaytonaClient(config(options));
 
+const nativeParams = (options: Daytona): CreateSandboxBaseParams => ({
+  ...(options.autoArchiveInterval === undefined
+    ? {}
+    : { autoArchiveInterval: options.autoArchiveInterval }),
+  ...(options.autoDeleteInterval === undefined
+    ? {}
+    : { autoDeleteInterval: options.autoDeleteInterval }),
+  ...(options.autoStopInterval === undefined
+    ? {}
+    : { autoStopInterval: options.autoStopInterval }),
+  ...(options.autoPauseInterval === undefined
+    ? {}
+    : { autoPauseInterval: options.autoPauseInterval }),
+  ...(options.ttlMinutes === undefined
+    ? {}
+    : { ttlMinutes: options.ttlMinutes }),
+  ...(options.queueTimeout === undefined
+    ? {}
+    : { queueTimeout: options.queueTimeout }),
+  ...(options.domainAllowList === undefined
+    ? {}
+    : { domainAllowList: options.domainAllowList }),
+  ...(options.outboundProxyUrl === undefined
+    ? {}
+    : { outboundProxyUrl: options.outboundProxyUrl }),
+  ...(options.secrets === undefined ? {} : { secrets: { ...options.secrets } }),
+  ...(options.kvm === undefined ? {} : { kvm: options.kvm }),
+  ...(options.target === undefined ? {} : { target: options.target }),
+  ...(options.ephemeral === undefined ? {} : { ephemeral: options.ephemeral }),
+  ...(options.language === undefined ? {} : { language: options.language }),
+  ...(options.linkedSandbox === undefined
+    ? {}
+    : { linkedSandbox: options.linkedSandbox }),
+  ...(options.networkAllowList === undefined
+    ? {}
+    : { networkAllowList: options.networkAllowList }),
+  ...(options.networkBlockAll === undefined
+    ? {}
+    : { networkBlockAll: options.networkBlockAll }),
+  ...(options.public === undefined ? {} : { public: options.public }),
+  ...(options.user === undefined ? {} : { user: options.user }),
+  ...(options.volumes === undefined ? {} : { volumes: [...options.volumes] }),
+});
+
 const baseParams = (
   options: Daytona,
   input: Parameters<Adapter<Raw>["create"]>[0] = {}
@@ -353,34 +425,10 @@ const baseParams = (
   const envVars = { ...options.env, ...input.env };
   assertSandboxEnv(envVars);
   return {
-    ...(options.autoArchiveInterval === undefined
-      ? {}
-      : { autoArchiveInterval: options.autoArchiveInterval }),
-    ...(options.autoDeleteInterval === undefined
-      ? {}
-      : { autoDeleteInterval: options.autoDeleteInterval }),
-    ...(options.autoStopInterval === undefined
-      ? {}
-      : { autoStopInterval: options.autoStopInterval }),
+    ...nativeParams(options),
     envVars,
-    ...(options.ephemeral === undefined
-      ? {}
-      : { ephemeral: options.ephemeral }),
     labels: { ...options.labels, ...input.metadata },
-    ...(options.language === undefined ? {} : { language: options.language }),
-    ...(options.linkedSandbox === undefined
-      ? {}
-      : { linkedSandbox: options.linkedSandbox }),
     ...((input.id ?? options.name) ? { name: input.id ?? options.name } : {}),
-    ...(options.networkAllowList === undefined
-      ? {}
-      : { networkAllowList: options.networkAllowList }),
-    ...(options.networkBlockAll === undefined
-      ? {}
-      : { networkBlockAll: options.networkBlockAll }),
-    ...(options.public === undefined ? {} : { public: options.public }),
-    ...(options.user === undefined ? {} : { user: options.user }),
-    ...(options.volumes === undefined ? {} : { volumes: [...options.volumes] }),
   };
 };
 
@@ -784,7 +832,21 @@ const createSandbox = (
   provider,
   raw,
   snapshots: {
-    create: () => rejectUnsupported("stable snapshots"),
+    create: async (name) => {
+      if (name !== undefined && name.trim().length === 0) {
+        throw sandboxError(
+          provider,
+          "Snapshot name is required",
+          "configuration"
+        );
+      }
+      return await wrap(async () => {
+        const label = name ?? `sandbox-sdk-${randomUUID()}`;
+        await raw.createSnapshot(label, seconds(options.timeout));
+        const snapshot = await client.snapshot.get(label);
+        return { id: snapshot.id, name: snapshot.name };
+      }, "snapshot create");
+    },
     delete: async (id) => {
       if (!present(id)) {
         throw sandboxError(

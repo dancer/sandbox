@@ -16,6 +16,7 @@ const json = async <Body>(name: string): Promise<Fixture<Body>> =>
 const workflow: Workflow = {
   capabilities: {
     environment: true,
+    fileStreaming: "native",
     files: true,
     ports: "dynamic",
     processExec: true,
@@ -34,7 +35,7 @@ const workflow: Workflow = {
       ssh: true,
       volumes: "create-time",
     },
-    snapshotCreate: false,
+    snapshotCreate: "filesystem",
     snapshotDelete: true,
     snapshotRestore: false,
     snapshotSource: "create-time",

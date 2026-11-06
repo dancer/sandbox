@@ -33,6 +33,7 @@
   "payload": {
     "capabilities": {
       "environment": true,
+      "fileStreaming": "native",
       "files": true,
       "ports": "dynamic",
       "processExec": true,
@@ -46,12 +47,12 @@
         "network": "dynamic",
         "previews": true,
         "pty": true,
+        "resources": "dynamic",
         "sessions": true,
         "ssh": true,
-        "volumes": "create-time",
-        "resources": "dynamic"
+        "volumes": "create-time"
       },
-      "snapshotCreate": false,
+      "snapshotCreate": "filesystem",
       "snapshotDelete": true,
       "snapshotRestore": false,
       "snapshotSource": "create-time",
@@ -106,7 +107,7 @@
       "stdout": "hello from daytona\n",
       "output": "hello from daytona\n",
       "stderrStream": "",
-      "stdoutStream": "hello from daytona"
+      "stdoutStream": "hello from daytona\n"
     },
     "unsupported": {
       "spawn": false,
