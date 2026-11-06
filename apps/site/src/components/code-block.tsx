@@ -5,8 +5,8 @@ import jsonc from "@shikijs/langs/jsonc";
 import tsx from "@shikijs/langs/tsx";
 import typescript from "@shikijs/langs/typescript";
 import yaml from "@shikijs/langs/yaml";
-import darkTheme from "@shikijs/themes/vitesse-dark";
-import lightTheme from "@shikijs/themes/vitesse-light";
+import darkTheme from "@shikijs/themes/github-dark-high-contrast";
+import lightTheme from "@shikijs/themes/github-light-high-contrast";
 import type { BundledLanguage } from "shiki";
 import { createHighlighterCore } from "shiki/core";
 import { createOnigurumaEngine } from "shiki/engine/oniguruma";
@@ -47,7 +47,8 @@ export const CodeBlock = async ({ code, lang, className }: CodeBlockProps) => {
   });
 
   return (
-    <div
+    <figure
+      aria-label={`${lang} code example`}
       className={cn(
         "group/code relative overflow-hidden rounded-lg bg-sidebar",
         className
@@ -55,9 +56,9 @@ export const CodeBlock = async ({ code, lang, className }: CodeBlockProps) => {
     >
       <Copy value={code} />
       <pre
-        className="overflow-x-auto p-6 pr-16 text-sm"
+        className="shiki overflow-x-auto p-6 pr-16 text-sm focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
+        tabIndex={0}
         data-language={lang}
-        style={{ color: result.fg }}
       >
         <code>
           {result.tokens.map((row, index) => (
@@ -79,6 +80,6 @@ export const CodeBlock = async ({ code, lang, className }: CodeBlockProps) => {
           ))}
         </code>
       </pre>
-    </div>
+    </figure>
   );
 };

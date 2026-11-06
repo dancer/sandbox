@@ -314,7 +314,8 @@ const StatusIcon = ({ cell }: { cell: Cell }) => {
   const bullet = <StarBullet status={cell.status} />;
   if (!cell.note) {
     return (
-      <span aria-label={label} className="inline-flex">
+      <span className="inline-flex">
+        <span className="sr-only">{label}</span>
         {bullet}
       </span>
     );

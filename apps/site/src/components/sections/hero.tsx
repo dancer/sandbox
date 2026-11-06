@@ -74,14 +74,14 @@ export const Hero = () => (
       transition={{ delay: 0.18, duration: 0.6, ease: EASE }}
     >
       {stats.map((stat, index) => (
-        <div className="flex items-center gap-2" key={stat.label}>
-          {index > 0 && (
-            <Star aria-hidden="true" className="size-2 text-foreground/25" />
-          )}
-          <div className="flex items-baseline gap-1.5">
-            <dt className="text-foreground tabular-nums">{stat.value}</dt>
-            <dd className="text-muted-foreground">{stat.label}</dd>
-          </div>
+        <div className="flex items-baseline gap-1.5" key={stat.label}>
+          <dt className="text-muted-foreground">{stat.label}</dt>
+          <dd className="order-first flex items-center gap-2 text-foreground tabular-nums">
+            {index > 0 && (
+              <Star aria-hidden="true" className="size-2 text-foreground/25" />
+            )}
+            {stat.value}
+          </dd>
         </div>
       ))}
     </motion.dl>
@@ -134,7 +134,7 @@ export const Hero = () => (
                   {mark}
                 </a>
               ) : (
-                <span aria-label={label}>{mark}</span>
+                <span>{mark}</span>
               )}
             </TooltipTrigger>
             <TooltipContent>{label}</TooltipContent>

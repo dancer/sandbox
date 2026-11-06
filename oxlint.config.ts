@@ -5,4 +5,12 @@ import react from "ultracite/oxlint/react";
 
 export default defineConfig({
   extends: [core, react, next],
+  overrides: [
+    {
+      files: ["apps/site/src/components/code-block.tsx"],
+      rules: {
+        "jsx-a11y/no-noninteractive-tabindex": ["warn", { tags: ["pre"] }],
+      },
+    },
+  ],
 });
