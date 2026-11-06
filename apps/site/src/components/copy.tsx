@@ -1,8 +1,8 @@
 "use client";
 
-import { CheckIcon, CopyIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { CheckIcon, CopyIcon, CircleAlertIcon } from "lucide-react";
 
+import { useClipboard } from "@/lib/clipboard";
 import { cn } from "@/lib/utils";
 
 interface CopyProps {
@@ -11,52 +11,38 @@ interface CopyProps {
 }
 
 export const Copy = ({ className, value }: CopyProps) => {
-  const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
-    if (!copied) {
-      return;
-    }
-
-    const timer = window.setTimeout(() => setCopied(false), 1600);
-    return () => window.clearTimeout(timer);
-  }, [copied]);
-
-  const fallback = () => {
-    const element = document.createElement("textarea");
-    element.value = value;
-    element.setAttribute("readonly", "");
-    element.style.position = "fixed";
-    element.style.opacity = "0";
-    document.body.append(element);
-    element.select();
-    document.execCommand("copy");
-    element.remove();
-  };
-
-  const write = async () => {
-    try {
-      await navigator.clipboard.writeText(value);
-    } catch {
-      fallback();
-    }
-    setCopied(true);
-  };
-
-  const Icon = copied ? CheckIcon : CopyIcon;
+  const { copy, status } = useClipboard(value);
+  const failed = status === "failed";
+  const Icon = { copied: CheckIcon, failed: CircleAlertIcon, ready: CopyIcon }[
+    status
+  ];
+  const label = {
+    copied: "Copied code",
+    failed: "Copy failed. Try again",
+    ready: "Copy code",
+  }[status];
+  const message = {
+    copied: "Copied to clipboard",
+    failed: "Copy failed. Select and copy the text manually.",
+    ready: "",
+  }[status];
 
   return (
     <button
-      aria-label={copied ? "Copied code" : "Copy code"}
+      aria-label={label}
       className={cn(
-        "absolute top-6 right-5 z-10 inline-flex items-center justify-center rounded-sm p-1 text-foreground/35 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
+        "absolute top-6 right-5 z-10 inline-flex size-8 items-center justify-center rounded-sm p-1 text-foreground/55 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
         className
       )}
-      onClick={write}
-      title={copied ? "Copied" : "Copy"}
+      onClick={copy}
+      title={label}
       type="button"
     >
-      <Icon aria-hidden="true" className="size-3.5" />
+      <Icon
+        aria-hidden="true"
+        className={cn("size-3.5", failed && "text-destructive")}
+      />
+      <output className="sr-only">{message}</output>
     </button>
   );
 };
