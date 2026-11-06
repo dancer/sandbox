@@ -1,8 +1,10 @@
 import { expect, test } from "bun:test";
 
+import { tools } from "@sandbox-sdk/ai";
 import { create } from "@sandbox-sdk/core";
 
 import { requestPreview } from "../../../test/preview";
+import { VercelDrive } from "../src/index";
 import { expectSource, expectWorkflow, source, workflow } from "./behavior";
 import {
   adapter,
@@ -18,6 +20,66 @@ import {
 import type { LiveSandbox } from "./fixture";
 
 const live = enabled() ? test : test.skip;
+
+live(
+  "vercel uses universal images, fifteen ports, regions, and persistent drives",
+  async () => {
+    const token = process.env.VERCEL_TOKEN;
+    const teamId = process.env.VERCEL_TEAM_ID;
+    const projectId = process.env.VERCEL_PROJECT_ID;
+    const credentials =
+      token && teamId && projectId ? { projectId, teamId, token } : {};
+    const drive = await VercelDrive.getOrCreate({
+      ...credentials,
+      name: `sandbox-sdk-${crypto.randomUUID()}`,
+      region: "iad1",
+    });
+    let sandbox: LiveSandbox | undefined;
+    try {
+      sandbox = await create({
+        adapter: adapter({
+          image: "vercel/sandbox/universal",
+          mounts: { "/data": drive },
+          region: "iad1",
+        }),
+        ports: Array.from({ length: 15 }, (_, index) => 3000 + index),
+      });
+      expect(sandbox.raw.region).toBe("iad1");
+      expect(sandbox.raw.image).toBeString();
+      expect(sandbox.raw.routes).toHaveLength(15);
+      const version = await sandbox.process.exec("node", ["--version"]);
+      expect(version.ok).toBe(true);
+      await sandbox.files.write("/data/message.txt", "drive");
+      const session = tools(sandbox, { cwd: "/data" }).sandbox;
+      expect(await session.stat({ path: "message.txt" })).toEqual({
+        size: 5,
+        type: "file",
+      });
+      expect(await session.listDirectory({ path: "." })).toContainEqual({
+        name: "message.txt",
+        type: "file",
+      });
+      await session.writeTextFile({
+        content: "temporary",
+        path: "temporary.txt",
+      });
+      expect(await session.deleteFile({ path: "temporary.txt" })).toBe(true);
+
+      expect(await sandbox.files.text("/data/message.txt")).toBe("drive");
+      const preview = await sandbox.ports.expose(3014);
+      expect(preview.url).toStartWith("https://");
+      await expect(sandbox.ports.expose(3015)).rejects.toMatchObject({
+        code: "configuration",
+      });
+    } finally {
+      try {
+        await cleanup(sandbox);
+      } finally {
+        await drive.delete();
+      }
+    }
+  }
+);
 
 live("vercel runs a live sandbox workflow", async () => {
   const file = path("workflow");
@@ -152,8 +214,11 @@ live("vercel exposes ports after creation", async () => {
     const response = await requestPreview(preview);
     expect(await response.text()).toBe("dynamic-vercel-port");
   } finally {
-    await running?.kill();
-    await cleanup(sandbox);
+    try {
+      await running?.kill();
+    } finally {
+      await cleanup(sandbox);
+    }
   }
 });
 

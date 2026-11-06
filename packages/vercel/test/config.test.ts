@@ -130,7 +130,6 @@ test("vercel passes oidc credentials directly to provider", async () => {
     expect(sandbox.id).toBe("sandbox");
     expect(seen).toMatchObject({
       projectId: "project",
-      runtime: "node24",
       teamId: "team",
       token: value,
     });
@@ -819,11 +818,11 @@ test("vercel rejects invalid declared ports before provider calls", async () => 
           teamId: "team",
           token: "token",
         }),
-        ports: [3000, 3001, 3002, 3003, 3004],
+        ports: Array.from({ length: 16 }, (_, index) => 3000 + index),
       })
     ).rejects.toMatchObject({
       code: "configuration",
-      message: "Vercel sandboxes can expose up to 4 ports",
+      message: "Vercel sandboxes can expose up to 15 ports",
       provider: "vercel",
     });
     expect(called).toBe(false);
@@ -1279,7 +1278,6 @@ test("vercel maps create options and updates dynamic ports", async () => {
       ports: [8080],
       projectId: "project",
       resources: { vcpus: 2 },
-      runtime: "node24",
       source: { snapshotId: "snapshot", type: "snapshot" },
       tags: { default: "true", feature: "test" },
       teamId: "team",

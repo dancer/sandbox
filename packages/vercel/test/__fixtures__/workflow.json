@@ -37,15 +37,17 @@
   "payload": {
     "capabilities": {
       "environment": true,
+      "fileStreaming": "native",
       "files": true,
       "ports": "dynamic",
       "processExec": true,
       "processSpawn": "separate",
       "raw": {
+        "drives": "create-time",
         "lifecycle": "dynamic",
+        "metrics": true,
         "network": "dynamic",
         "previews": "dynamic",
-        "metrics": true,
         "pty": true,
         "resources": "dynamic",
         "sessions": "dynamic"

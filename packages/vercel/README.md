@@ -2,8 +2,10 @@
 
 Vercel Sandbox adapter for Sandbox SDK.
 
-The adapter defaults to the legacy `node24` runtime on Amazon Linux, preserving
-existing workloads when using Vercel Sandbox 3. Forks inherit the source runtime.
+The adapter uses Vercel's current universal image by default. Select `image` for
+a Vercel Container Registry image, or set `runtime` explicitly for a legacy
+Amazon Linux runtime. Images and runtimes are mutually exclusive. Snapshot
+sources retain their own environment.
 
 ## Install
 
@@ -18,7 +20,10 @@ import { withSandbox } from "@sandbox-sdk/core";
 import { vercel } from "@sandbox-sdk/vercel";
 
 await withSandbox(
-  { adapter: vercel({ runtime: "node24" }), cwd: "/vercel/sandbox" },
+  {
+    adapter: vercel({ image: "vercel/sandbox/universal", region: "iad1" }),
+    cwd: "/vercel/sandbox",
+  },
   async (sandbox) => sandbox.process.shell("node --version")
 );
 ```
@@ -29,6 +34,12 @@ network policy, sessions, snapshots, and forks remain available through
 `sandbox.raw`.
 
 Read the [Vercel adapter documentation](https://sandbox-sdk.sh/adapters.md).
+
+## Images, placement, and storage
+
+Use `region` and `failoverRegions` for placement, and `networkId` for a Secure Compute network. Up to 15 unique ports can be declared or exposed dynamically. Sandbox tags retain the provider's five-key limit.
+
+Import `VercelDrive` to create a native drive, then pass `mounts: { "/data": drive }` or a typed drive reference. Drives are provider-owned storage and remain available through native APIs. Forks can override their image and must explicitly declare drive mounts because Vercel does not inherit them.
 
 ## Cleanup
 

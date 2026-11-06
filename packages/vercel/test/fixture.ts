@@ -71,6 +71,7 @@ export const cleanup = async (
     return;
   }
   if (deletable(sandbox.raw)) {
+    await sandbox.stop();
     await sandbox.raw.delete();
     return;
   }

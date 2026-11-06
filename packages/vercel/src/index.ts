@@ -30,12 +30,18 @@ import {
   Sandbox as VercelSandbox,
   Snapshot as VercelSnapshot,
 } from "@vercel/sandbox";
-import type { Command as NativeCommand, NetworkPolicy } from "@vercel/sandbox";
+import type {
+  Command as NativeCommand,
+  NetworkPolicy,
+  SandboxMounts,
+  SandboxRegion,
+} from "@vercel/sandbox";
 
 export {
   APIError as VercelAPIError,
   Command as VercelCommand,
   CommandFinished as VercelCommandFinished,
+  Drive as VercelDrive,
   FileSystem as VercelFileSystem,
   Sandbox as VercelSandbox,
   Session as VercelSession,
@@ -58,6 +64,9 @@ export type {
   ProxyMeta as VercelProxyMeta,
   SerializedSandbox as SerializedVercelSandbox,
   SerializedSnapshot as SerializedVercelSnapshot,
+  SerializedDrive as SerializedVercelDrive,
+  SandboxMounts as VercelMounts,
+  SandboxRegion as VercelRegion,
   SnapshotTreeNodeData as VercelSnapshotTreeNodeData,
 } from "@vercel/sandbox";
 
@@ -174,13 +183,21 @@ export type Vercel = Readonly<{
   fork?: Fork | string;
   /** reuse a named sandbox when present and create it when absent */
   getOrCreate?: boolean;
+  /** Vercel container image; omitted to use the current universal image, and mutually exclusive with runtime or a snapshot source */
+  image?: string;
+  /** failover regions tried after the primary region; must not contain the primary region */
+  failoverRegions?: readonly SandboxRegion[];
+  /** pre-created Vercel drives keyed by absolute mount path; forked sandboxes must declare mounts explicitly */
+  mounts?: SandboxMounts;
+  /** Secure Compute private network id for the sandbox */
+  networkId?: string;
   /** retention policy for snapshots created by this sandbox */
   keepLastSnapshots?: KeepLastSnapshots;
   /** provider sandbox name used when the create input does not supply an id */
   name?: string;
   /** outbound network policy for the sandbox, including optional Vercel transformations */
   networkPolicy?: NetworkPolicy;
-  /** initial public ports, with create input values taking precedence and a Vercel maximum of four unique ports per sandbox */
+  /** initial public ports, with create input values taking precedence and a Vercel maximum of fifteen unique ports per sandbox */
   ports?: readonly number[];
   /**
    * control automatic filesystem restoration between Vercel sandbox sessions
@@ -192,7 +209,9 @@ export type Vercel = Readonly<{
   projectId?: string;
   /** resource request for new sandboxes */
   resources?: Resources;
-  /** Vercel runtime id, defaults to node24 on Amazon Linux to preserve existing workloads */
+  /** primary Vercel region, defaulting to the provider's region */
+  region?: SandboxRegion;
+  /** legacy Vercel runtime id; omit for the universal image or select an image explicitly */
   runtime?: Runtime;
   /** signal that cancels sandbox creation, get, get-or-create, or fork requests */
   signal?: AbortSignal;
@@ -235,7 +254,7 @@ const provider = "vercel";
 
 const secrets = ["VERCEL_OIDC_TOKEN", "VERCEL_TOKEN"] as const;
 
-const maximumPorts = 4;
+const maximumPorts = 15;
 
 const maximumTags = 5;
 
@@ -247,6 +266,7 @@ const capabilities: Capabilities = {
   processExec: true,
   processSpawn: "separate",
   raw: {
+    drives: "create-time",
     lifecycle: "dynamic",
     metrics: true,
     network: "dynamic",
@@ -517,14 +537,26 @@ const createInput = (
   return {
     ...auth(options),
     env: environment,
+    failoverRegions:
+      options.failoverRegions === undefined
+        ? undefined
+        : [...options.failoverRegions],
+    ...(options.image === undefined ? {} : { image: options.image }),
     keepLastSnapshots: retention(options.keepLastSnapshots),
+    mounts: options.mounts,
     name: input.id ?? options.name,
+    networkId: options.networkId,
     networkPolicy: options.networkPolicy,
     onResume: options.onResume,
     persistent: options.persistent,
     ports: [...ports],
+    region: options.region,
     resources,
-    ...(includeRuntime ? { runtime: options.runtime ?? "node24" } : {}),
+    ...(includeRuntime &&
+    snapshot === undefined &&
+    options.runtime !== undefined
+      ? { runtime: options.runtime }
+      : {}),
     signal: options.signal,
     snapshotExpiration,
     source:
@@ -850,6 +882,20 @@ const spawn = async (
     } else {
       deadline.signal?.addEventListener("abort", cancel, { once: true });
     }
+    const completion = (async () => {
+      try {
+        return await wait(running, deadline, options.signal);
+      } finally {
+        dispose();
+      }
+    })();
+    void (async () => {
+      try {
+        return await completion;
+      } catch {
+        return null;
+      }
+    })();
     return {
       id: running.cmdId,
       kill: async (signal = "SIGTERM") => {
@@ -857,13 +903,7 @@ const spawn = async (
         await running.kill(signal as VercelSignal);
       },
       output: stream(running.logs(signals)),
-      result: (async () => {
-        try {
-          return await wait(running, deadline, options.signal);
-        } finally {
-          dispose();
-        }
-      })(),
+      result: completion,
       stderr: stream(running.logs(signals), "stderr"),
       stdout: stream(running.logs(signals), "stdout"),
     };
@@ -945,10 +985,10 @@ const createSandbox = (
         const target = port(value, provider);
         portOptions(provider, options, "https");
         if (!exposed.has(target)) {
-          if (exposed.size >= 4) {
+          if (exposed.size >= maximumPorts) {
             throw sandboxError(
               provider,
-              "Vercel sandboxes can expose up to 4 ports",
+              `Vercel sandboxes can expose up to ${maximumPorts} ports`,
               "configuration"
             );
           }
@@ -1039,6 +1079,28 @@ export const vercel = (options: Vercel = {}): Adapter<Raw> => ({
   capabilities,
   async create(input = {}) {
     validate(options);
+    if (
+      options.image !== undefined &&
+      (options.runtime !== undefined ||
+        input.snapshot !== undefined ||
+        input.template !== undefined)
+    ) {
+      throw sandboxError(
+        provider,
+        "Vercel image cannot be combined with runtime, snapshot, or template",
+        "configuration"
+      );
+    }
+    if (
+      options.region !== undefined &&
+      options.failoverRegions?.includes(options.region)
+    ) {
+      throw sandboxError(
+        provider,
+        "Vercel failover regions must not contain the primary region",
+        "configuration"
+      );
+    }
     validateFork(options, input);
     const cwd = input.cwd ?? options.cwd ?? "/vercel/sandbox";
     const ports = declaredPorts(input.ports ?? options.ports ?? []);
