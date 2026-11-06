@@ -111,3 +111,52 @@ test("lockfile downloads do not depend on private registry hosts", () => {
     expect(new URL(value ?? "").hostname).toBe("registry.npmjs.org");
   }
 });
+
+test("upgraded glob preserves provider traversal and cancellation", async () => {
+  const root = await mkdtemp(join(tmpdir(), "sandbox-glob-"));
+  try {
+    await Promise.all([
+      writeFile(join(root, "file.txt"), "file"),
+      writeFile(join(root, ".hidden.txt"), "hidden"),
+      writeFile(join(root, "ignored.tmp"), "ignored"),
+    ]);
+    for (const names of [
+      ["@sandbox-sdk/e2b", "e2b"],
+      ["@sandbox-sdk/blaxel", "@blaxel/core", "archiver", "archiver-utils"],
+    ]) {
+      const matcher = dependency(...names)("glob") as {
+        glob(
+          pattern: string,
+          options: { cwd: string; dot?: boolean; signal?: AbortSignal }
+        ): Promise<string[]>;
+        globSync(
+          pattern: string,
+          options: { cwd: string; dot?: boolean }
+        ): string[];
+      };
+      const files = await matcher.glob("**/*.txt", { cwd: root, dot: true });
+      expect(files.toSorted()).toEqual([".hidden.txt", "file.txt"]);
+      expect(matcher.globSync("**/*.txt", { cwd: root })).toEqual(["file.txt"]);
+      await expect(
+        matcher.glob("**/*", { cwd: root, signal: AbortSignal.abort() })
+      ).rejects.toBeDefined();
+    }
+  } finally {
+    await rm(root, { force: true, recursive: true });
+  }
+});
+
+test("upgraded minimatch preserves Vercel file pattern APIs", () => {
+  const matcher = dependency(
+    "vercel/package.json",
+    "@vercel/python-analysis"
+  )("minimatch") as {
+    minimatch(path: string, pattern: string): boolean;
+    match(paths: string[], pattern: string): string[];
+  };
+  expect(matcher.minimatch("src/main.py", "**/*.{py,pyi}")).toBe(true);
+  expect(matcher.minimatch("src/main.ts", "**/*.{py,pyi}")).toBe(false);
+  expect(matcher.match(["src/main.py", "src/main.ts"], "**/*.py")).toEqual([
+    "src/main.py",
+  ]);
+});
